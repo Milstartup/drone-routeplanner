@@ -1,0 +1,6 @@
+# CocoaPods haalt de DJI-SDK binnen. Bundler installeert CocoaPods alleen in
+# deze map (vendor/bundle), zonder beheerderswachtwoord en zonder de Ruby van
+# macOS te veranderen. Gebruik daarom altijd `bundle exec pod ...`.
+source "https://rubygems.org"
+
+gem "cocoapods", "1.17.0"

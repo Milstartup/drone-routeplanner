@@ -142,6 +142,13 @@ Bouw een minimale iPhone-app die **alleen**:
 
 Vlieg hierbij nog niet.
 
+**Gebouwd (25 oktober 2026):** de app **Veldvlucht** staat in [`ios/`](../ios/README.md).
+
+- Met DJI Mobile SDK 4.16.2 via CocoaPods 1.17.0. CocoaPods is alleen in `ios/vendor/` geïnstalleerd, zonder beheerderswachtwoord.
+- Gebouwd zonder fouten met Xcode 16.4.
+- De App Key staat in `ios/Config/Lokaal.xcconfig`. Dat bestand staat in `.gitignore`.
+- **Nog te doen:** de App Key invullen en de test met de drone. De handleiding en de go/no-go-lijst staan in [ios/README.md](../ios/README.md).
+
 - **Lukt dit:** de rest is gewoon werk.
 - **Lukt het niet:** kijk naar de alternatieven in hoofdstuk 7 van het DJI-document. Mogelijke oorzaken:
   - bouwproblemen met de oude SDK en de huidige Xcode (zie GitHub-issue #560 van de DJI-SDK);

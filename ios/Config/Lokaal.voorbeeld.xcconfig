@@ -1,0 +1,12 @@
+// Voorbeeld voor Lokaal.xcconfig. Kopieer dit bestand naar Lokaal.xcconfig
+// (in dezelfde map) en vul daar je eigen waarden in. Lokaal.xcconfig staat in
+// .gitignore en komt dus nooit in git. Zet in DIT voorbeeldbestand nooit een
+// echte sleutel.
+
+// Je App Key van developer.dji.com (User Center -> Apps -> Veldvlucht).
+// Plak hem direct na het =-teken, zonder aanhalingstekens.
+DJI_APP_KEY =
+
+// Je Apple-team voor het ondertekenen van de app. Staat in Xcode bij
+// Settings -> Accounts, of laat Xcode het invullen bij Signing & Capabilities.
+DEVELOPMENT_TEAM =

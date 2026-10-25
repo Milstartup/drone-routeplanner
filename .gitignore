@@ -3,3 +3,12 @@ dist/
 .env.local
 .env.*.local
 *.log
+
+# iPhone-app (ios/)
+ios/Config/Lokaal.xcconfig
+ios/Pods/
+ios/vendor/
+ios/build/
+xcuserdata/
+DerivedData/
+.DS_Store

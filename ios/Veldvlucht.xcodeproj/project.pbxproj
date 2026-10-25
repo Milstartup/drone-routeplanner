@@ -1,0 +1,372 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		097FBB36F9BD370DCC3BC607 /* libPods-Veldvlucht.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4ACA47D0D5959639DEE4ECB /* libPods-Veldvlucht.a */; };
+		A10000000000000000000030 /* VeldvluchtApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000020 /* VeldvluchtApp.swift */; };
+		A10000000000000000000031 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* ContentView.swift */; };
+		A10000000000000000000032 /* DroneStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* DroneStatus.swift */; };
+		A10000000000000000000033 /* DJIConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* DJIConnection.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		11D2A5DEB79F0312E0C4F4DB /* Pods-Veldvlucht.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Veldvlucht.debug.xcconfig"; path = "Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht.debug.xcconfig"; sourceTree = "<group>"; };
+		A10000000000000000000011 /* Veldvlucht.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veldvlucht.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000020 /* VeldvluchtApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VeldvluchtApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000021 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A10000000000000000000022 /* DroneStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroneStatus.swift; sourceTree = "<group>"; };
+		A10000000000000000000023 /* DJIConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DJIConnection.swift; sourceTree = "<group>"; };
+		A10000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000025 /* Veldvlucht.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Veldvlucht.xcconfig; sourceTree = "<group>"; };
+		A10000000000000000000026 /* Lokaal.voorbeeld.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Lokaal.voorbeeld.xcconfig; sourceTree = "<group>"; };
+		D4ACA47D0D5959639DEE4ECB /* libPods-Veldvlucht.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Veldvlucht.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA7944098F58BE630AB72597 /* Pods-Veldvlucht.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Veldvlucht.release.xcconfig"; path = "Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht.release.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000041 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				097FBB36F9BD370DCC3BC607 /* libPods-Veldvlucht.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0C24E96C4DA15D58AF75BD5B /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				11D2A5DEB79F0312E0C4F4DB /* Pods-Veldvlucht.debug.xcconfig */,
+				DA7944098F58BE630AB72597 /* Pods-Veldvlucht.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		59B9354921F803E131374498 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D4ACA47D0D5959639DEE4ECB /* libPods-Veldvlucht.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000004 /* Veldvlucht */,
+				A10000000000000000000005 /* Config */,
+				A10000000000000000000003 /* Products */,
+				0C24E96C4DA15D58AF75BD5B /* Pods */,
+				59B9354921F803E131374498 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000011 /* Veldvlucht.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000004 /* Veldvlucht */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000020 /* VeldvluchtApp.swift */,
+				A10000000000000000000021 /* ContentView.swift */,
+				A10000000000000000000022 /* DroneStatus.swift */,
+				A10000000000000000000023 /* DJIConnection.swift */,
+				A10000000000000000000024 /* Info.plist */,
+			);
+			path = Veldvlucht;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000005 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000025 /* Veldvlucht.xcconfig */,
+				A10000000000000000000026 /* Lokaal.voorbeeld.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000010 /* Veldvlucht */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000053 /* Build configuration list for PBXNativeTarget "Veldvlucht" */;
+			buildPhases = (
+				61157526C5DF6E375BA235BB /* [CP] Check Pods Manifest.lock */,
+				A10000000000000000000043 /* Check DJI App Key */,
+				A10000000000000000000040 /* Sources */,
+				A10000000000000000000041 /* Frameworks */,
+				A10000000000000000000042 /* Resources */,
+				7BBC2DA744D948FC532AD0DF /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Veldvlucht;
+			productName = Veldvlucht;
+			productReference = A10000000000000000000011 /* Veldvlucht.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					A10000000000000000000010 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = A10000000000000000000050 /* Build configuration list for PBXProject "Veldvlucht" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = nl;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				nl,
+				Base,
+			);
+			mainGroup = A10000000000000000000002;
+			productRefGroup = A10000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000010 /* Veldvlucht */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000042 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		61157526C5DF6E375BA235BB /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Veldvlucht-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		7BBC2DA744D948FC532AD0DF /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A10000000000000000000043 /* Check DJI App Key */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Check DJI App Key";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# The key comes from Config/Lokaal.xcconfig, which is not in git.\nif [ -z \"${DJI_APP_KEY}\" ]; then\n  echo \"error: De DJI App Key ontbreekt. Vul DJI_APP_KEY in ios/Config/Lokaal.xcconfig in. Bestaat dat bestand niet, kopieer dan Lokaal.voorbeeld.xcconfig naar Lokaal.xcconfig. Zie ios/README.md.\"\n  exit 1\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000040 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000030 /* VeldvluchtApp.swift in Sources */,
+				A10000000000000000000031 /* ContentView.swift in Sources */,
+				A10000000000000000000032 /* DroneStatus.swift in Sources */,
+				A10000000000000000000033 /* DJIConnection.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000000000000000000051 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000025 /* Veldvlucht.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000000000000000000052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000025 /* Veldvlucht.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A10000000000000000000054 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 11D2A5DEB79F0312E0C4F4DB /* Pods-Veldvlucht.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Veldvlucht/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.milanmehrzad.veldvlucht;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A10000000000000000000055 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = DA7944098F58BE630AB72597 /* Pods-Veldvlucht.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Veldvlucht/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.milanmehrzad.veldvlucht;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000050 /* Build configuration list for PBXProject "Veldvlucht" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000051 /* Debug */,
+				A10000000000000000000052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000053 /* Build configuration list for PBXNativeTarget "Veldvlucht" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000054 /* Debug */,
+				A10000000000000000000055 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000000000000000000001 /* Project object */;
+}

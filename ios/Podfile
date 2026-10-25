@@ -1,0 +1,16 @@
+# DJI Mobile SDK 4.16.2 (the last iOS release) is only available through CocoaPods.
+# Install or update from this folder with: bundle exec pod install
+platform :ios, '16.0'
+
+target 'Veldvlucht' do
+  pod 'DJI-SDK-iOS', '4.16.2'
+end
+
+post_install do |installer|
+  # The DJI podspec still says iOS 9.0, below what Xcode 16 supports.
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+    end
+  end
+end

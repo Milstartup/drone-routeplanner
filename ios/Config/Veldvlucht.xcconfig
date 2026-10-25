@@ -1,0 +1,8 @@
+// Project-wide settings for Veldvlucht.
+//
+// Values that belong to this Mac and must stay out of git (the DJI App Key and
+// the Apple signing team) live in Lokaal.xcconfig next to this file. That file
+// is listed in .gitignore; Lokaal.voorbeeld.xcconfig shows what goes in it.
+// The "Check DJI App Key" build step stops the build if the key is missing.
+
+#include? "Lokaal.xcconfig"

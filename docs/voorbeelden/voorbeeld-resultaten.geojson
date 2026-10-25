@@ -1,0 +1,127 @@
+{
+  "type": "FeatureCollection",
+  "properties": {
+    "format": "veld/resultaten",
+    "version": 0,
+    "fieldId": "veld-noord",
+    "createdAt": "2026-10-25T12:00:00+01:00"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.5410, 52.4980], [5.5440, 52.4980], [5.5440, 52.5000], [5.5410, 52.5000], [5.5410, 52.4980]]]
+      },
+      "properties": { "kind": "veldgrens", "name": "Broccoli noord" }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.5410, 52.4980], [5.5416, 52.4980], [5.5416, 52.5000], [5.5410, 52.5000], [5.5410, 52.4980]]]
+      },
+      "properties": {
+        "kind": "waterzone",
+        "name": "Strook 1",
+        "advice": "genoeg",
+        "amountMm": null,
+        "reason": "Sensor s1 is vochtig (ruwe waarde 478, licht stijgend). Op 28 oktober wordt 4,8 mm regen verwacht.",
+        "confidence": 0.7
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.5416, 52.4980], [5.5422, 52.4980], [5.5422, 52.5000], [5.5416, 52.5000], [5.5416, 52.4980]]]
+      },
+      "properties": {
+        "kind": "waterzone",
+        "name": "Strook 2",
+        "advice": "genoeg",
+        "amountMm": null,
+        "reason": "Geen eigen sensor. Ligt tussen s1 (vochtig) en s2 (49 % vocht). De planten op de foto's zien er gelijkmatig uit.",
+        "confidence": 0.4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.5422, 52.4980], [5.5428, 52.4980], [5.5428, 52.5000], [5.5422, 52.5000], [5.5422, 52.4980]]]
+      },
+      "properties": {
+        "kind": "waterzone",
+        "name": "Strook 3",
+        "advice": "binnenkort",
+        "amountMm": 8,
+        "reason": "Sensor s2: 49 % vocht en elke dag ongeveer 3 procentpunt droger. Na 28 oktober weinig regen verwacht.",
+        "confidence": 0.6
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.5428, 52.4980], [5.5434, 52.4980], [5.5434, 52.5000], [5.5428, 52.5000], [5.5428, 52.4980]]]
+      },
+      "properties": {
+        "kind": "waterzone",
+        "name": "Strook 4",
+        "advice": "binnenkort",
+        "amountMm": 8,
+        "reason": "Geen eigen sensor. Ligt tussen s2 (binnenkort) en s3 (droog).",
+        "confidence": 0.4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.5434, 52.4980], [5.5440, 52.4980], [5.5440, 52.5000], [5.5434, 52.5000], [5.5434, 52.4980]]]
+      },
+      "properties": {
+        "kind": "waterzone",
+        "name": "Strook 5",
+        "advice": "water",
+        "amountMm": 12,
+        "reason": "Sensor s3 is droog (ruwe waarde 761, elke dag hoger) en tot en met 27 oktober valt er vrijwel geen regen.",
+        "confidence": 0.7
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [5.5413693, 52.4991996] },
+      "properties": {
+        "kind": "aandacht",
+        "reason": "Plant duidelijk geler dan de planten eromheen.",
+        "photoFile": "DJI_0026.JPG",
+        "flightId": "2026-10-25-veld-noord-1",
+        "confidence": 0.6
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [5.5425511, 52.4991996] },
+      "properties": {
+        "kind": "aandacht",
+        "reason": "Kale plek van ongeveer 2 m in de rij: mogelijk uitgevallen planten.",
+        "photoFile": "DJI_0098.JPG",
+        "flightId": "2026-10-25-veld-noord-1",
+        "confidence": 0.7
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [5.5434375, 52.4986925] },
+      "properties": {
+        "kind": "aandacht",
+        "reason": "Planten kleiner dan hun buren (achterblijvende groei), in de droge strook.",
+        "photoFile": "DJI_0151.JPG",
+        "flightId": "2026-10-25-veld-noord-1",
+        "confidence": 0.5
+      }
+    }
+  ]
+}

@@ -1,11 +1,15 @@
 # Stappenplan: van routeplanner naar drone, sensoren en veldkaart
 
-Stand op 25 oktober 2026:
+Stand op 26 oktober 2026:
 
 - **Klaar:** de routeplanner (browser-app in deze repository).
+- **Gebouwd, nog niet getest op de iPhone:** de iPhone-app **Veldvlucht** in [`ios/`](../ios/README.md), met drie tabbladen:
+  - **Drone:** de haalbaarheidstest (stap 2);
+  - **Route:** routebestand inlezen, controleren en op de kaart tonen (eerste deel van stap 3);
+  - **Veldkaart:** met voorbeeldgegevens (stap 7).
 - **Nog te bouwen:**
-  - de iPhone-app die de route vliegt en onderweg foto's maakt met de camera van de drone (stap 0 t/m 6);
-  - daarnaast de bodemvochtsensoren, het centrale systeem met de AI en de veldkaart in de iPhone-app (stap 7 t/m 9).
+  - het vliegen zelf: stuurlus, foto's onderweg en veiligheid (rest van stap 3, stap 4 t/m 6). Dat begint pas na een geslaagde test met de drone in stap 2;
+  - de bodemvochtsensoren en het centrale systeem met de AI (stap 8 en 9).
 
 Achtergrond:
 
@@ -158,6 +162,10 @@ Vlieg hierbij nog niet.
 ## Stap 3: route en foto's, zonder te vliegen
 
 - Het `.routeplan.json` inlezen (AirDrop of de Bestanden-app), opnieuw valideren en op een kaart tonen.
+  - **Gebouwd (26 oktober 2026):** tabblad *Route* in de app.
+  - De app gebruikt de regels van de planner, plus eigen controles op het blok `derived` dat hij straks vliegt.
+  - Strenger dan de planner: een foto-interval onder 2 s is in de app een **fout**.
+  - De regels staan in `ios/VeldvluchtKern` en worden getest met `swift test` (zie [ios/README.md](../ios/README.md)).
 - Een stuurlus van ongeveer 10 Hz met Virtual Stick en het fotomoment per fotopositie uitproberen in de **ingebouwde simulator van de DJI-SDK**. Haal de propellers eraf als de drone voor de simulator aangesloten is.
 - Testen in de simulator:
   - Klopt de vliegrichting (pitch/roll)?
@@ -205,6 +213,19 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
    - sensorpunten met de laatste meting;
    - een weerbalk.
 3. Test het in het veld: is alles in één oogopslag duidelijk, ook in de zon?
+
+**Gebouwd (26 oktober 2026):**
+
+- Stap 1 en 2: de voorbeeldbestanden staan in [`docs/voorbeelden/`](voorbeelden/). Het tabblad *Veldkaart* in de app toont ze:
+  - luchtfoto van PDOK;
+  - stroken in blauw, geel of rood;
+  - markeringen en sensoren: tik erop voor de reden, de foto-naam of het verloop;
+  - weerbalk met het beste vliegmoment.
+- Nieuw dataformaat `veld/weer` voor de weerbalk (hoofdstuk 6 van [ARCHITECTUUR.md](ARCHITECTUUR.md)).
+- **Nog te doen:**
+  - stap 3: testen in het veld;
+  - later: echte gegevens van het centrale systeem in plaats van de voorbeeldbestanden;
+  - terugkijken naar eerdere datums.
 
 ## Stap 8: sensorkastje
 

@@ -1,13 +1,14 @@
-# Veldvlucht: de haalbaarheidstest (stap 2)
+# Veldvlucht: de iPhone-app
 
-Dit is de eerste, kleinste versie van de iPhone-app (stap 2 in [STAPPENPLAN.md](../docs/STAPPENPLAN.md)). De app doet **alleen** dit:
+De iPhone-app uit [STAPPENPLAN.md](../docs/STAPPENPLAN.md). Hij heeft drie tabbladen, elk los van de andere:
 
-1. zich aanmelden bij DJI met de App Key;
-2. verbinding maken met de afstandsbediening en de Mavic Mini;
-3. accu, GPS-satellieten en de firmwareversie van de drone tonen;
-4. **op de grond één foto maken** met de camera van de drone.
+| Tabblad | Wat het doet | Stap |
+|---|---|---|
+| **Drone** | De haalbaarheidstest: aanmelden bij DJI, verbinden met de Mavic Mini, accu, GPS en firmware tonen, en **op de grond één foto maken**. | 2 |
+| **Route** | Een routebestand van de planner inlezen, opnieuw controleren en op de luchtfoto tonen. | 3 (eerste deel) |
+| **Veldkaart** | Het veld met stroken in blauw, geel of rood, markeringen, sensoren en het weer. Nu nog met **voorbeeldgegevens**. | 7 |
 
-**Wat de app niet doet:** hij stuurt **geen vliegcommando's**, toont geen live camerabeeld en leest nog geen route in. De fotoknop werkt alleen als de drone niet vliegt.
+**Wat de app niet doet:** hij stuurt **geen vliegcommando's** en toont geen live camerabeeld. De fotoknop werkt alleen als de drone niet vliegt. Vliegen komt pas na een geslaagde test met de drone.
 
 ## Wat er in deze map staat
 
@@ -15,7 +16,9 @@ Dit is de eerste, kleinste versie van de iPhone-app (stap 2 in [STAPPENPLAN.md](
 |---|---|---|
 | `Veldvlucht.xcworkspace` | **Dit open je in Xcode.** Bundelt de app en de DJI-SDK. | Ja |
 | `Veldvlucht.xcodeproj` | Het Xcode-project van de app. Niet los openen, maar via de workspace. | Ja |
-| `Veldvlucht/` | De broncode (Swift) en `Info.plist`. | Ja |
+| `Veldvlucht/` | De schermen en de DJI-koppeling (Swift), plus `Info.plist`. | Ja |
+| `VeldvluchtKern/` | Het rekenwerk zonder drone of scherm: routebestand, controles, dataformaten. Met tests. | Ja |
+| `../docs/voorbeelden/` | Voorbeeldbestanden in alle dataformaten. Gaan mee in de app als map `voorbeelden`. | Ja |
 | `Config/Veldvlucht.xcconfig` | Instellingen; leest `Lokaal.xcconfig` in. | Ja |
 | `Config/Lokaal.voorbeeld.xcconfig` | Voorbeeld van wat er in `Lokaal.xcconfig` hoort, zonder echte sleutel. | Ja |
 | `Config/Lokaal.xcconfig` | **Je DJI App Key** en je Apple-team. Alleen op deze Mac. | **Nee** (`.gitignore`) |
@@ -40,6 +43,14 @@ Dit is de eerste, kleinste versie van de iPhone-app (stap 2 in [STAPPENPLAN.md](
 - `Config/Lokaal.xcconfig` is aangemaakt met je Apple-team (Personal Team). **Alleen de App Key moet je er zelf nog in zetten.**
 - **Nog niet getest:** de app op je iPhone met de drone. Dat is de test hieronder.
   - De iPhone-simulator kon vanuit Claude's sessie niet opstarten. Voor deze test maakt dat niet uit: de drone werkt alleen met een echte iPhone.
+
+**Erbij gekomen op 26 oktober 2026:**
+
+- Het tabblad **Route** (zie "Een route inlezen" hieronder).
+- Het tabblad **Veldkaart** (zie "De veldkaart" hieronder).
+- Het rekenpakket `VeldvluchtKern` met **31 tests die allemaal slagen**.
+- De app bouwt nog steeds zonder fouten of waarschuwingen.
+- **Niet getest:** hoe de schermen er op de iPhone uitzien. De simulator werkte niet, dus dat zie je pas als je de app op je iPhone zet. Laat het Claude weten als iets er vreemd uitziet.
 
 ## Eenmalig: je App Key invullen
 
@@ -109,6 +120,54 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
 - Open hem in Voorvertoning en kies *Extra → Toon info*. Staat er een tabblad met GPS of een locatie, dan zet de Mavic Mini GPS in de foto's.
 - Dat zal alleen zo zijn als de drone op het moment van de foto GPS had.
 
+## Een route inlezen (tabblad Route)
+
+1. **Maak een route in de planner** en klik op *Download JSON*. Je krijgt een bestand `….routeplan.json`.
+2. **Zet het bestand op de iPhone.** Bijvoorbeeld:
+   - met **AirDrop** vanaf de Mac: kies op de iPhone *Veldvlucht*, of bewaar het in *Bestanden*;
+   - via **iCloud Drive**: zet het bestand in iCloud Drive op de computer.
+3. **Open het in de app:** tabblad *Route* → **Routebestand openen…** → kies het bestand.
+   - Wil je alleen kijken hoe het werkt? Kies **Voorbeeldroute laden**.
+4. **Lees de controle.**
+   - **Rood** = fout: met een fout kan de route straks niet gevlogen worden. Pas de route aan in de planner.
+   - **Oranje** = waarschuwing: lees hem en beslis zelf.
+   - De app controleert met de regels van de planner én met eigen regels (zie [ROUTEBESTAND.md](../docs/ROUTEBESTAND.md)). Een foto-interval onder 2 s is in de app altijd een fout.
+5. **Toon op de kaart:**
+   - geel = stukken met foto's;
+   - oranje gestippeld = stukken zonder foto's, en de weg van en naar het startpunt;
+   - witte stippen = de geplande foto's.
+
+## De veldkaart (tabblad Veldkaart)
+
+De veldkaart toont nu **voorbeeldgegevens** voor een verzonnen broccoliveld `veld-noord` bij Dronten. Zodra het centrale systeem bestaat, komen daar de echte gegevens.
+
+- **Bovenaan:** het weer voor vijf dagen en het **beste vliegmoment**. Een windstoot van 8 m/s of meer staat in oranje: dat is de grens van de Mavic Mini.
+- **Op de kaart:**
+  - **stroken** in **blauw** (genoeg water), **geel** (binnenkort water geven) of **rood** (nu water geven);
+  - **paarse** markeringen: planten of plekken die aandacht nodig hebben;
+  - **turquoise** druppels: de bodemvochtsensoren met hun laatste meting.
+- **Tik** op een strook, markering of sensor voor de details:
+  - bij een strook: **waarop het advies gebaseerd is**;
+  - bij een markering: de reden en de naam van de foto;
+  - bij een sensor: een grafiek van de afgelopen dagen.
+- **Kaart wisselen:** rechtsboven, knop *Kaart*. Kies tussen de luchtfoto van PDOK (alleen Nederland, scherper) en de satellietkaart van Apple.
+- **Je eigen plek:** de eerste keer vraagt de app of hij je locatie mag gebruiken. Dan zie je in het veld een blauwe stip.
+
+## Het rekenpakket testen
+
+Het rekenwerk (routebestand, controles, dataformaten) staat apart in `VeldvluchtKern`, zonder DJI- of iPhone-code. Net als `src/core` bij de planner. Daardoor kun je het testen op de Mac, zonder iPhone of simulator:
+
+1. Ga naar de map van het pakket:
+   ```bash
+   cd ~/Documents/GitHub/drone-routeplanner/ios/VeldvluchtKern
+   ```
+2. Draai de tests:
+   ```bash
+   swift test
+   ```
+
+Onderaan moet staan: *Executed 31 tests, with 0 failures*. De tests lezen ook alle voorbeeldbestanden uit `docs/voorbeelden`, dus een fout in zo'n bestand valt meteen op.
+
 ## Uitslag: go of no-go
 
 | Onderdeel | Gelukt? |
@@ -122,7 +181,7 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
 | Eén foto op de SD-kaart | |
 | GPS in de foto (EXIF) | |
 
-**Alles gelukt:** go. De volgende stap is stap 3 (route inlezen en in de DJI-simulator testen).
+**Alles gelukt:** go. De volgende stap is de rest van stap 3: de stuurlus en de foto's uitproberen in de simulator van DJI.
 **Iets mislukt:** stuur het logboek naar Claude en kijk bij "Als het misgaat" hieronder.
 
 ## Als het misgaat
@@ -169,10 +228,19 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 
 | Bestand | Wat het doet |
 |---|---|
-| `VeldvluchtApp.swift` | Start de app, houdt het scherm aan en start de aanmelding bij DJI. |
-| `ContentView.swift` | Het scherm met de vier stappen en het logboek. Bevat geen DJI-code. |
-| `DroneStatus.swift` | Wat het scherm laat zien (accu, GPS, firmware, foto...), in gewone Swift. |
+| `VeldvluchtApp.swift` | Start de app met de drie tabbladen, houdt het scherm aan en start de aanmelding bij DJI. Vangt ook routebestanden op die via AirDrop of *Deel* binnenkomen. |
+| `DroneTestView.swift` | Tabblad *Drone*: de vier stappen en het logboek. Bevat geen DJI-code. |
+| `DroneStatus.swift` | Wat het tabblad *Drone* laat zien (accu, GPS, firmware, foto...), in gewone Swift. |
 | `DJIConnection.swift` | De **enige** plek die de DJI-SDK aanroept (de "DJI-adapter" uit hoofdstuk 6.1 van [DJI-MOBILE-SDK-V4.md](../docs/DJI-MOBILE-SDK-V4.md)). |
+| `RouteView.swift` | Tabblad *Route*: bestand kiezen, controle tonen, kaart. |
+| `FieldMapScreen.swift` | Tabblad *Veldkaart*: weerbalk, kaart en de details na een tik. |
+| `MapCanvas.swift` | De kaart (Apple MapKit) met de PDOK-luchtfoto, vlakken, lijnen en punten. |
+| `SampleData.swift` | Leest de voorbeeldbestanden die in de app zitten. |
+| `VeldvluchtKern/…/RoutePlanFile.swift` | Het routebestand inlezen. Andere formaten en ongeldige coördinaten worden geweigerd. |
+| `VeldvluchtKern/…/RouteCheck.swift` | De controles op de route, en de eigen berekening van afstand en vliegtijd. |
+| `VeldvluchtKern/…/FieldFormats.swift` | De dataformaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md). |
+| `VeldvluchtKern/…/FieldSummary.swift` | Sorteert en beschrijft wat de veldkaart toont. Rekent zelf geen advies uit. |
+| `VeldvluchtKern/…/Geo.swift` | Afstanden en vormen op de kaart, met dezelfde formules als de planner. |
 | `Info.plist` | App-instellingen: de App Key (`DJISDKAppKey`, uit `Lokaal.xcconfig`), de DJI-protocollen voor de afstandsbediening en de teksten voor de toestemmingsvragen. |
 
 **Bewuste keuzes:**

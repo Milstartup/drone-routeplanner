@@ -155,7 +155,9 @@ src/
              validatie, JSON-formaat. Hier staan ook alle tests.
   map/       Kaartbronnen (URL, bronvermelding, voorwaarden).
   ui/        React-schermen: kaart (Leaflet), panelen, simulatieklok, opslag in de browser.
-docs/        Routebestand en onderzoek naar de DJI Mobile SDK.
+docs/        Routebestand, architectuur, stappenplan en onderzoek naar de DJI Mobile SDK.
+  voorbeelden/  Voorbeeldbestanden in alle dataformaten.
+ios/         De iPhone-app Veldvlucht (Swift, Xcode op een Mac). Zie ios/README.md.
 ```
 
 - De **routeplanner staat los van de dronebesturing.** `src/core` importeert alleen andere bestanden uit `src/core`.
@@ -171,9 +173,15 @@ docs/        Routebestand en onderzoek naar de DJI Mobile SDK.
 
 Leaflet is gekozen omdat het licht is, gewone kaarttegels toont en zelf geen sleutel nodig heeft.
 
-## Volgende stap: de iPhone-app
+## De iPhone-app
 
-Zie:
+De iPhone-app **Veldvlucht** staat in [`ios/`](ios/README.md). Hij is gebouwd, maar nog niet getest met de drone:
+
+- **Drone:** de haalbaarheidstest (aanmelden bij DJI, verbinden, accu, GPS, firmware en één foto op de grond);
+- **Route:** een `.routeplan.json` van deze planner inlezen, opnieuw controleren en op de kaart tonen;
+- **Veldkaart:** het veld met wateradvies, markeringen, sensoren en weer, nu nog met voorbeeldgegevens.
+
+Vliegen kan de app nog niet. Zie verder:
 
 - [docs/STAPPENPLAN.md](docs/STAPPENPLAN.md) voor de volgende stappen;
 - [docs/ARCHITECTUUR.md](docs/ARCHITECTUUR.md) voor het hele systeem (drone, bodemvochtsensoren, weer, centraal systeem met AI en de veldkaart in de app);

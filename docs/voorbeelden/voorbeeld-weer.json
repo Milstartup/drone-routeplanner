@@ -1,0 +1,28 @@
+{
+  "format": "veld/weer",
+  "version": 0,
+  "fieldId": "veld-noord",
+  "location": { "lat": 52.499, "lng": 5.5425 },
+  "source": "Open-Meteo (voorbeeldwaarden)",
+  "attribution": "Weergegevens door Open-Meteo.com (CC BY 4.0)",
+  "createdAt": "2026-10-25T12:00:00+01:00",
+  "days": [
+    { "date": "2026-10-26", "precipitationMm": 0.0, "tempMinC": 6, "tempMaxC": 13, "windMaxMps": 5.5, "gustMaxMps": 9.8, "evaporationMm": 0.7 },
+    { "date": "2026-10-27", "precipitationMm": 0.2, "tempMinC": 5, "tempMaxC": 12, "windMaxMps": 3.4, "gustMaxMps": 6.1, "evaporationMm": 0.6 },
+    { "date": "2026-10-28", "precipitationMm": 4.8, "tempMinC": 8, "tempMaxC": 12, "windMaxMps": 7.2, "gustMaxMps": 12.5, "evaporationMm": 0.4 },
+    { "date": "2026-10-29", "precipitationMm": 1.1, "tempMinC": 7, "tempMaxC": 11, "windMaxMps": 6.0, "gustMaxMps": 10.4, "evaporationMm": 0.5 },
+    { "date": "2026-10-30", "precipitationMm": 0.0, "tempMinC": 4, "tempMaxC": 10, "windMaxMps": 2.8, "gustMaxMps": 5.2, "evaporationMm": 0.6 }
+  ],
+  "flightWindows": [
+    {
+      "start": "2026-10-27T11:00:00+01:00",
+      "end": "2026-10-27T15:00:00+01:00",
+      "reason": "Wind 3 m/s met windstoten tot 6 m/s, droog en daglicht."
+    },
+    {
+      "start": "2026-10-30T10:00:00+01:00",
+      "end": "2026-10-30T14:00:00+01:00",
+      "reason": "Wind 3 m/s met windstoten tot 5 m/s, droog en daglicht."
+    }
+  ]
+}

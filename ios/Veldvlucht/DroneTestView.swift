@@ -2,7 +2,7 @@
 import SwiftUI
 import UIKit
 
-struct ContentView: View {
+struct DroneTestView: View {
     @ObservedObject var drone: DJIConnection
 
     private var status: DroneStatus { drone.status }
@@ -143,7 +143,7 @@ struct ContentView: View {
 }
 
 /// A row with a green tick, a red cross or an hourglass (ok == nil: still waiting).
-private struct Check: View {
+struct Check: View {
     let label: String
     let ok: Bool?
 
@@ -163,7 +163,7 @@ private struct Check: View {
     }
 }
 
-private struct Row: View {
+struct Row: View {
     let label: String
     let value: String
 

@@ -1,0 +1,59 @@
+{
+  "format": "veld/fotolog",
+  "version": 0,
+  "flightId": "2026-10-25-veld-noord-1",
+  "fieldId": "veld-noord",
+  "routePlanName": "Broccoli noord (voorbeeld)",
+  "photos": [
+    {
+      "index": 0,
+      "plannedPhotoIndex": 0,
+      "file": "DJI_0001.JPG",
+      "time": "2026-10-25T10:14:03+01:00",
+      "lat": 52.498045,
+      "lng": 5.5410739,
+      "altitudeM": 30,
+      "headingDeg": 0
+    },
+    {
+      "index": 1,
+      "plannedPhotoIndex": 1,
+      "file": "DJI_0002.JPG",
+      "time": "2026-10-25T10:14:06+01:00",
+      "lat": 52.4981531,
+      "lng": 5.5410741,
+      "altitudeM": 30.2,
+      "headingDeg": 1
+    },
+    {
+      "index": 2,
+      "plannedPhotoIndex": 2,
+      "file": "DJI_0003.JPG",
+      "time": "2026-10-25T10:14:09+01:00",
+      "lat": 52.4982606,
+      "lng": 5.5410736,
+      "altitudeM": 30.1,
+      "headingDeg": 0
+    },
+    {
+      "index": 3,
+      "plannedPhotoIndex": 3,
+      "file": "DJI_0004.JPG",
+      "time": "2026-10-25T10:14:12+01:00",
+      "lat": 52.4983690,
+      "lng": 5.5410741,
+      "altitudeM": 29.9,
+      "headingDeg": 359
+    },
+    {
+      "index": 4,
+      "plannedPhotoIndex": 4,
+      "file": "DJI_0005.JPG",
+      "time": "2026-10-25T10:14:15+01:00",
+      "lat": 52.4984765,
+      "lng": 5.5410738,
+      "altitudeM": 30,
+      "headingDeg": 0
+    }
+  ]
+}

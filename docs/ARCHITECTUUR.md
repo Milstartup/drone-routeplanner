@@ -30,10 +30,10 @@ Een AI in het centrale systeem bepaalt daaruit **hoeveel water welke delen van h
 | Onderdeel | Status | Waar |
 |---|---|---|
 | Routeplanner | **Klaar** (prototype) | Deze repository, `src/` |
-| Drone-app (vliegen + foto's) | Ontwerp | [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
+| Drone-app (vliegen + foto's) | Haalbaarheidstest en route inlezen **gebouwd**, nog niet getest met de drone; vliegen nog niet | [`ios/`](../ios/README.md), [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
 | Sensorkastje | Ontwerp | Dit document, hoofdstuk 2 |
 | Centraal systeem + AI | Ontwerp | Dit document, hoofdstuk 4 |
-| Veldkaart in de iPhone-app | Ontwerp | Dit document, hoofdstuk 5 |
+| Veldkaart in de iPhone-app | **Gebouwd** met voorbeeldgegevens | [`ios/`](../ios/README.md), dit document, hoofdstuk 5 |
 
 ## Scheidingsregels
 
@@ -132,6 +132,9 @@ Eén scherm per veld, overzichtelijk te gebruiken in het veld.
 
 Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijdzone. Elk formaat krijgt een `format` en een `version`, net als het routebestand.
 
+- **Voorbeeldbestanden** van elk formaat staan in [`voorbeelden/`](voorbeelden/), allemaal voor hetzelfde voorbeeldveld `veld-noord`. De iPhone-app gebruikt ze voor de veldkaart, en de tests in `ios/VeldvluchtKern` controleren ze.
+- **Zomertijd:** tot 25 oktober 2026 03:00 is het in Nederland `+02:00`, daarna `+01:00`. Een meting op 25 oktober om 06:00 is dus `2026-10-25T06:00:00+01:00`.
+
 ### Sensormeting
 
 ```json
@@ -142,7 +145,7 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
   "fieldId": "veld-noord",
   "location": { "lat": 52.4991, "lng": 5.5431 },
   "depthCm": 15,
-  "time": "2026-10-25T06:00:00+02:00",
+  "time": "2026-10-25T06:00:00+01:00",
   "raw": 612,
   "moisturePercent": null,
   "calibration": null,
@@ -150,8 +153,10 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
 }
 ```
 
-- `raw` is de ruwe sensorwaarde.
+- `raw` is de ruwe sensorwaarde. Bij de school-sensor betekent een hogere waarde meestal droger.
 - `moisturePercent` en `calibration` blijven leeg tot de sensor geijkt is.
+- Na het ijken: `"calibration": { "dryRaw": 860, "wetRaw": 340 }`, de ruwe waarden in droge en in verzadigde grond van het veld. Het centrale systeem rekent dan `moisturePercent` uit.
+- Meerdere metingen in één bestand: een JSON-lijst van zulke objecten (zie [`voorbeelden/voorbeeld-sensormetingen.json`](voorbeelden/voorbeeld-sensormetingen.json)).
 
 ### Fotolog (per vlucht)
 
@@ -167,7 +172,7 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
       "index": 0,
       "plannedPhotoIndex": 0,
       "file": "DJI_0001.JPG",
-      "time": "2026-10-25T10:14:03+02:00",
+      "time": "2026-10-25T10:14:03+01:00",
       "lat": 52.49912,
       "lng": 5.54268,
       "altitudeM": 30,
@@ -185,7 +190,7 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
 ```json
 {
   "type": "FeatureCollection",
-  "properties": { "format": "veld/resultaten", "version": 0, "fieldId": "veld-noord", "createdAt": "2026-10-25T12:00:00+02:00" },
+  "properties": { "format": "veld/resultaten", "version": 0, "fieldId": "veld-noord", "createdAt": "2026-10-25T12:00:00+01:00" },
   "features": [
     {
       "type": "Feature",
@@ -202,6 +207,43 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
 ```
 
 GeoJSON zet de lengtegraad **vóór** de breedtegraad (`[lng, lat]`), anders dan de andere formaten.
+
+Soorten (`kind`):
+
+| `kind` | Geometrie | Velden |
+|---|---|---|
+| `veldgrens` | Polygon | `name` |
+| `waterzone` | Polygon (een strook langs de rijrichting van de tractor) | `name`, `advice` (`genoeg`, `binnenkort` of `water`), `amountMm`, `reason`, `confidence` (0 tot 1) |
+| `aandacht` | Point | `reason`, `photoFile`, `flightId`, `confidence` |
+
+- **Elk advies en elke markering heeft een `reason`.** De app laat altijd zien waarop het gebaseerd is.
+- **Kleuren op de veldkaart:** `genoeg` blauw, `binnenkort` geel, `water` rood.
+
+### Weer (voor de veldkaart)
+
+Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weerdienst (hoofdstuk 3) en zet ze in dit formaat klaar, met de vliegmomenten uit hoofdstuk 7.
+
+```json
+{
+  "format": "veld/weer",
+  "version": 0,
+  "fieldId": "veld-noord",
+  "location": { "lat": 52.499, "lng": 5.5425 },
+  "source": "Open-Meteo",
+  "attribution": "Weergegevens door Open-Meteo.com (CC BY 4.0)",
+  "createdAt": "2026-10-25T12:00:00+01:00",
+  "days": [
+    { "date": "2026-10-27", "precipitationMm": 0.2, "tempMinC": 5, "tempMaxC": 12, "windMaxMps": 3.4, "gustMaxMps": 6.1, "evaporationMm": 0.6 }
+  ],
+  "flightWindows": [
+    { "start": "2026-10-27T11:00:00+01:00", "end": "2026-10-27T15:00:00+01:00", "reason": "Wind 3 m/s met windstoten tot 6 m/s, droog en daglicht." }
+  ]
+}
+```
+
+- `date` is de dag in Nederlandse tijd. Wind in m/s, omdat de grens van de Mavic Mini ook in m/s staat (8 m/s).
+- `attribution` is de verplichte bronvermelding van de weerdienst; de app toont die bij het weer.
+- `flightWindows` mag leeg zijn als er geen goed vliegmoment is.
 
 ## 7. Eisen (antwoorden van 25 oktober 2026)
 
@@ -275,9 +317,9 @@ GeoJSON zet de lengtegraad **vóór** de breedtegraad (`[lng, lat]`), anders dan
 
 Deze volgorde staat ook in [STAPPENPLAN.md](STAPPENPLAN.md).
 
-1. **Dataformaten** van hoofdstuk 6 vastleggen, met voorbeeldbestanden.
-2. **Veldkaart in de iPhone-app** met voorbeeldgegevens.
-3. **Drone-app:** de haalbaarheidstest, daarna vliegen en foto's.
+1. **Dataformaten** van hoofdstuk 6 vastleggen, met voorbeeldbestanden. *Gedaan: [`voorbeelden/`](voorbeelden/).*
+2. **Veldkaart in de iPhone-app** met voorbeeldgegevens. *Gebouwd in [`ios/`](../ios/README.md); nog te testen in het veld.*
+3. **Drone-app:** de haalbaarheidstest, daarna vliegen en foto's. *Haalbaarheidstest gebouwd; nog te testen met de drone.*
 4. **Eén sensorkastje** met de huidige sensor: eerst op tafel, dan in het veld.
 5. **Centraal systeem, stap voor stap:**
    1. ontvangen en opslaan;

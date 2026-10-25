@@ -109,3 +109,19 @@ Een ingekorte eigen route met drie punten, zonder startpunt. Op het eerste stuk 
 2. **Controleer opnieuw.** Gebruik dezelfde regels als de planner, plus wat alleen de app weet: actuele accu, GPS-ontvangst, wind, no-fly-zones en de werkelijke plek van het startpunt.
 3. **Het plan is een wens, geen opdracht.** De piloot bevestigt de route en houdt altijd de mogelijkheid om over te nemen (zie [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md)).
 4. **Hoogte is relatief.** Zet de drone op dezelfde plek en hoogte op als `home`, of reken het verschil door.
+
+## Wat de iPhone-app al doet (26 oktober 2026)
+
+Het tabblad *Route* in de app Veldvlucht ([ios/README.md](../ios/README.md)) leest dit bestand en volgt de regels hierboven:
+
+- **Regel 1:** andere `format`- of `version`-waarden, een ontbrekend blok `derived` en ongeldige coördinaten worden geweigerd, met een Nederlandse melding.
+- **Regel 2:** de app gebruikt de grenzen van de planner (hoogte, snelheid, aannames, afstand tot het startpunt, accutijd) en controleert daarnaast het blok `derived`, omdat de app dat straks vliegt:
+  - de routepunten zijn doorlopend genummerd en hebben de vlieghoogte;
+  - elk stuk loopt van punt *i* naar punt *i + 1*;
+  - bij een eigen route komen de punten overeen met `routePoints`;
+  - elke fotopositie ligt op een stuk met foto's, in vliegvolgorde;
+  - afstand en vliegtijd rekent de app zelf uit. Wijkt `derived.estimate` daar te veel van af, dan geeft de app een waarschuwing.
+- **Strenger dan de planner:** een foto-interval onder 2 s is in de app een fout, geen waarschuwing. Sneller kan de camera van de Mavic Mini niet.
+- Een voorbeeldbestand staat in [`voorbeelden/voorbeeld.routeplan.json`](voorbeelden/voorbeeld.routeplan.json): tien banen over het voorbeeldveld `veld-noord`, met startpunt en 180 foto's.
+  - Het is gemaakt met dezelfde formules als de planner, maar niet door de planner zelf.
+  - Ter controle kun je het in de planner openen met *JSON laden*.

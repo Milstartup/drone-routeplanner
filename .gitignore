@@ -12,3 +12,5 @@ ios/build/
 xcuserdata/
 DerivedData/
 .DS_Store
+ios/VeldvluchtKern/.build/
+ios/VeldvluchtKern/.swiftpm/

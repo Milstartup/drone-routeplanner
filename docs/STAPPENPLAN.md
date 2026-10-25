@@ -61,6 +61,11 @@ Achtergrond:
 
    Verschijnt de lege app op de iPhone, dan werkt het. Zo niet, probeer dan Xcode 26.3.
 
+   **Resultaat 25 oktober 2026: geslaagd.**
+   - Xcode 16.4 op de MacBook Pro 2018 zet een lege SwiftUI-app op de iPhone 13 met iOS 27.0.1.
+   - Daarvoor moest eerst het onderdeel "iOS 18.5" in Xcode gedownload worden (knop *Get*).
+   - Ingelogd met een gratis Apple ID (Personal Team), organisatie-id `nl.milanmehrzad`.
+
    Met een gratis Apple ID werkt dit ook. De app op de iPhone verloopt dan wel na ongeveer een week; daarna installeer je hem opnieuw vanuit Xcode.
 3. **DJI-ontwikkelaarsaccount** maken op <https://developer.dji.com>. De App Key volgt in stap 2, als de app een Bundle ID heeft.
 4. **Hardware testen met DJI Fly:**
@@ -108,6 +113,12 @@ Start daarna een **nieuwe Claude-sessie in deze map op de Mac**. Die sessie lees
 Zet de iPhone-app in een eigen map, bijvoorbeeld `ios/`. Neem niets van de dronecode op in `src/core`; dat bewaakt de test `separation.test.ts`.
 
 ## Stap 2: haalbaarheidstest (go/no-go)
+
+**Voorbereiding:**
+
+- **Kies de definitieve naam en Bundle ID**, bijvoorbeeld app **Veldvlucht** met Bundle ID `nl.milanmehrzad.veldvlucht`.
+- **Maak een App Key** op developer.dji.com (User Center → Apps → Create App, platform iOS) met **exact** die Bundle ID. De App Key werkt alleen met die Bundle ID.
+- **Zet de App Key niet in git.** Bewaar hem in een apart bestand dat in `.gitignore` staat.
 
 Bouw een minimale iPhone-app die **alleen**:
 

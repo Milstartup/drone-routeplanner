@@ -1,13 +1,16 @@
-# Stappenplan: van routeplanner naar vliegende drone
+# Stappenplan: van routeplanner naar drone, sensoren en veldkaart
 
 Stand op 25 oktober 2026:
 
 - **Klaar:** de routeplanner (browser-app in deze repository).
-- **Nog te bouwen:** de iPhone-app die de route vliegt en onderweg foto's maakt met de camera van de drone.
+- **Nog te bouwen:**
+  - de iPhone-app die de route vliegt en onderweg foto's maakt met de camera van de drone (stap 0 t/m 6);
+  - daarnaast de bodemvochtsensoren, het centrale systeem met de AI en de veldkaart in de iPhone-app (stap 7 t/m 9).
 
 Achtergrond:
 
-- [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md): onderzoek en ontwerp van de app.
+- [ARCHITECTUUR.md](ARCHITECTUUR.md): hoe drone, sensoren, weer en centraal systeem samenkomen, met de dataformaten.
+- [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md): onderzoek en ontwerp van de drone-app.
 - [ROUTEBESTAND.md](ROUTEBESTAND.md): het bestand dat de planner aan de app geeft.
 
 ## Hoe de foto's onderweg werken
@@ -17,7 +20,7 @@ Achtergrond:
 - **De camera** slaat de foto op de **microSD-kaart in de drone** op: JPEG, 12 MP, 4000 × 3000.
 - **De app** telt via `camera:didGenerateNewMediaFile:` welke foto's echt gelukt zijn. Zo kan een onderbroken vlucht later precies daar verder.
 - **Harde grens:** minimaal **2 seconden** tussen twee foto's (kortste intervalstand van de Mavic Mini). Bij 4 m/s is dat minimaal 8 m tussen foto's. De planner waarschuwt al bij kortere intervallen.
-- **Na de vlucht** gaan de foto's van de microSD-kaart naar het externe analysesysteem.
+- **Na de vlucht** gaan de foto's van de microSD-kaart naar het centrale systeem.
   - Controleer bij de eerste test of de Mavic Mini GPS-gegevens in de foto's (EXIF) zet.
   - De app bewaart daarnaast een logbestand met per foto het nummer, de tijd en de positie.
 
@@ -64,6 +67,7 @@ npm run dev
 Start daarna een **nieuwe Claude-sessie in deze map op de Mac**. Die sessie leest eerst:
 
 - dit bestand;
+- `docs/ARCHITECTUUR.md`;
 - `docs/DJI-MOBILE-SDK-V4.md`;
 - `docs/ROUTEBESTAND.md`.
 
@@ -113,11 +117,52 @@ Werk dit uit volgens hoofdstuk 6 van het DJI-document:
 2. Controleer daarna:
    - Zijn alle geplande foto's gemaakt?
    - Liggen ze op de goede plek?
-   - Zijn ze scherp genoeg voor het analysesysteem?
+   - Zijn ze scherp genoeg om de planten te beoordelen?
    - Bevatten ze GPS-gegevens?
 3. Daarna stap voor stap groter, tot een heel veld (verdeeld over meerdere accu's als de planner dat aangeeft).
 
-## Stap 6: foto's naar het analysesysteem
+## Stap 6: foto's naar het centrale systeem
 
 - Foto's van de microSD-kaart kopiëren, samen met het fotolog van de app.
-- Afspreken met het analysesysteem welk formaat het wil: alleen de JPEG's, of ook het log met posities.
+- Het fotolog volgt het formaat `veld/fotolog` uit hoofdstuk 6 van [ARCHITECTUUR.md](ARCHITECTUUR.md).
+- Zolang het centrale systeem er nog niet is: bewaar foto's en fotolog per vlucht in een eigen map.
+
+## Stap 7: veldkaart in de iPhone-app (met voorbeeldgegevens)
+
+Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappen 2 t/m 5.
+
+1. Maak voorbeeldbestanden in de formaten van [ARCHITECTUUR.md](ARCHITECTUUR.md):
+   - resultaten (zones en markeringen);
+   - sensormetingen.
+2. Bouw het veldkaartscherm:
+   - luchtfoto, veldgrens en zones gekleurd naar wateradvies;
+   - markeringen voor planten die aandacht nodig hebben (tik voor de reden en de foto);
+   - sensorpunten met de laatste meting;
+   - een weerbalk.
+3. Test het in het veld: is alles in één oogopslag duidelijk, ook in de zon?
+
+## Stap 8: sensorkastje
+
+1. Op tafel:
+   - de huidige sensor op een ESP32- of LoRa-bordje aansluiten en de **analoge** uitgang uitlezen;
+   - de voeding alleen aanzetten tijdens een meting, tegen slijtage.
+2. Versturen in het formaat `veld/sensormeting`:
+   - eerst via wifi op tafel;
+   - daarna via LoRaWAN of het mobiele netwerk, als het veld daar dekking heeft.
+3. IJken met droge en natte grond van het veld.
+4. In het veld: waterdicht kastje, accu (eventueel met zonnepaneel) en een vaste, ingemeten GPS-positie.
+5. Later: betere sensoren (capacitief of landbouwsensoren), minstens één per zone.
+
+## Stap 9: centraal systeem en AI
+
+Stap voor stap, zodat elke stap zelf al nut heeft:
+
+1. **Ontvangen en opslaan** van sensormetingen, foto's met fotolog en de veldgrens.
+2. **Tonen op de veldkaart** in de app: eerst alleen de ruwe gegevens.
+3. **Weer koppelen** via een officiële weerdienst (KNMI, Google Weather API of een betaald Open-Meteo-abonnement; zie [ARCHITECTUUR.md](ARCHITECTUUR.md) hoofdstuk 3).
+4. **Wateradvies met eenvoudige regels**, die de teler controleert.
+5. **AI**, als er genoeg gegevens en gelabelde foto's zijn:
+   - wateradvies per zone;
+   - het markeren van planten die aandacht nodig hebben.
+
+Beantwoord eerst de open vragen uit hoofdstuk 7 van [ARCHITECTUUR.md](ARCHITECTUUR.md) (veldgrootte, dekking, commercieel gebruik, manier van water geven).

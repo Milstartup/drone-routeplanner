@@ -120,6 +120,19 @@ Zet de iPhone-app in een eigen map, bijvoorbeeld `ios/`. Neem niets van de drone
 - **Maak een App Key** op developer.dji.com (User Center → Apps → Create App, platform iOS) met **exact** die Bundle ID. De App Key werkt alleen met die Bundle ID.
 - **Zet de App Key niet in git.** Bewaar hem in een apart bestand dat in `.gitignore` staat.
 
+**Gedaan (25 oktober 2026):**
+
+- DJI-developeraccount aangemaakt.
+- App **Veldvlucht** geregistreerd: Mobile SDK, iOS, Bundle ID `nl.milanmehrzad.veldvlucht`.
+- De App Key staat bij de gebruiker op de Mac, niet in deze repository.
+
+**Voor de fototest op de grond:**
+
+- Accu's van de drone en de afstandsbediening opladen.
+- **Propellers eraf.**
+- Er moet een **microSD-kaart in de drone** zitten, anders kan hij geen foto opslaan.
+- Sluit DJI Fly af voordat je de eigen app gebruikt.
+
 Bouw een minimale iPhone-app die **alleen**:
 
 1. zich aanmeldt bij DJI (`DJISDKAppKey` in Info.plist, `registerAppWithDelegate:`);

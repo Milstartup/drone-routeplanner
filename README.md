@@ -181,6 +181,6 @@ Zie:
 
 In het kort:
 
-- Een iPhone-app bouwen kan alleen op een **Mac met Apple-chip** (Xcode).
+- Een iPhone-app bouwen kan alleen op een **Mac met Xcode**. Op een Intel-Mac gaat het met een oudere Xcode-versie (zie het stappenplan).
 - De Mavic Mini kan geen routes zelfstandig uitvoeren. De iPhone moet de drone continu besturen.
 - De DJI-SDK voor iOS wordt sinds 2022 niet meer bijgewerkt en heeft problemen met de huidige Xcode-versies.

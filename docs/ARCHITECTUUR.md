@@ -203,14 +203,74 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
 
 GeoJSON zet de lengtegraad **vóór** de breedtegraad (`[lng, lat]`), anders dan de andere formaten.
 
-## 7. Open vragen
+## 7. Eisen (antwoorden van 25 oktober 2026)
 
-1. **Hoe groot is het veld**, en hoeveel sensoren wil of kun je plaatsen?
-2. **Is er LoRaWAN-dekking of mobiel bereik** op het veld?
-3. **Is het gebruik commercieel?** Dat bepaalt welke weerdienst en welke kaartdiensten mogen.
-4. **Hoe wordt er water gegeven:** met de hand, met een haspel of druppelslangen? Dat bepaalt hoe fijn het advies moet zijn (per zone, per strook).
-5. **Hoe vaak wordt er gevlogen**, en hoe snel moet het advies er daarna zijn?
-6. **Waar gaat het centrale systeem draaien** (cloud of eigen computer), en wie mag de gegevens zien?
+**Soort project.** Het is een **schoolproject**: een concept op kleine schaal, zonder budget en niet commercieel. In theorie moet het wel te gebruiken zijn op een groot veld.
+
+### Veld en sensoren
+
+| Eis | Gevolg voor het ontwerp |
+|---|---|
+| Veld, plek en grootte zelf te kiezen in de app | Kan al in de routeplanner: zoeken en de grens tekenen, overal en in elke grootte. |
+| Aantal bodemvochtsensoren zelf te kiezen | Nieuwe functie "Sensoren plaatsen": kies een aantal, de app stelt een gelijkmatige verdeling over het veld voor, en de punten zijn te verslepen. Elke sensor krijgt een id en een vaste positie (`sensorId`, `location`). |
+| De school-sensor van €1,50 wordt gebruikt | Prima voor het concept. Houd rekening met slijtage en ijken (hoofdstuk 2). Er wordt zelf gebouwd met een ESP32. |
+| Sensoren versturen via de **hotspot van de telefoon** | De ESP32 maakt verbinding met de hotspot. Omdat die er niet altijd is, **bewaart het kastje zijn metingen** en verstuurt het ze zodra de hotspot in de buurt is. Voor een echt groot veld: LoRaWAN of een simkaart per kastje. |
+
+### Water geven
+
+| Eis | Gevolg voor het ontwerp |
+|---|---|
+| Een tractor met waterkanonnen rijdt heen en weer, en kan per stuk water geven | Het advies wordt per **strook langs de rijrichting van de tractor**, met de breedte van het bereik van de kanonnen. Later in te stellen: rijrichting, afstand tussen de rijpaden en bereik. De waterzones uit hoofdstuk 6 worden dus stroken. |
+
+### Vliegen
+
+| Eis | Gevolg voor het ontwerp |
+|---|---|
+| Het systeem geeft aan wanneer je het beste kunt vliegen, met een melding | Het centrale systeem bekijkt de verwachting en zoekt een **vliegmoment**: wind en windstoten ruim onder 8 m/s, geen regen, daglicht. Een echte pushmelding van een server naar de iPhone vraagt een betaald Apple Developer-lidmaatschap. Gratis alternatieven: de app haalt het advies zelf op en zet een **lokale melding**, of het advies staat bovenaan de veldkaart. |
+| Advies na een vlucht: liefst snel, maar het moet kloppen | De analyse draait direct na het uploaden. Eerst komen snelle resultaten (sensoren en weer), daarna die van de foto's. |
+| **"Niemand vliegt de drone, hij vliegt zelf"** | De drone vliegt de route zelf: de app stuurt en maakt de foto's. Toch moet er bij elke vlucht iemand aanwezig zijn, om twee redenen. **Technisch:** de Mini heeft geen missies aan boord, dus de afstandsbediening en de iPhone-app moeten de hele vlucht aan staan. **Wettelijk:** in de open categorie van de EU-regels moet er een piloot zijn die de drone ziet en kan ingrijpen. Een drone die volledig zelfstandig vertrekt en landt, is met de Mavic Mini niet mogelijk. |
+
+### Apparaten
+
+| Eis | Gevolg voor het ontwerp |
+|---|---|
+| iPhone 13 | Lightning-aansluiting; het gemelde probleem met USB-C-iPhones speelt hier niet. |
+| MacBook met **Intel-chip** | Xcode 27 draait niet op Intel. Xcode 26 en 16 wel, afhankelijk van de macOS-versie (zie [STAPPENPLAN.md](STAPPENPLAN.md), stap 0). Voor eigen gebruik is dat genoeg, want de App Store is toch geen optie. Twee voordelen: met Xcode 16 (iOS 18-SDK) speelt de bouwfout met de iOS 26-SDK niet, en de DJI-simulator (alleen voor Intel gebouwd) draait op een Intel-Mac zonder Rosetta. |
+| Firmware drone 01.00.0500 | Precies de versie die de iOS-SDK noemt. **Werk de firmware niet bij**, ook niet als DJI Fly erom vraagt. |
+
+### Centraal systeem en AI
+
+| Eis | Gevolg voor het ontwerp |
+|---|---|
+| Plek maakt niet uit, moet goed bereikbaar zijn vanuit de app | Een gratis clouddienst met database, opslag en inloggen (keuze volgt bij de bouw). |
+| Alleen jij, maar je kunt mensen toevoegen | Inloggen met accounts. Per veld is er een eigenaar die anderen kan uitnodigen om mee te kijken. |
+| Foto's horen bij de analyse | Eén vlucht over een heel veld kan honderden foto's van een paar MB opleveren, samen gigabytes. Gratis cloudopslag is klein. Daarom **draait de foto-analyse op de laptop**, en gaan alleen de resultaten en kleine voorbeeldfoto's naar de cloud. |
+| De AI herkent planten die een inspectie nodig hebben, en planten die meer of minder water nodig hebben | Zie de aanpak hieronder. |
+| De AI moet "alles op Google bekijken" | Zo werkt het niet. Foto's en video's van internet mag je niet zomaar gebruiken (auteursrecht). Ze lijken ook niet op luchtfoto's van jouw veld vanaf 30 m. Een AI leert van voorbeelden die lijken op wat hij later moet beoordelen. |
+
+**Aanpak van de analyse, in drie niveaus:**
+
+1. **Zonder getrainde AI (eerst):**
+   - De analyse zoekt in de drone-foto's de losse broccoliplanten.
+   - Per plant meet hij hoe groen en hoe groot die is.
+   - Planten die duidelijk afwijken van hun buren krijgen de markering **"inspectie nodig"**.
+   - Dit is uitlegbaar, gratis en werkt zonder voorbeeldfoto's.
+2. **Wateradvies met een waterbalans per strook:**
+   - In: de laatste sensormetingen, de verwachte regen en de verdamping uit de weersverwachting.
+   - Uit: per strook "genoeg", "binnenkort" of "nu water geven".
+   - De foto's bevestigen het advies: blijven planten in een strook achter of verkleuren ze?
+3. **Later een getrainde AI:**
+   - Leren van gelabelde foto's: eigen drone-foto's waarbij je in het veld hebt gecontroleerd wat er aan de hand was, aangevuld met openbare datasets met een licentie die dat toelaat.
+   - Een bestaande beeld-AI via een API kan ook, maar die kost geld per foto. Dat past niet bij een project zonder budget.
+
+**Weer.** Omdat het geen commercieel gebruik is, mag de **gratis Open-Meteo-API** gebruikt worden (geen sleutel, wel bronvermelding). Het KNMI Data Platform kan ook.
+
+### Nog open
+
+- **Welke MacBook** (model en jaar) en **welke macOS-versie**? Dat bepaalt welke Xcode werkt.
+- **Welke iOS-versie** staat op de iPhone 13?
+- **Bevestiging** dat er bij elke vlucht iemand als piloot aanwezig is die kan ingrijpen.
+- **Gegevens van de tractor** voor de stroken: rijrichting, afstand tussen rijpaden en bereik van de kanonnen. Mag later.
 
 ## 8. Bouwvolgorde
 

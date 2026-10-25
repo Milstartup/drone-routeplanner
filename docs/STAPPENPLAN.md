@@ -26,14 +26,31 @@ Achtergrond:
 
 ## Stap 0: Mac en hardware klaarmaken (zelf doen)
 
-1. **Apple-chip:** Apple-menu → *Over deze Mac*. Daar moet **Chip: Apple M…** staan; de huidige Xcode draait alleen op Apple-chips. Controleer ook of macOS up-to-date is (Xcode 27 vraagt macOS Tahoe 26.6 of nieuwer).
-2. **Xcode** installeren uit de Mac App Store. Open het één keer en log in met je Apple ID (Xcode → Settings → Accounts).
+1. **Mac controleren:** Apple-menu → *Over deze Mac*. Noteer het **model met jaartal** (bijvoorbeeld "MacBook Pro 13-inch, 2019") en de **macOS-versie**.
+   - **Apple-chip:** de nieuwste Xcode (27, vraagt macOS Tahoe 26.6 of nieuwer).
+   - **Intel-chip (deze MacBook):** Xcode 27 draait niet op Intel. Kies een oudere Xcode die past bij je macOS (bron: <https://developer.apple.com/support/xcode/>):
+
+     | Jouw macOS | Bruikbare Xcode |
+     |---|---|
+     | Tahoe 26.2 of nieuwer (op Intel alleen MacBook Pro 16-inch 2019 en 13-inch 2020 met vier Thunderbolt-poorten) | 26.4.1 t/m 26.6, of 16.4 tot en met Tahoe 26.1 |
+     | Sequoia 15.6 of nieuwer | 26.0 t/m 26.3, of 16.4 |
+     | Sequoia 15.3 tot 15.6 | 16.4 |
+     | Sonoma 14.5 tot Sequoia 15.x | 16.0 t/m 16.2 |
+
+   - **Advies voor de DJI-SDK: Xcode 16.x** (iOS 18-SDK). Daarmee speelt de bouwfout met de iOS 26-SDK (`ALAssetsLibrary`, GitHub-issue #560) niet.
+   - Volgens Apple's tabel kunnen al deze versies apps installeren op iPhones met iOS 15 of nieuwer. **Test dat als eerste** met een leeg app-project op je iPhone 13.
+   - Een App Store-versie kan op deze manier niet (die eist Xcode 26 of nieuwer), maar dat was door de MFi-regels toch al geen optie.
+2. **Xcode installeren.**
+   - **Apple-chip:** uit de Mac App Store.
+   - **Intel-Mac:** de passende oudere versie, als `.xip`-bestand, van Apple's officiële downloadpagina <https://developer.apple.com/download/all/> (inloggen met je Apple ID).
+
+   Open Xcode één keer en log in met je Apple ID (Xcode → Settings → Accounts).
 3. **DJI-ontwikkelaarsaccount** maken op <https://developer.dji.com>. De App Key volgt in stap 2, als de app een Bundle ID heeft.
 4. **Hardware testen met DJI Fly:**
    - Maakt je iPhone verbinding met de afstandsbediening van de Mavic Mini?
    - Zie je het camerabeeld?
-   - Noteer het iPhone-model. Bij USB-C-iPhones (15 en nieuwer) zijn problemen gemeld.
-   - Noteer de firmwareversie van de drone. De iOS-SDK noemt 01.00.0500; of nieuwere firmware werkt, is niet bevestigd.
+   - De iPhone 13 heeft Lightning; de gemelde problemen met USB-C-iPhones spelen hier niet. Noteer de iOS-versie (Instellingen → Algemeen → Info).
+   - De firmware van de drone is **01.00.0500**, precies de versie die de iOS-SDK noemt. **Werk de firmware niet bij**, ook niet als DJI Fly erom vraagt.
 5. **Node.js** op de Mac, als je de planner ook daar wilt draaien: de LTS-versie van <https://nodejs.org>.
 
 ## Stap 1: project op de Mac
@@ -165,4 +182,11 @@ Stap voor stap, zodat elke stap zelf al nut heeft:
    - wateradvies per zone;
    - het markeren van planten die aandacht nodig hebben.
 
-Beantwoord eerst de open vragen uit hoofdstuk 7 van [ARCHITECTUUR.md](ARCHITECTUUR.md) (veldgrootte, dekking, commercieel gebruik, manier van water geven).
+De eisen staan in hoofdstuk 7 van [ARCHITECTUUR.md](ARCHITECTUUR.md):
+
+- wateradvies per strook langs de rijrichting van de tractor;
+- een melding met het beste vliegmoment;
+- accounts waarmee je anderen kunt laten meekijken;
+- foto-analyse op de laptop.
+
+Daar staat ook wat nog open is.

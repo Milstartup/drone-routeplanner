@@ -147,7 +147,11 @@ Bron: [officieel] [DJIRemoteController](https://developer.dji.com/api-reference/
 
 ## 5. Wat je nodig hebt voor de iPhone-app
 
-- **Een Mac met een Apple-chip** (M1 of nieuwer) met macOS Tahoe 26.6 of nieuwer en Xcode. Op Windows kun je geen iOS-app bouwen of op een iPhone zetten.
+- **Een Mac met Xcode.** Op Windows kun je geen iOS-app bouwen of op een iPhone zetten.
+  - Met een Apple-chip: de nieuwste Xcode.
+  - Met een **Intel-chip**: Xcode 27 werkt niet, maar Xcode 26.x of 16.x wel, afhankelijk van de macOS-versie (tabel in [STAPPENPLAN.md](STAPPENPLAN.md), stap 0).
+  - Voor eigen gebruik is dat genoeg. Met Xcode 16 (iOS 18-SDK) speelt de bouwfout met de iOS 26-SDK niet.
+  - De simulator van de DJI-SDK (alleen voor Intel gebouwd) draait op een Intel-Mac zonder Rosetta.
 - **Een Apple-ontwikkelaarsaccount.**
   - Met een gratis account kun je op je eigen iPhone installeren, maar de app verloopt dan na korte tijd.
   - Met een betaald account (Apple Developer Program) gaat dat langer mee.

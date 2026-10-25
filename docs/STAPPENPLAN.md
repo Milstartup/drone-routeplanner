@@ -38,6 +38,11 @@ Achtergrond:
      | Sonoma 14.5 tot Sequoia 15.x | 16.0 t/m 16.2 |
 
    - **Advies voor de DJI-SDK: Xcode 16.x** (iOS 18-SDK). Daarmee speelt de bouwfout met de iOS 26-SDK (`ALAssetsLibrary`, GitHub-issue #560) niet.
+   - **Deze MacBook:** MacBook Pro 13-inch 2018 (vier Thunderbolt 3-poorten), macOS Sequoia 15.7.4. Dit model krijgt geen macOS Tahoe.
+     - Gebruik **Xcode 16.4**.
+     - Lukt dat niet, dan als reserve Xcode 26.3.
+     - Er is 104 GB vrij; dat is genoeg voor Xcode.
+   - **iPhone:** iPhone 13 met iOS 27.0.1.
    - Volgens Apple's tabel kunnen al deze versies apps installeren op iPhones met iOS 15 of nieuwer. **Test dat als eerste** met een leeg app-project op je iPhone 13.
    - Een App Store-versie kan op deze manier niet (die eist Xcode 26 of nieuwer), maar dat was door de MFi-regels toch al geen optie.
 2. **Xcode installeren.**
@@ -45,6 +50,18 @@ Achtergrond:
    - **Intel-Mac:** de passende oudere versie, als `.xip`-bestand, van Apple's officiële downloadpagina <https://developer.apple.com/download/all/> (inloggen met je Apple ID).
 
    Open Xcode één keer en log in met je Apple ID (Xcode → Settings → Accounts).
+
+   **Eerste test: werkt Xcode 16.4 met je iPhone?** Dit is de eerste go/no-go-check.
+
+   1. Verbind de iPhone met een kabel met de Mac en tik op de iPhone op **Vertrouw**.
+   2. Maak in Xcode een leeg project: *File → New → Project → iOS → App*.
+   3. Kies bij *Signing & Capabilities* je Apple ID als *Team*.
+   4. Kies je iPhone als doel en klik op ▶ (Run).
+   5. Zet op de iPhone de **ontwikkelaarsmodus** aan als daarom gevraagd wordt (Instellingen → Privacy en beveiliging → Ontwikkelaarsmodus). Vertrouw daarna je ontwikkelaarsprofiel (Instellingen → Algemeen → VPN en apparaatbeheer).
+
+   Verschijnt de lege app op de iPhone, dan werkt het. Zo niet, probeer dan Xcode 26.3.
+
+   Met een gratis Apple ID werkt dit ook. De app op de iPhone verloopt dan wel na ongeveer een week; daarna installeer je hem opnieuw vanuit Xcode.
 3. **DJI-ontwikkelaarsaccount** maken op <https://developer.dji.com>. De App Key volgt in stap 2, als de app een Bundle ID heeft.
 4. **Hardware testen met DJI Fly:**
    - Maakt je iPhone verbinding met de afstandsbediening van de Mavic Mini?

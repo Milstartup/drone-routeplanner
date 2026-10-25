@@ -235,7 +235,7 @@ GeoJSON zet de lengtegraad **vóór** de breedtegraad (`[lng, lat]`), anders dan
 | Eis | Gevolg voor het ontwerp |
 |---|---|
 | iPhone 13 | Lightning-aansluiting; het gemelde probleem met USB-C-iPhones speelt hier niet. |
-| MacBook met **Intel-chip** | Xcode 27 draait niet op Intel. Xcode 26 en 16 wel, afhankelijk van de macOS-versie (zie [STAPPENPLAN.md](STAPPENPLAN.md), stap 0). Voor eigen gebruik is dat genoeg, want de App Store is toch geen optie. Twee voordelen: met Xcode 16 (iOS 18-SDK) speelt de bouwfout met de iOS 26-SDK niet, en de DJI-simulator (alleen voor Intel gebouwd) draait op een Intel-Mac zonder Rosetta. |
+| MacBook Pro 13-inch 2018 met **Intel-chip**, macOS Sequoia 15.7.4 (geen Tahoe mogelijk); iPhone 13 met iOS 27.0.1 | Gebruik **Xcode 16.4**, met Xcode 26.3 als reserve. Xcode 27 draait niet op Intel. Xcode 26 en 16 wel, afhankelijk van de macOS-versie (zie [STAPPENPLAN.md](STAPPENPLAN.md), stap 0). Voor eigen gebruik is dat genoeg, want de App Store is toch geen optie. Twee voordelen: met Xcode 16 (iOS 18-SDK) speelt de bouwfout met de iOS 26-SDK niet, en de DJI-simulator (alleen voor Intel gebouwd) draait op een Intel-Mac zonder Rosetta. |
 | Firmware drone 01.00.0500 | Precies de versie die de iOS-SDK noemt. **Werk de firmware niet bij**, ook niet als DJI Fly erom vraagt. |
 
 ### Centraal systeem en AI
@@ -265,11 +265,10 @@ GeoJSON zet de lengtegraad **vóór** de breedtegraad (`[lng, lat]`), anders dan
 
 **Weer.** Omdat het geen commercieel gebruik is, mag de **gratis Open-Meteo-API** gebruikt worden (geen sleutel, wel bronvermelding). Het KNMI Data Platform kan ook.
 
+**Piloot.** Bevestigd: bij elke vlucht is er iemand als piloot aanwezig die kan ingrijpen.
+
 ### Nog open
 
-- **Welke MacBook** (model en jaar) en **welke macOS-versie**? Dat bepaalt welke Xcode werkt.
-- **Welke iOS-versie** staat op de iPhone 13?
-- **Bevestiging** dat er bij elke vlucht iemand als piloot aanwezig is die kan ingrijpen.
 - **Gegevens van de tractor** voor de stroken: rijrichting, afstand tussen rijpaden en bereik van de kanonnen. Mag later.
 
 ## 8. Bouwvolgorde

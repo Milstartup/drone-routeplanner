@@ -173,7 +173,7 @@ Leaflet is gekozen omdat het licht is, gewone kaarttegels toont en zelf geen sle
 
 ## Volgende stap: de iPhone-app
 
-Zie [docs/DJI-MOBILE-SDK-V4.md](docs/DJI-MOBILE-SDK-V4.md) voor het onderzoek en het ontwerp. In het kort:
+Zie [docs/STAPPENPLAN.md](docs/STAPPENPLAN.md) voor de volgende stappen en [docs/DJI-MOBILE-SDK-V4.md](docs/DJI-MOBILE-SDK-V4.md) voor het onderzoek en het ontwerp. In het kort:
 
 - Een iPhone-app bouwen kan alleen op een **Mac met Apple-chip** (Xcode).
 - De Mavic Mini kan geen routes zelfstandig uitvoeren. De iPhone moet de drone continu besturen.

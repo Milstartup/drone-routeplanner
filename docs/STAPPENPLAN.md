@@ -35,11 +35,19 @@ Achtergrond:
 
 ## Stap 1: project op de Mac
 
-Haal de repository op in de Terminal-app:
+Het project staat als **privé-repository** op <https://github.com/Milstartup/drone-routeplanner>. Omdat de repository privé is, moet je op de Mac inloggen bij GitHub. Twee manieren:
 
-```bash
-git clone https://github.com/<jouw-gebruikersnaam>/drone-routeplanner.git
-```
+- **Makkelijkst: GitHub Desktop**
+  1. Download het programma van <https://desktop.github.com> en log in met je GitHub-account.
+  2. Kies *File → Clone Repository → Milstartup/drone-routeplanner*.
+  3. Kies een map, bijvoorbeeld `~/Projects`.
+- **Met de Terminal:** log eerst in met de GitHub CLI (`gh auth login`), en haal het project dan op:
+  ```bash
+  gh repo clone Milstartup/drone-routeplanner
+  ```
+
+Ga daarna in de Terminal naar de projectmap:
+
 ```bash
 cd drone-routeplanner
 ```

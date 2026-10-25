@@ -132,7 +132,7 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
 | Xcode: *"De DJI App Key ontbreekt"* | Vul de App Key in, zie hierboven. |
 | Xcode: *"The sandbox is not in sync with the Podfile.lock"* | Draai `bundle exec pod install` in de map `ios` (zie hieronder). |
 | Xcode: iets met *Signing* of *Provisioning profile* | Kies bij *Signing & Capabilities* je Personal Team. Controleer dat de iPhone met de kabel verbonden en ontgrendeld is. |
-| Stap 1: *Geen internet* (DJI-code −1) | Zet wifi of 4G aan en start de app opnieuw. |
+| Stap 1: *Geen internet* (DJI-code −1) | Zet wifi of 4G aan en druk op **Opnieuw proberen**. |
 | Stap 1: *De App Key klopt niet* (code −2, −9 of −15) | Controleer de sleutel in `Lokaal.xcconfig`: geen spaties of aanhalingstekens, niets vergeten. Bouw daarna opnieuw met ▶. |
 | Stap 1: *De Bundle ID past niet* (code −5) | De App Key hoort bij een andere Bundle ID. Die moet op developer.dji.com `nl.milanmehrzad.veldvlucht` zijn. |
 | Stap 1: *Te veel toestellen* (code −7 of −16) | De sleutel is al op te veel toestellen gebruikt. Kijk op developer.dji.com of maak een nieuwe App Key. |

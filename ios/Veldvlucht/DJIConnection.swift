@@ -25,6 +25,13 @@ final class DJIConnection: NSObject, ObservableObject {
         DJISDKManager.registerApp(with: self)
     }
 
+    /// Step 1 again after a failed registration, for example without internet.
+    func retryRegistration() {
+        guard case .failed = status.registration else { return }
+        started = false
+        start()
+    }
+
     /// Step 4: one photo on the ground, saved on the drone's microSD card.
     func takePhoto() {
         guard let camera = aircraft?.camera else {
@@ -136,6 +143,17 @@ final class DJIConnection: NSObject, ObservableObject {
         }
     }
 
+    /// DJI only documents completion blocks as running on the main queue. Delegate
+    /// and key-listener callbacks go through here, because SwiftUI state may only
+    /// change on the main thread.
+    private func onMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.async(execute: work)
+        }
+    }
+
     private func addLog(_ text: String) {
         log.append(LogLine(time: Date(), text: text))
         if log.count > 300 { log.removeFirst(log.count - 300) }
@@ -167,58 +185,67 @@ final class DJIConnection: NSObject, ObservableObject {
 
 extension DJIConnection: DJISDKManagerDelegate {
     func appRegisteredWithError(_ error: Error?) {
-        if let error = error {
-            let message = registrationMessage(error)
-            status.registration = .failed(message)
-            addLog("Aanmelden mislukt: \(message)")
-            return
-        }
-        status.registration = .done
-        addLog("Aangemeld bij DJI. Verbinding met de afstandsbediening zoeken…")
-
-        if let key = connectionKey {
-            DJISDKManager.keyManager()?.startListeningForChanges(on: key, withListener: self) { [weak self] _, newValue in
-                self?.setAircraftConnected(newValue?.boolValue ?? false)
+        onMain { [self] in
+            if let error = error {
+                let message = registrationMessage(error)
+                status.registration = .failed(message)
+                addLog("Aanmelden mislukt: \(message)")
+                return
             }
-        }
-        if !DJISDKManager.startConnectionToProduct() {
-            addLog("Verbinding zoeken kon niet starten.")
+            status.registration = .done
+            addLog("Aangemeld bij DJI. Verbinding met de afstandsbediening zoeken…")
+
+            if let key = connectionKey {
+                DJISDKManager.keyManager()?.startListeningForChanges(on: key, withListener: self) { [weak self] _, newValue in
+                    self?.onMain { self?.setAircraftConnected(newValue?.boolValue ?? false) }
+                }
+            }
+            if !DJISDKManager.startConnectionToProduct() {
+                addLog("Verbinding zoeken kon niet starten.")
+            }
         }
     }
 
     func didUpdateDatabaseDownloadProgress(_ progress: Progress) {
-        status.databaseProgress = progress.isFinished ? nil : progress.fractionCompleted
+        let fraction = progress.isFinished ? nil : progress.fractionCompleted
+        onMain { [self] in status.databaseProgress = fraction }
     }
 
     func productConnected(_ product: DJIBaseProduct?) {
-        status.remoteConnected = product != nil
-        guard let product = product else { return }
-        addLog("Afstandsbediening verbonden (\(product.model ?? "onbekend model")).")
-        bindComponents()
-        if let key = connectionKey, let value = DJISDKManager.keyManager()?.getValueFor(key) {
-            setAircraftConnected(value.boolValue)
+        onMain { [self] in
+            status.remoteConnected = product != nil
+            guard let product = product else { return }
+            addLog("Afstandsbediening verbonden (\(product.model ?? "onbekend model")).")
+            bindComponents()
+            if let key = connectionKey, let value = DJISDKManager.keyManager()?.getValueFor(key) {
+                setAircraftConnected(value.boolValue)
+            }
         }
     }
 
     func productDisconnected() {
-        status.remoteConnected = false
-        setAircraftConnected(false)
-        status.model = nil
-        addLog("Afstandsbediening losgekoppeld.")
-        bindComponents()
+        onMain { [self] in
+            status.remoteConnected = false
+            setAircraftConnected(false)
+            status.model = nil
+            addLog("Afstandsbediening losgekoppeld.")
+            bindComponents()
+        }
     }
 
     func productChanged(_ product: DJIBaseProduct?) {
-        addLog("Product gewijzigd: \(product?.model ?? "geen").")
-        bindComponents()
+        onMain { [self] in
+            addLog("Product gewijzigd: \(product?.model ?? "geen").")
+            bindComponents()
+        }
     }
 
     func componentConnected(withKey key: String?, andIndex index: Int) {
-        bindComponents()
+        onMain { [self] in bindComponents() }
     }
 
     func componentDisconnected(withKey key: String?, andIndex index: Int) {
-        bindComponents()
+        onMain { [self] in bindComponents() }
     }
 }
 
@@ -226,10 +253,16 @@ extension DJIConnection: DJISDKManagerDelegate {
 
 extension DJIConnection: DJIFlightControllerDelegate {
     func flightController(_ fc: DJIFlightController, didUpdate state: DJIFlightControllerState) {
-        status.satelliteCount = Int(state.satelliteCount)
-        status.gpsLevel = gpsLevel(state.gpsSignalLevel)
-        status.motorsOn = state.areMotorsOn
-        status.isFlying = state.isFlying
+        let satellites = Int(state.satelliteCount)
+        let level = gpsLevel(state.gpsSignalLevel)
+        let motorsOn = state.areMotorsOn
+        let isFlying = state.isFlying
+        onMain { [self] in
+            status.satelliteCount = satellites
+            status.gpsLevel = level
+            status.motorsOn = motorsOn
+            status.isFlying = isFlying
+        }
     }
 
     private func gpsLevel(_ level: DJIGPSSignalLevel) -> Int? {
@@ -247,8 +280,12 @@ extension DJIConnection: DJIFlightControllerDelegate {
 
 extension DJIConnection: DJIBatteryDelegate {
     func battery(_ battery: DJIBattery, didUpdate state: DJIBatteryState) {
-        status.batteryPercent = Int(state.chargeRemainingInPercent)
-        status.batteryVolts = Double(state.voltage) / 1000 // the SDK reports millivolts
+        let percent = Int(state.chargeRemainingInPercent)
+        let volts = Double(state.voltage) / 1000 // the SDK reports millivolts
+        onMain { [self] in
+            status.batteryPercent = percent
+            status.batteryVolts = volts
+        }
     }
 }
 
@@ -268,15 +305,20 @@ extension DJIConnection: DJICameraDelegate {
         } else {
             text = "ruimte voor \(storageState.availableCaptureCount) foto's"
         }
-        status.sdCard = text
-        status.sdCardReady = storageState.isInserted && !storageState.isInitializing
+        let ready = storageState.isInserted && !storageState.isInitializing
             && !storageState.hasError && !storageState.isFull
+        onMain { [self] in
+            status.sdCard = text
+            status.sdCardReady = ready
+        }
     }
 
     func camera(_ camera: DJICamera, didGenerateNewMediaFile newMedia: DJIMediaFile) {
         let sizeMB = Double(newMedia.fileSizeInBytes) / 1_000_000
         let text = "\(newMedia.fileName) (\(String(format: "%.1f", sizeMB)) MB)"
-        status.photo = .done(text)
-        addLog("Foto opgeslagen op de SD-kaart: \(text).")
+        onMain { [self] in
+            status.photo = .done(text)
+            addLog("Foto opgeslagen op de SD-kaart: \(text).")
+        }
     }
 }

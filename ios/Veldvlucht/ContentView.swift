@@ -32,6 +32,9 @@ struct ContentView: View {
             case .failed(let message):
                 Check(label: "Mislukt", ok: false)
                 Text(message).font(.footnote).foregroundStyle(.red)
+                Button("Opnieuw proberen") {
+                    drone.retryRegistration()
+                }
             }
             if let progress = status.databaseProgress {
                 ProgressView("Fly Safe-database downloaden", value: progress)

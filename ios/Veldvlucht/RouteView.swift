@@ -57,7 +57,9 @@ final class RouteModel: ObservableObject {
 
 struct RouteView: View {
     @ObservedObject var model: RouteModel
+    let drone: DJIConnection
     @State private var importing = false
+    @State private var session: FlightSession?
 
     var body: some View {
         NavigationStack {
@@ -97,6 +99,17 @@ struct RouteView: View {
                             Label("Toon op de kaart", systemImage: "map")
                         }
                     }
+                    if model.errorCount == 0 {
+                        Section {
+                            Button {
+                                session = FlightSession(file: file, drone: drone)
+                            } label: {
+                                Label("Vliegen in de simulator…", systemImage: "airplane.departure")
+                            }
+                        } footer: {
+                            Text("Stap 3: de drone blijft met de propellers eraf op de grond. Alleen de simulator van DJI vliegt de route.")
+                        }
+                    }
                 }
             }
             .navigationTitle("Route")
@@ -104,6 +117,9 @@ struct RouteView: View {
                 if case .success(let url) = result {
                     model.load(url: url)
                 }
+            }
+            .fullScreenCover(item: $session) { session in
+                FlightView(session: session, flight: session.flight, drone: drone)
             }
         }
     }
@@ -186,7 +202,11 @@ struct RouteMapView: View {
         .background(.thinMaterial, in: Capsule())
     }
 
-    private var shapes: [MapShape] {
+    private var shapes: [MapShape] { Self.shapes(for: file) }
+
+    private var pins: [MapPin] { Self.pins(for: file) }
+
+    static func shapes(for file: RoutePlanFile) -> [MapShape] {
         var shapes: [MapShape] = []
         if file.boundary.count >= 3 {
             shapes.append(MapShape(id: "veldgrens", kind: .polygon, points: file.boundary, stroke: .white, fill: UIColor.white.withAlphaComponent(0.12)))
@@ -209,7 +229,7 @@ struct RouteMapView: View {
         return shapes
     }
 
-    private var pins: [MapPin] {
+    static func pins(for file: RoutePlanFile) -> [MapPin] {
         var pins = file.derived.photoPoints.prefix(5000).map {
             MapPin(id: "foto-\($0.index)", coordinate: $0.latLng, title: nil, style: .dot(.white))
         }

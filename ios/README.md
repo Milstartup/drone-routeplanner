@@ -5,10 +5,13 @@ De iPhone-app uit [STAPPENPLAN.md](../docs/STAPPENPLAN.md). Hij heeft drie tabbl
 | Tabblad | Wat het doet | Stap |
 |---|---|---|
 | **Drone** | De haalbaarheidstest: aanmelden bij DJI, verbinden met de Mavic Mini, accu, GPS en firmware tonen, en **op de grond één foto maken**. | 2 |
-| **Route** | Een routebestand van de planner inlezen, opnieuw controleren en op de luchtfoto tonen. | 3 (eerste deel) |
+| **Route** | Een routebestand van de planner inlezen, opnieuw controleren, op de luchtfoto tonen en **vliegen in de simulator van DJI**. | 3 |
 | **Veldkaart** | Het veld met stroken in blauw, geel of rood, markeringen, sensoren en het weer. Nu nog met **voorbeeldgegevens**. | 7 |
 
-**Wat de app niet doet:** hij stuurt **geen vliegcommando's** en toont geen live camerabeeld. De fotoknop werkt alleen als de drone niet vliegt. Vliegen komt pas na een geslaagde test met de drone.
+**Wat de app niet doet:**
+- Hij stuurt **alleen vliegcommando's als de simulator van DJI aan staat**. Echt vliegen komt pas in stap 5.
+- Hij toont geen live camerabeeld.
+- De fotoknop op het tabblad *Drone* werkt alleen als de drone niet vliegt.
 
 ## Wat er in deze map staat
 
@@ -48,7 +51,7 @@ De iPhone-app uit [STAPPENPLAN.md](../docs/STAPPENPLAN.md). Hij heeft drie tabbl
 
 - Het tabblad **Route** (zie "Een route inlezen" hieronder).
 - Het tabblad **Veldkaart** (zie "De veldkaart" hieronder).
-- Het rekenpakket `VeldvluchtKern` met **31 tests die allemaal slagen**.
+- Het rekenpakket `VeldvluchtKern` met tests die allemaal slagen (nu 49, zie "Het rekenpakket testen").
 - De app bouwt nog steeds zonder fouten of waarschuwingen.
 - **Niet getest:** hoe de schermen er op de iPhone uitzien. De simulator werkte niet, dus dat zie je pas als je de app op je iPhone zet. Laat het Claude weten als iets er vreemd uitziet.
 
@@ -137,6 +140,42 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
    - oranje gestippeld = stukken zonder foto's, en de weg van en naar het startpunt;
    - witte stippen = de geplande foto's.
 
+## Vliegen in de simulator (stap 3)
+
+**Wat er gebeurt:** de drone staat met de **propellers eraf** op de grond. De simulator van DJI laat de vluchtcomputer doen alsof hij vliegt, vanaf het startpunt van de route. De app stuurt de drone 10 keer per seconde met *Virtual Stick* langs de route. De camera maakt **echt** foto's op de SD-kaart: de voorbeeldroute geeft 180 foto's, samen ongeveer 720 MB.
+
+**Veiligheid, ingebouwd in de app:**
+- **Alleen in de simulator.** Staat de simulator uit, dan start de route niet. Gaat hij tijdens de vlucht uit, dan stopt de app met sturen.
+- **Richtingtest.** Elke vlucht begint met een korte test op hoogte: 2 seconden alleen pitch, dan 2 seconden alleen roll. De app meet welke kant de drone op gaat. Volgens DJI is pitch = oost en roll = noord. Klopt de test niet, dan vliegt de app de route niet.
+- **Sticks of Overnemen:** beweeg je een stick of druk je op **Overnemen**, dan stopt de app direct met sturen. Jij vliegt dan.
+- **Verbinding weg:** de app stopt met sturen. De drone keert volgens de failsafe-instelling na 3 seconden zelf terug.
+- **Accu bijna op:** de drone gaat naar huis. Wat al gelukt is, wordt bewaard.
+- **Nooit vanzelf verder.** Na een pauze, overname of verbroken verbinding vraagt **Hervatten** altijd jouw bevestiging. De drone vliegt dan eerst terug naar waar de route stopte.
+- **Foto's:** minstens 2 seconden tussen twee foto's. Een foto telt pas als de camera het bestand meldt.
+
+**Zo doe je de test:**
+1. Haal de **propellers eraf**. Zet de drone op een vlakke plek, met de SD-kaart erin, en sluit DJI Fly af.
+2. Verbind iPhone, afstandsbediening en drone. Op het tabblad *Drone* moeten beide lampjes groen zijn.
+3. Ga naar het tabblad **Route** en kies **Voorbeeldroute laden**, of je eigen route. Kies daarna **Vliegen in de simulator…**
+4. Druk op **Simulator starten**. De drone "staat" dan op het startpunt van de route, met 12 GPS-satellieten.
+5. Onder de knoppen mogen geen oranje punten meer staan. Druk op **Route starten** en bevestig.
+6. **Kijk mee.** Bovenaan staat de fase: *Voorbereiden → Opstijgen → Klimmen → Richtingtest → Naar het begin → Route vliegen → Naar huis en landen → Klaar*. Op de kaart vliegt het rode vliegtuigje mee. Gemaakte foto's worden **groen**, gemiste **rood**.
+7. **Beantwoord de drie vragen uit het stappenplan:**
+   - *Klopt de vliegrichting?* In het logboek staat na de richtingtest bijvoorbeeld "pitch = oost, roll = noord (zoals DJI beschrijft)". Vliegt het vliegtuigje over de gele lijnen?
+   - *Worden de foto's op de goede plekken gemaakt?* Worden de stippen groen op de lijnen, zonder rode?
+   - *Gaat hervatten na een pauze goed?* Druk midden in de route op **Pauze**, wacht even en druk op **Hervatten**. Hij hoort terug te gaan naar waar hij stopte en verder te gaan zonder dubbele foto's.
+   - Probeer ook **Overnemen**, en beweeg eens kort een stick: de app moet dan stoppen met sturen.
+8. **Afsluiten:**
+   - Aan het eind vliegt de drone in de simulator naar huis en landt.
+   - Druk op **Simulator stoppen**.
+   - Zet de drone uit en weer aan voordat je ooit echt vliegt.
+9. **Logboek:** knop rechtsboven → **Kopieer logboek** → plak het hier in de chat.
+10. **Fotolog en logboek op de iPhone:** open de Bestanden-app en ga naar *Op mijn iPhone → Veldvlucht → Vluchten*. Per vlucht staan daar:
+    - het fotolog (`….fotolog.json`, formaat `veld/fotolog`);
+    - het logboek (`….logboek.txt`).
+
+**Nog niet getest:** of de simulator van de SDK op de Mavic Mini werkt. Lukt **Simulator starten** niet, stuur dan het logboek.
+
 ## De veldkaart (tabblad Veldkaart)
 
 De veldkaart toont nu **voorbeeldgegevens** voor een verzonnen broccoliveld `veld-noord` bij Dronten. Zodra het centrale systeem bestaat, komen daar de echte gegevens.
@@ -166,7 +205,14 @@ Het rekenwerk (routebestand, controles, dataformaten) staat apart in `Veldvlucht
    swift test
    ```
 
-Onderaan moet staan: *Executed 31 tests, with 0 failures*. De tests lezen ook alle voorbeeldbestanden uit `docs/voorbeelden`, dus een fout in zo'n bestand valt meteen op.
+Onderaan moet staan: *Executed 49 tests, with 0 failures*.
+
+- De tests lezen ook alle voorbeeldbestanden uit `docs/voorbeelden`, dus een fout in zo'n bestand valt meteen op.
+- **De stuurlus wordt getest met een nep-drone** (`FakeDrone.swift`): een eenvoudig model dat reageert op stuurcommando's, met een vertraging, en eventueel met wind. Daarmee vliegt de test de hele voorbeeldroute en controleert hij:
+  - alle 180 foto's binnen 2 m van hun plek, en minstens 2 s tussen twee foto's;
+  - verwisselde of omgekeerde assen, en een mislukte richtingtest;
+  - zijwind;
+  - pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu en een simulator die uitvalt.
 
 ## Uitslag: go of no-go
 
@@ -231,8 +277,9 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `VeldvluchtApp.swift` | Start de app met de drie tabbladen, houdt het scherm aan en start de aanmelding bij DJI. Vangt ook routebestanden op die via AirDrop of *Deel* binnenkomen. |
 | `DroneTestView.swift` | Tabblad *Drone*: de vier stappen en het logboek. Bevat geen DJI-code. |
 | `DroneStatus.swift` | Wat het tabblad *Drone* laat zien (accu, GPS, firmware, foto...), in gewone Swift. |
-| `DJIConnection.swift` | De **enige** plek die de DJI-SDK aanroept (de "DJI-adapter" uit hoofdstuk 6.1 van [DJI-MOBILE-SDK-V4.md](../docs/DJI-MOBILE-SDK-V4.md)). |
-| `RouteView.swift` | Tabblad *Route*: bestand kiezen, controle tonen, kaart. |
+| `DJIConnection.swift` | De **enige** plek die de DJI-SDK aanroept (de "DJI-adapter" uit hoofdstuk 6.1 van [DJI-MOBILE-SDK-V4.md](../docs/DJI-MOBILE-SDK-V4.md)). Voert de commando's van de vluchtlogica uit: simulator, Virtual Stick, opstijgen, naar huis, foto. Meldt telemetrie en stickbewegingen terug. |
+| `RouteView.swift` | Tabblad *Route*: bestand kiezen, controle tonen, kaart, en de knop naar de vlucht. |
+| `FlightView.swift` | Het vluchtscherm (volledig scherm): fase, kaart met de drone, voortgang en de knoppen Pauze, Overnemen en Naar huis. Laat de stuurlus 10 keer per seconde lopen en bewaart fotolog en logboek. |
 | `FieldMapScreen.swift` | Tabblad *Veldkaart*: weerbalk, kaart en de details na een tik. |
 | `MapCanvas.swift` | De kaart (Apple MapKit) met de PDOK-luchtfoto, vlakken, lijnen en punten. |
 | `SampleData.swift` | Leest de voorbeeldbestanden die in de app zitten. |
@@ -241,6 +288,9 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `VeldvluchtKern/…/FieldFormats.swift` | De dataformaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md). |
 | `VeldvluchtKern/…/FieldSummary.swift` | Sorteert en beschrijft wat de veldkaart toont. Rekent zelf geen advies uit. |
 | `VeldvluchtKern/…/Geo.swift` | Afstanden en vormen op de kaart, met dezelfde formules als de planner. |
+| `VeldvluchtKern/…/RouteFlight.swift` | **De vluchtlogica:** de toestanden uit hoofdstuk 6.3 van het DJI-document, de stuurlus, de fotomomenten en de veiligheidsregels. Bevat geen DJI-code. |
+| `VeldvluchtKern/…/FlightPlan.swift` | De route in meters rond het startpunt, voor de stuurlus. |
+| `VeldvluchtKern/…/AxisMapping.swift` | De richtingtest: welke kant pitch en roll de drone op sturen. |
 | `Info.plist` | App-instellingen: de App Key (`DJISDKAppKey`, uit `Lokaal.xcconfig`), de DJI-protocollen voor de afstandsbediening en de teksten voor de toestemmingsvragen. |
 
 **Bewuste keuzes:**

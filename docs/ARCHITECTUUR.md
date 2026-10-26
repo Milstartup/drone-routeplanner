@@ -30,7 +30,7 @@ Een AI in het centrale systeem bepaalt daaruit **hoeveel water welke delen van h
 | Onderdeel | Status | Waar |
 |---|---|---|
 | Routeplanner | **Klaar** (prototype) | Deze repository, `src/` |
-| Drone-app (vliegen + foto's) | Haalbaarheidstest **geslaagd** met de drone (26 oktober 2026); route inlezen gebouwd; vliegen nog niet | [`ios/`](../ios/README.md), [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
+| Drone-app (vliegen + foto's) | Haalbaarheidstest **geslaagd** met de drone (26 oktober 2026). Route inlezen en **vliegen in de DJI-simulator** gebouwd, getest met een nep-drone. Echt vliegen nog niet. | [`ios/`](../ios/README.md), [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
 | Sensorkastje | Ontwerp | Dit document, hoofdstuk 2 |
 | Centraal systeem + AI | Ontwerp | Dit document, hoofdstuk 4 |
 | Veldkaart in de iPhone-app | **Gebouwd** met voorbeeldgegevens | [`ios/`](../ios/README.md), dit document, hoofdstuk 5 |

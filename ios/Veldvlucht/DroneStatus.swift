@@ -44,6 +44,8 @@ struct DroneStatus {
     var gpsLevel: Int?
     var motorsOn = false
     var isFlying = false
+    /// DJI's built-in simulator is running: the drone only "flies" in software.
+    var simulatorActive = false
 
     var hasCamera = false
     var sdCard: String?

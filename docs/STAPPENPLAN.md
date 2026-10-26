@@ -9,7 +9,7 @@ Stand op 26 oktober 2026:
   - **Route:** routebestand inlezen, controleren en op de kaart tonen (eerste deel van stap 3);
   - **Veldkaart:** met voorbeeldgegevens (stap 7).
 - **Nog te bouwen:**
-  - het vliegen zelf: stuurlus, foto's onderweg en veiligheid (rest van stap 3, stap 4 t/m 6);
+  - het echt vliegen: eerst de simulatortest van stap 3 met de drone, dan stap 4 t/m 6;
   - de bodemvochtsensoren en het centrale systeem met de AI (stap 8 en 9).
 
 Achtergrond:
@@ -202,7 +202,31 @@ Vlieg hierbij nog niet.
   - Worden de foto's op de goede plekken gemaakt?
   - Gaat hervatten na een pauze goed?
 
+**Gebouwd (26 oktober 2026):** de knop *Vliegen in de simulator…* op het tabblad Route.
+
+- Elke vlucht begint met een **richtingtest**. De app meet zelf welke kant pitch en roll de drone op sturen, in plaats van op DJI's tekst te vertrouwen. Dat beantwoordt de eerste vraag bij elke vlucht opnieuw.
+- **Stuurlus:**
+  - 10 keer per seconde;
+  - snelheid langs de lijn en remmen voor elk routepunt;
+  - bijsturen naar de lijn, ook bij wind;
+  - de neus langs de vliegbanen.
+- **Foto's:** een losse foto bij elke geplande positie, met minstens 2 s ertussen. Een foto telt pas als de camera het bestand meldt. Het fotolog (`veld/fotolog`) staat per vlucht in de Bestanden-app.
+- **Alleen in de simulator:** zonder actieve simulator start de route niet.
+- **Getest met een nep-drone** (49 tests in `ios/VeldvluchtKern`):
+  - de hele voorbeeldroute, met alle 180 foto's binnen 2 m van hun plek;
+  - verwisselde assen en zijwind;
+  - pauze en hervatten, overnemen en verbindingsverlies.
+- **Nog te doen:** dezelfde test met de echte drone in de simulator van DJI. De stappen staan in [ios/README.md](../ios/README.md), "Vliegen in de simulator".
+
 ## Stap 4: veiligheid
+
+**Stand 26 oktober 2026:** de punten hieronder zitten al in de vluchtlogica van stap 3. Ze zijn getest met de nep-drone, maar nog niet met de echte drone. Daarna volgt de test op een veilige plek, en daarna pas buiten:
+
+- de drie knoppen;
+- overnemen bij stickbewegingen;
+- failsafe GoHome met een terugkeerhoogte van minstens 20 m;
+- naar huis bij een bijna lege accu;
+- nooit automatisch hervatten.
 
 Werk dit uit volgens hoofdstuk 6 van het DJI-document:
 

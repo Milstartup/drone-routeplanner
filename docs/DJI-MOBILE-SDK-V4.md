@@ -186,6 +186,8 @@ Planner (deze browser-app)   ──  .routeplan.json  ──►   iPhone-app
   - Hoogte: in de positiestand op de geplande hoogte.
   - Draaien: met de hoeksnelheidsstand (vanwege de bekende fout in de hoekstand).
 - **Welke kant op is "pitch"?** DJI's gids en DJI's voorbeeldcode lijken elkaar hierover tegen te spreken. **Test dit eerst in de simulator van de SDK** voordat je buiten vliegt.
+  - De header `DJIFlightControllerBaseTypes.h` zegt: in het grondassenstelsel met snelheidsstand is pitch positief = **oost** en roll positief = **noord** [officieel].
+  - De app vertrouwt daar niet blind op. Elke vlucht begint met een **richtingtest** die het meet, en de app stuurt op wat hij meet (`AxisMapping.swift`).
 - **Foto's:** er zijn twee mogelijkheden.
   1. **Een losse foto per geplande fotopositie** (`DJICameraShootPhotoModeSingle`, `startShootPhoto`). De app neemt een foto zodra de drone binnen een paar meter van de volgende fotopositie is. Dat werkt het netst met wind, maar het interval mag niet korter zijn dan de camera aankan (aanname: 2 s, zoals de kortste intervalstand).
   2. **De intervalstand van de camera** (`setPhotoTimeIntervalSettings`, minimaal 2 s) aan het begin van elke vliegbaan aanzetten en aan het eind uitzetten. Dat is eenvoudiger, maar de afstand tussen foto's hangt dan af van de werkelijke snelheid.

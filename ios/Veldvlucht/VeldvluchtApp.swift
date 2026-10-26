@@ -1,8 +1,9 @@
 // Veldvlucht: the iPhone app of docs/STAPPENPLAN.md. Three tabs, each separate:
 // - Drone: the feasibility test of step 2 (register, connect, telemetry, one photo);
-// - Route: read and check a route file from the planner (first part of step 3);
+// - Route: read and check a route file from the planner, and fly it in DJI's simulator
+//   (step 3);
 // - Veldkaart: the field map with sample data (step 7).
-// There are no flight commands in this app yet.
+// Flight commands only go out while DJI's simulator runs (RouteFlight.Settings).
 import SwiftUI
 import UIKit
 
@@ -24,7 +25,7 @@ struct VeldvluchtApp: App {
                 DroneTestView(drone: drone)
                     .tabItem { Label("Drone", systemImage: "antenna.radiowaves.left.and.right") }
                     .tag(Screen.drone)
-                RouteView(model: route)
+                RouteView(model: route, drone: drone)
                     .tabItem { Label("Route", systemImage: "point.topleft.down.curvedto.point.bottomright.up") }
                     .tag(Screen.route)
                 FieldMapScreen()

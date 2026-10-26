@@ -64,6 +64,10 @@ struct MapCanvas: UIViewRepresentable {
     /// Change this when the shapes or pins change: the map then redraws and zooms to fit.
     var contentID: String
     var baseLayer = BaseLayer.pdok
+    /// Other colours for some dot pins, for example photos already taken. Changes cheaply.
+    var pinColors: [String: UIColor] = [:]
+    /// A pin that moves without redrawing the rest, such as the drone itself.
+    var movingPin: MapPin?
     var onSelect: ((String) -> Void)?
 
     /// Same 8 cm aerial photo as the planner (src/map/providers.ts). Open data, no key needed.
@@ -104,6 +108,8 @@ struct MapCanvas: UIViewRepresentable {
             coordinator.contentID = contentID
             coordinator.show(shapes: shapes, pins: pins, on: map)
         }
+        coordinator.apply(colors: pinColors, on: map)
+        coordinator.move(movingPin, on: map)
     }
 
     final class Coordinator: NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate {
@@ -112,6 +118,9 @@ struct MapCanvas: UIViewRepresentable {
         var baseLayer: BaseLayer?
         private var tiles: MKTileOverlay?
         private var styles: [ObjectIdentifier: MapShape] = [:]
+        private var annotationsByID: [String: PinAnnotation] = [:]
+        private var appliedColors: [String: UIColor] = [:]
+        private var moving: MovingAnnotation?
         private let locationManager = CLLocationManager()
         private var dotImages: [UIColor: UIImage] = [:]
 
@@ -140,6 +149,8 @@ struct MapCanvas: UIViewRepresentable {
             map.removeOverlays(map.overlays.filter { !($0 is MKTileOverlay) })
             map.removeAnnotations(map.annotations.filter { !($0 is MKUserLocation) })
             styles = [:]
+            appliedColors = [:]
+            moving = nil
 
             var visible = MKMapRect.null
             for shape in shapes where shape.points.count >= 2 {
@@ -156,6 +167,7 @@ struct MapCanvas: UIViewRepresentable {
                 visible = visible.union(overlay.boundingMapRect)
             }
             let annotations = pins.map(PinAnnotation.init)
+            annotationsByID = Dictionary(annotations.map { ($0.pin.id, $0) }, uniquingKeysWith: { first, _ in first })
             map.addAnnotations(annotations)
             for annotation in annotations {
                 let point = MKMapPoint(annotation.coordinate)
@@ -165,6 +177,35 @@ struct MapCanvas: UIViewRepresentable {
             // Wait for the first layout, otherwise the map has no size to fit into yet.
             DispatchQueue.main.async {
                 map.setVisibleMapRect(visible, edgePadding: UIEdgeInsets(top: 40, left: 30, bottom: 70, right: 30), animated: false)
+            }
+        }
+
+        func apply(colors: [String: UIColor], on map: MKMapView) {
+            for (id, color) in colors where appliedColors[id] != color {
+                guard let annotation = annotationsByID[id] else { continue }
+                annotation.color = color
+                if let view = map.view(for: annotation) {
+                    view.image = dotImage(color)
+                }
+            }
+            appliedColors = colors
+        }
+
+        func move(_ pin: MapPin?, on map: MKMapView) {
+            guard let pin = pin else {
+                if let moving = moving {
+                    map.removeAnnotation(moving)
+                    self.moving = nil
+                }
+                return
+            }
+            let coordinate = CLLocationCoordinate2D(latitude: pin.coordinate.lat, longitude: pin.coordinate.lng)
+            if let moving = moving {
+                moving.coordinate = coordinate
+            } else {
+                let annotation = MovingAnnotation(pin: pin, coordinate: coordinate)
+                map.addAnnotation(annotation)
+                moving = annotation
             }
         }
 
@@ -191,13 +232,26 @@ struct MapCanvas: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            if let moving = annotation as? MovingAnnotation {
+                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: "moving") as? MKMarkerAnnotationView)
+                    ?? MKMarkerAnnotationView(annotation: moving, reuseIdentifier: "moving")
+                view.annotation = moving
+                if case .marker(let symbol, let color) = moving.pin.style {
+                    view.glyphImage = UIImage(systemName: symbol)
+                    view.markerTintColor = color
+                }
+                view.displayPriority = .required
+                view.zPriority = .max
+                view.canShowCallout = false
+                return view
+            }
             guard let annotation = annotation as? PinAnnotation else { return nil }
             switch annotation.pin.style {
             case .dot(let color):
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: "dot")
                     ?? MKAnnotationView(annotation: annotation, reuseIdentifier: "dot")
                 view.annotation = annotation
-                view.image = dotImage(color)
+                view.image = dotImage(annotation.color ?? color)
                 view.canShowCallout = false
                 view.displayPriority = .required
                 return view
@@ -264,12 +318,25 @@ struct MapCanvas: UIViewRepresentable {
 private final class PinAnnotation: NSObject, MKAnnotation {
     let pin: MapPin
     let coordinate: CLLocationCoordinate2D
+    /// Replaces the colour of a dot pin.
+    var color: UIColor?
 
     var title: String? { pin.title }
 
     init(_ pin: MapPin) {
         self.pin = pin
         coordinate = CLLocationCoordinate2D(latitude: pin.coordinate.lat, longitude: pin.coordinate.lng)
+    }
+}
+
+/// The drone on the map: MapKit moves it smoothly when `coordinate` changes.
+private final class MovingAnnotation: NSObject, MKAnnotation {
+    let pin: MapPin
+    @objc dynamic var coordinate: CLLocationCoordinate2D
+
+    init(pin: MapPin, coordinate: CLLocationCoordinate2D) {
+        self.pin = pin
+        self.coordinate = coordinate
     }
 }
 

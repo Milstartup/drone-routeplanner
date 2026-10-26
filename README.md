@@ -181,7 +181,9 @@ De iPhone-app **Veldvlucht** staat in [`ios/`](ios/README.md). De haalbaarheidst
 - **Route:** een `.routeplan.json` van deze planner inlezen, opnieuw controleren en op de kaart tonen;
 - **Veldkaart:** het veld met wateradvies, markeringen, sensoren en weer, nu nog met voorbeeldgegevens.
 
-Vliegen kan de app nog niet. Zie verder:
+- **Vliegen in de simulator van DJI:** de app vliegt een route met Virtual Stick en maakt de foto's, maar alleen terwijl de simulator aan staat (stap 3).
+
+Echt vliegen kan de app nog niet. Zie verder:
 
 - [docs/STAPPENPLAN.md](docs/STAPPENPLAN.md) voor de volgende stappen;
 - [docs/ARCHITECTUUR.md](docs/ARCHITECTUUR.md) voor het hele systeem (drone, bodemvochtsensoren, weer, centraal systeem met AI en de veldkaart in de app);

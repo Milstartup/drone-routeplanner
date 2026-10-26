@@ -1,7 +1,9 @@
 // The only file that talks to the DJI SDK (the "DJI adapter" from
 // docs/DJI-MOBILE-SDK-V4.md, section 6.1). It registers the app, connects to the
-// drone, publishes telemetry as a DroneStatus and can take one photo.
-// It never sends flight commands.
+// drone, publishes telemetry as a DroneStatus and can take one photo. For a route flight
+// it carries out the commands of RouteFlight (DroneControl, at the bottom); RouteFlight
+// decides what to do and only flies while DJI's simulator is running.
+import CoreLocation
 import DJISDK
 import Foundation
 
@@ -16,6 +18,13 @@ final class DJIConnection: NSObject, ObservableObject {
     private var loggedGPS = false
     private var loggedGoodGPS = false
     private let connectionKey = DJIProductKey(param: DJIParamConnection)
+
+    /// Set by the flight screen while a route flight is open.
+    var onTelemetry: ((DroneTelemetry) -> Void)?
+    var onSticksMoved: (() -> Void)?
+    var onPhotoSaved: ((String) -> Void)?
+    private(set) var lastTelemetry: DroneTelemetry?
+    private var sticksDeflected = false
 
     private var aircraft: DJIAircraft? { DJISDKManager.product() as? DJIAircraft }
 
@@ -102,6 +111,7 @@ final class DJIConnection: NSObject, ObservableObject {
         let product = DJISDKManager.product()
         status.model = product?.model
         aircraft?.flightController?.delegate = self
+        aircraft?.remoteController?.delegate = self
         product?.battery?.delegate = self
         product?.camera?.delegate = self
         status.hasCamera = product?.camera != nil
@@ -144,6 +154,56 @@ final class DJIConnection: NSObject, ObservableObject {
             status.firmware = nil
             status.firmwareUnknown = false
             status.flightControllerFirmware = nil
+            status.simulatorActive = false
+            if var telemetry = lastTelemetry {
+                telemetry.connected = false
+                telemetry.time = Date()
+                lastTelemetry = telemetry
+                onTelemetry?(telemetry)
+            }
+        }
+    }
+
+    // MARK: Simulator
+
+    /// DJI's simulator: the drone stays on the ground, the flight controller acts as if
+    /// it flies from `location`. Only with the motors off.
+    func startSimulator(at location: LatLng) {
+        guard let simulator = aircraft?.flightController?.simulator else {
+            addLog("Simulator: deze drone geeft geen simulator.")
+            return
+        }
+        guard !status.motorsOn else {
+            addLog("Simulator starten kan alleen met de motoren uit.")
+            return
+        }
+        addLog("Simulator starten op het startpunt van de route…")
+        let coordinate = CLLocationCoordinate2D(latitude: location.lat, longitude: location.lng)
+        simulator.start(withLocation: coordinate, updateFrequency: 10, gpsSatellitesNumber: 12) { [weak self] error in
+            self?.onMain { [weak self] in
+                guard let self = self else { return }
+                if let error = error {
+                    self.addLog("Simulator starten lukt niet: \(error.localizedDescription)")
+                } else {
+                    self.status.simulatorActive = true
+                    self.addLog("Simulator aan. De drone blijft op de grond; alleen de vluchtcomputer doet alsof hij vliegt.")
+                }
+            }
+        }
+    }
+
+    func stopSimulator() {
+        guard let simulator = aircraft?.flightController?.simulator else { return }
+        simulator.stop { [weak self] error in
+            self?.onMain { [weak self] in
+                guard let self = self else { return }
+                if let error = error {
+                    self.addLog("Simulator stoppen lukt niet: \(error.localizedDescription)")
+                } else {
+                    self.status.simulatorActive = false
+                    self.addLog("Simulator uit. Zet de drone uit en weer aan voordat je echt vliegt.")
+                }
+            }
         }
     }
 
@@ -301,11 +361,31 @@ extension DJIConnection: DJIFlightControllerDelegate {
         let level = gpsLevel(state.gpsSignalLevel)
         let motorsOn = state.areMotorsOn
         let isFlying = state.isFlying
+        var position: LatLng?
+        if let c = state.aircraftLocation?.coordinate, CLLocationCoordinate2DIsValid(c), c.latitude != 0 || c.longitude != 0 {
+            position = LatLng(lat: c.latitude, lng: c.longitude)
+        }
+        let altitude = state.altitude
+        let heading = (state.attitude.yaw + 360).truncatingRemainder(dividingBy: 360)
+        // velocityX/Y are north and east in DJI's North-East-Down system.
+        let north = Double(state.velocityX)
+        let east = Double(state.velocityY)
+        let needed = Int(state.goHomeAssessment.batteryPercentageNeededToGoHome)
+        let simulator = fc.simulator?.isSimulatorActive ?? false
         onMain { [self] in
             status.satelliteCount = satellites
             status.gpsLevel = level
             status.motorsOn = motorsOn
             status.isFlying = isFlying
+            if status.simulatorActive != simulator { status.simulatorActive = simulator }
+            let telemetry = DroneTelemetry(
+                time: Date(), connected: status.aircraftConnected, simulatorActive: simulator,
+                position: position, satelliteCount: satellites, altitudeM: altitude, headingDeg: heading,
+                velocityNorth: north, velocityEast: east, isFlying: isFlying, motorsOn: motorsOn,
+                batteryPercent: status.batteryPercent, batteryNeededToGoHome: needed
+            )
+            lastTelemetry = telemetry
+            onTelemetry?(telemetry)
             if !loggedGPS {
                 loggedGPS = true
                 addLog("GPS: \(satellites) satellieten, \(level.map { "signaal \($0) van 5" } ?? "geen GPS-signaal").")
@@ -372,9 +452,107 @@ extension DJIConnection: DJICameraDelegate {
     func camera(_ camera: DJICamera, didGenerateNewMediaFile newMedia: DJIMediaFile) {
         let sizeMB = Double(newMedia.fileSizeInBytes) / 1_000_000
         let text = "\(newMedia.fileName) (\(dutchNumber(sizeMB, digits: 1)) MB)"
+        let fileName = newMedia.fileName
         onMain { [self] in
             status.photo = .done(text)
             addLog("Foto opgeslagen op de SD-kaart: \(text).")
+            onPhotoSaved?(fileName)
         }
+    }
+}
+
+// MARK: - Sticks
+
+extension DJIConnection: DJIRemoteControllerDelegate {
+    /// Tells the flight when the pilot moves a stick: the app then stops steering
+    /// (docs/DJI-MOBILE-SDK-V4.md, 6.5). Sticks run from -660 to 660; 150 is a clear push.
+    func remoteController(_ rc: DJIRemoteController, didUpdate state: DJIRCHardwareState) {
+        let values = [state.leftStick.horizontalPosition, state.leftStick.verticalPosition,
+                      state.rightStick.horizontalPosition, state.rightStick.verticalPosition]
+        let deflected = values.contains { abs($0) > 150 }
+        onMain { [self] in
+            if deflected && !sticksDeflected { onSticksMoved?() }
+            sticksDeflected = deflected
+        }
+    }
+}
+
+// MARK: - Commands for a route flight (RouteFlight decides, this carries out)
+
+extension DJIConnection: DroneControl {
+    func prepareForRoute(goHomeHeightM: Double, completion: @escaping (Error?) -> Void) {
+        guard let fc = aircraft?.flightController, let camera = aircraft?.camera else {
+            completion(FlightError(message: "Geen vluchtcomputer of camera gevonden."))
+            return
+        }
+        let done: (Error?) -> Void = { [weak self] error in self?.onMain { completion(error) } }
+        // The SDK only controls the Mini in P mode; its remote has no physical switch.
+        guard let positionMode = DJIRCSoftSwitchJoyStickMode(rawValue: 1), // _P in the header
+              let remote = aircraft?.remoteController else {
+            done(FlightError(message: "Geen afstandsbediening gevonden."))
+            return
+        }
+        remote.setSoftSwitchJoyStickMode(positionMode) { error in
+            if let error = error { return done(FlightError(message: "Afstandsbediening op P zetten: \(error.localizedDescription)")) }
+            fc.setConnectionFailSafeBehavior(.goHome) { error in
+                if let error = error { return done(FlightError(message: "Failsafe instellen: \(error.localizedDescription)")) }
+                fc.setGoHomeHeightInMeters(UInt(goHomeHeightM.rounded(.up))) { error in
+                    if let error = error { return done(FlightError(message: "Terugkeerhoogte instellen: \(error.localizedDescription)")) }
+                    if camera.isFlatCameraModeSupported() {
+                        camera.setFlatMode(.photoSingle) { error in done(error) }
+                    } else {
+                        camera.setMode(.shootPhoto) { error in
+                            if let error = error { return done(error) }
+                            camera.setShootPhotoMode(.single) { error in done(error) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func takeOff(completion: @escaping (Error?) -> Void) {
+        guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
+        fc.startTakeoff { [weak self] error in self?.onMain { completion(error) } }
+    }
+
+    func setVirtualStick(enabled: Bool, completion: @escaping (Error?) -> Void) {
+        guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
+        if enabled {
+            // These reset when the flight controller reconnects, so set them every time.
+            fc.rollPitchControlMode = .velocity
+            fc.yawControlMode = .angularVelocity
+            fc.verticalControlMode = .position
+            fc.rollPitchCoordinateSystem = .ground
+            fc.isVirtualStickAdvancedModeEnabled = true
+        }
+        fc.setVirtualStickModeEnabled(enabled) { [weak self] error in self?.onMain { completion(error) } }
+    }
+
+    func send(_ sticks: StickValues) {
+        guard let fc = aircraft?.flightController else { return }
+        func limit(_ value: Double, _ bound: Double) -> Float { Float(min(bound, max(-bound, value))) }
+        let data = DJIVirtualStickFlightControlData(
+            pitch: limit(sticks.pitch, 8),
+            roll: limit(sticks.roll, 8),
+            yaw: limit(sticks.yawRate, 30),
+            verticalThrottle: Float(min(120, max(0, sticks.altitudeM)))
+        )
+        fc.send(data, withCompletion: nil)
+    }
+
+    func shootPhoto(completion: @escaping (Error?) -> Void) {
+        guard let camera = aircraft?.camera else { return completion(FlightError(message: "Geen camera.")) }
+        camera.startShootPhoto { [weak self] error in self?.onMain { completion(error) } }
+    }
+
+    func goHome(completion: @escaping (Error?) -> Void) {
+        guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
+        fc.startGoHome { [weak self] error in self?.onMain { completion(error) } }
+    }
+
+    func cancelGoHome(completion: @escaping (Error?) -> Void) {
+        guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
+        fc.cancelGoHome { [weak self] error in self?.onMain { completion(error) } }
     }
 }

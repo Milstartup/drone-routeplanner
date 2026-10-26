@@ -12,7 +12,10 @@
 		1E7B29D98B6322D70BFA3A09 /* JSONReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21EBE013B729452360E76CF6 /* JSONReading.swift */; };
 		4CCE75F44F45FBD73E03D5AB /* MapCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2975965CB65A23A0E61D9F05 /* MapCanvas.swift */; };
 		5A8A0771F340A3A415542C39 /* FieldFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33BCA70B133C63171405D2E1 /* FieldFormats.swift */; };
+		5CFCA09372A6B17D9F98F8B3 /* FlightPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */; };
+		608A3773ECBF14D5F87A2CF3 /* RouteFlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */; };
 		6FBBE37AB7484E4676754772 /* FieldMapScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD090855C6513C4C1763DF26 /* FieldMapScreen.swift */; };
+		9E7824971337DEE560EB2100 /* FlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A80118DE72C67FF2028E32 /* FlightView.swift */; };
 		A0714BABA6CA6E850429BB4A /* RouteCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 835DF01A1D628FD32A7A9642 /* RouteCheck.swift */; };
 		A10000000000000000000030 /* VeldvluchtApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000020 /* VeldvluchtApp.swift */; };
 		A10000000000000000000031 /* DroneTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* DroneTestView.swift */; };
@@ -23,6 +26,7 @@
 		D1FD1C16A9BC94D5ADE61DFD /* FieldSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D7B41B1CDF10283ACE84DC /* FieldSummary.swift */; };
 		D95272E0B9BFFE5E5A0E9CC1 /* RouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C09B64073AF6A4E1287079 /* RouteView.swift */; };
 		DFC019F36CBF6B3B87CF0B04 /* Geo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A5632A804C2A0B1BBF3ADC /* Geo.swift */; };
+		E17B7E3A2835D2FFE5F793D7 /* AxisMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCB970BDD03FEC3FB4058EBC /* AxisMapping.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +37,7 @@
 		2975965CB65A23A0E61D9F05 /* MapCanvas.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MapCanvas.swift; sourceTree = "<group>"; };
 		33BCA70B133C63171405D2E1 /* FieldFormats.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldFormats.swift; sourceTree = "<group>"; };
 		47874DBBDB6A0249128B6373 /* RoutePlanFile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutePlanFile.swift; sourceTree = "<group>"; };
+		4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteFlight.swift; sourceTree = "<group>"; };
 		54C09B64073AF6A4E1287079 /* RouteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteView.swift; sourceTree = "<group>"; };
 		7AB68BB2B3BF769F320CE850 /* voorbeelden */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = voorbeelden; path = ../docs/voorbeelden; sourceTree = "<group>"; };
 		835DF01A1D628FD32A7A9642 /* RouteCheck.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteCheck.swift; sourceTree = "<group>"; };
@@ -45,8 +50,11 @@
 		A10000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000025 /* Veldvlucht.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Veldvlucht.xcconfig; sourceTree = "<group>"; };
 		A10000000000000000000026 /* Lokaal.voorbeeld.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Lokaal.voorbeeld.xcconfig; sourceTree = "<group>"; };
+		D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FlightPlan.swift; sourceTree = "<group>"; };
 		D4ACA47D0D5959639DEE4ECB /* libPods-Veldvlucht.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Veldvlucht.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA7944098F58BE630AB72597 /* Pods-Veldvlucht.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Veldvlucht.release.xcconfig"; path = "Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht.release.xcconfig"; sourceTree = "<group>"; };
+		DCB970BDD03FEC3FB4058EBC /* AxisMapping.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AxisMapping.swift; sourceTree = "<group>"; };
+		E8A80118DE72C67FF2028E32 /* FlightView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FlightView.swift; sourceTree = "<group>"; };
 		FD090855C6513C4C1763DF26 /* FieldMapScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldMapScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -71,6 +79,9 @@
 				835DF01A1D628FD32A7A9642 /* RouteCheck.swift */,
 				33BCA70B133C63171405D2E1 /* FieldFormats.swift */,
 				08D7B41B1CDF10283ACE84DC /* FieldSummary.swift */,
+				D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */,
+				DCB970BDD03FEC3FB4058EBC /* AxisMapping.swift */,
+				4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */,
 			);
 			name = Kern;
 			path = VeldvluchtKern/Sources/VeldvluchtKern;
@@ -127,6 +138,7 @@
 				FD090855C6513C4C1763DF26 /* FieldMapScreen.swift */,
 				2975965CB65A23A0E61D9F05 /* MapCanvas.swift */,
 				21F84BF4762899053DD69013 /* SampleData.swift */,
+				E8A80118DE72C67FF2028E32 /* FlightView.swift */,
 			);
 			path = Veldvlucht;
 			sourceTree = "<group>";
@@ -287,6 +299,10 @@
 				A0714BABA6CA6E850429BB4A /* RouteCheck.swift in Sources */,
 				5A8A0771F340A3A415542C39 /* FieldFormats.swift in Sources */,
 				D1FD1C16A9BC94D5ADE61DFD /* FieldSummary.swift in Sources */,
+				9E7824971337DEE560EB2100 /* FlightView.swift in Sources */,
+				5CFCA09372A6B17D9F98F8B3 /* FlightPlan.swift in Sources */,
+				E17B7E3A2835D2FFE5F793D7 /* AxisMapping.swift in Sources */,
+				608A3773ECBF14D5F87A2CF3 /* RouteFlight.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

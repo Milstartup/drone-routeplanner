@@ -175,7 +175,7 @@ Leaflet is gekozen omdat het licht is, gewone kaarttegels toont en zelf geen sle
 
 ## De iPhone-app
 
-De iPhone-app **Veldvlucht** staat in [`ios/`](ios/README.md). Hij is gebouwd, maar nog niet getest met de drone:
+De iPhone-app **Veldvlucht** staat in [`ios/`](ios/README.md). De haalbaarheidstest met de drone is op 26 oktober 2026 geslaagd:
 
 - **Drone:** de haalbaarheidstest (aanmelden bij DJI, verbinden, accu, GPS, firmware en één foto op de grond);
 - **Route:** een `.routeplan.json` van deze planner inlezen, opnieuw controleren en op de kaart tonen;

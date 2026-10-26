@@ -3,12 +3,13 @@
 Stand op 26 oktober 2026:
 
 - **Klaar:** de routeplanner (browser-app in deze repository).
-- **Gebouwd, nog niet getest op de iPhone:** de iPhone-app **Veldvlucht** in [`ios/`](../ios/README.md), met drie tabbladen:
-  - **Drone:** de haalbaarheidstest (stap 2);
+- **Haalbaarheidstest (stap 2) geslaagd op 26 oktober 2026:** de eigen app praat met de Mavic Mini.
+- **De iPhone-app Veldvlucht** in [`ios/`](../ios/README.md), met drie tabbladen:
+  - **Drone:** de haalbaarheidstest (stap 2), getest met de drone;
   - **Route:** routebestand inlezen, controleren en op de kaart tonen (eerste deel van stap 3);
   - **Veldkaart:** met voorbeeldgegevens (stap 7).
 - **Nog te bouwen:**
-  - het vliegen zelf: stuurlus, foto's onderweg en veiligheid (rest van stap 3, stap 4 t/m 6). Dat begint pas na een geslaagde test met de drone in stap 2;
+  - het vliegen zelf: stuurlus, foto's onderweg en veiligheid (rest van stap 3, stap 4 t/m 6);
   - de bodemvochtsensoren en het centrale systeem met de AI (stap 8 en 9).
 
 Achtergrond:
@@ -153,10 +154,10 @@ Vlieg hierbij nog niet.
 - De App Key staat in `ios/Config/Lokaal.xcconfig`. Dat bestand staat in `.gitignore`.
 - De handleiding en de go/no-go-lijst staan in [ios/README.md](../ios/README.md).
 
-**Eerste test met de drone (26 oktober 2026): voorlopig go.**
+**Test met de drone (26 oktober 2026): go.**
 
 - Opstelling: de Mavic Mini (firmware niet bijgewerkt), iPhone 13 met iOS 27.0.1, app gebouwd met Xcode 16.4.
-- De uitslag per onderdeel (uit het logboek van de app):
+- De uitslag per onderdeel, uit de logboeken van twee testrondes:
 
   | Onderdeel | Uitslag |
   |---|---|
@@ -164,9 +165,10 @@ Vlieg hierbij nog niet.
   | iPhone ↔ afstandsbediening (Lightning-kabel) | Gelukt |
   | Afstandsbediening ↔ drone | Gelukt; de SDK herkent de drone als "Mavic Mini" |
   | Eén foto op de grond | Gelukt: `DJI_0096.jpg`, 4,0 MB op de SD-kaart, 1 seconde na de knop |
-  | Accu en GPS | Nog vast te leggen (stonden niet in het logboek van deze versie) |
-  | Firmware | Nog niet uitgelezen, door een fout in de app (zie hieronder) |
-  | GPS in de foto (EXIF) | Nog te controleren op de Mac |
+  | Accu | Gelukt: 91 % (8,10 V) |
+  | GPS (buiten) | Gelukt: 10 satellieten na ongeveer 2 minuten |
+  | Firmware | Gelukt: pakket **01.00.0500**, zoals verwacht; vluchtcomputer 03.04.06.43. DJI's server geeft de pakketversie dus nog door. |
+  | GPS in de foto (EXIF) | Nog te controleren op de Mac (de testfoto is binnen gemaakt) |
 
 - **Wat dit betekent:** de grootste risico's uit het onderzoek blijken geen probleem:
   - de oude SDK 4.16.2 bouwt met Xcode 16.4;
@@ -174,14 +176,12 @@ Vlieg hierbij nog niet.
   - DJI accepteert de App Key nog;
   - de iPhone praat via de kabel met de afstandsbediening;
   - de app kan de camera bedienen.
-- **Fout in de app, hersteld:**
+- **Fout in de app, gevonden in de eerste ronde en hersteld:**
   - Het lampje *afstandsbediening ↔ drone* werd al groen toen alleen de afstandsbediening er was. Het signaal `DJIParamConnection` is dan al "verbonden".
   - Daardoor las de app de firmware te vroeg en daarna niet meer.
-  - De app kijkt nu naar de vluchtcomputer van de drone. Hij zet ook accu en GPS in het logboek.
-- **Nog te doen:**
-  - de nieuwe versie op de iPhone zetten;
-  - de test kort herhalen voor firmware, accu en GPS (buiten);
-  - de foto op de Mac bekijken op GPS-gegevens.
+  - De app kijkt nu naar de vluchtcomputer van de drone. In de tweede ronde lukte de firmware daarmee meteen.
+- **Nog te doen:** een foto die buiten gemaakt is op de Mac bekijken op GPS-gegevens (*Extra → Toon info* in Voorvertoning).
+- **Volgende stap:** de rest van stap 3, de stuurlus in de simulator van DJI.
 
 - **Lukt dit:** de rest is gewoon werk.
 - **Lukt het niet:** kijk naar de alternatieven in hoofdstuk 7 van het DJI-document. Mogelijke oorzaken:

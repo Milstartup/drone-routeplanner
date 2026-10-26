@@ -30,7 +30,7 @@ Een AI in het centrale systeem bepaalt daaruit **hoeveel water welke delen van h
 | Onderdeel | Status | Waar |
 |---|---|---|
 | Routeplanner | **Klaar** (prototype) | Deze repository, `src/` |
-| Drone-app (vliegen + foto's) | Haalbaarheidstest en route inlezen **gebouwd**, nog niet getest met de drone; vliegen nog niet | [`ios/`](../ios/README.md), [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
+| Drone-app (vliegen + foto's) | Haalbaarheidstest **geslaagd** met de drone (26 oktober 2026); route inlezen gebouwd; vliegen nog niet | [`ios/`](../ios/README.md), [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
 | Sensorkastje | Ontwerp | Dit document, hoofdstuk 2 |
 | Centraal systeem + AI | Ontwerp | Dit document, hoofdstuk 4 |
 | Veldkaart in de iPhone-app | **Gebouwd** met voorbeeldgegevens | [`ios/`](../ios/README.md), dit document, hoofdstuk 5 |
@@ -319,7 +319,7 @@ Deze volgorde staat ook in [STAPPENPLAN.md](STAPPENPLAN.md).
 
 1. **Dataformaten** van hoofdstuk 6 vastleggen, met voorbeeldbestanden. *Gedaan: [`voorbeelden/`](voorbeelden/).*
 2. **Veldkaart in de iPhone-app** met voorbeeldgegevens. *Gebouwd in [`ios/`](../ios/README.md); nog te testen in het veld.*
-3. **Drone-app:** de haalbaarheidstest, daarna vliegen en foto's. *Haalbaarheidstest gebouwd; nog te testen met de drone.*
+3. **Drone-app:** de haalbaarheidstest, daarna vliegen en foto's. *Haalbaarheidstest geslaagd op 26 oktober 2026.*
 4. **Eén sensorkastje** met de huidige sensor: eerst op tafel, dan in het veld.
 5. **Centraal systeem, stap voor stap:**
    1. ontvangen en opslaan;

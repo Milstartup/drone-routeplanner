@@ -30,7 +30,12 @@ struct DroneStatus {
     /// Remote controller ↔ drone (the radio link).
     var aircraftConnected = false
     var model: String?
+    /// Firmware package version, such as 01.00.0500. For the Mavic Mini the SDK asks DJI's server.
     var firmware: String?
+    /// True when the package version could not be read (see the log for the reason).
+    var firmwareUnknown = false
+    /// The flight controller's own firmware version; readable without internet.
+    var flightControllerFirmware: String?
 
     var batteryPercent: Int?
     var batteryVolts: Double?

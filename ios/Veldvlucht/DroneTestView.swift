@@ -62,13 +62,16 @@ struct DroneTestView: View {
             HStack {
                 Text("Firmware")
                 Spacer()
-                Text(status.firmware ?? "–").foregroundStyle(firmwareColor)
+                Text(firmwareText).foregroundStyle(firmwareColor)
+            }
+            if let flightController = status.flightControllerFirmware {
+                Row(label: "Vluchtcomputer", value: flightController)
             }
             Row(label: "Motoren", value: status.motorsOn ? "aan" : "uit")
         } header: {
             Text("3 · Drone")
         } footer: {
-            Text("Binnen ziet de drone weinig of geen satellieten; GPS test je buiten. Verwacht firmware \(expectedFirmware). Werk de firmware niet bij.")
+            Text("Binnen ziet de drone weinig of geen satellieten; GPS test je buiten. Verwacht firmware \(expectedFirmware); de DJI-software vraagt die op via internet. Werk de firmware niet bij.")
         }
     }
 
@@ -130,8 +133,13 @@ struct DroneTestView: View {
         return "\(count) (signaal \(level) van 5)"
     }
 
+    private var firmwareText: String {
+        if let firmware = status.firmware { return firmware }
+        return status.firmwareUnknown ? "onbekend, zie logboek" : "–"
+    }
+
     private var firmwareColor: Color {
-        guard let firmware = status.firmware else { return .secondary }
+        guard let firmware = status.firmware else { return status.firmwareUnknown ? .orange : .secondary }
         return firmware == expectedFirmware ? .green : .orange
     }
 

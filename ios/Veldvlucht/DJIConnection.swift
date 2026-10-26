@@ -125,20 +125,45 @@ final class DJIConnection: NSObject, ObservableObject {
         bindComponents()
         if connected {
             readFirmware()
+            readFlightControllerFirmware()
         } else {
             status.firmware = nil
+            status.firmwareUnknown = false
+            status.flightControllerFirmware = nil
         }
     }
 
-    private func readFirmware() {
+    /// The package version needs DJI's server for the Mavic Mini (DJIBaseProduct.h), and right
+    /// after connecting the drone may not answer yet, so try a few times.
+    private func readFirmware(triesLeft: Int = 3) {
+        status.firmwareUnknown = false
         DJISDKManager.product()?.getFirmwarePackageVersion { [weak self] version, error in
-            guard let self = self else { return }
-            if let version = version {
+            guard let self = self, self.status.aircraftConnected else { return }
+            if let version = version, !version.isEmpty {
                 self.status.firmware = version
                 let note = version == expectedFirmware ? "zoals verwacht" : "LET OP: verwacht \(expectedFirmware)"
-                self.addLog("Firmware van de drone: \(version) (\(note)).")
+                self.addLog("Firmwarepakket van de drone: \(version) (\(note)).")
+            } else if triesLeft > 1 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    guard self.status.aircraftConnected else { return }
+                    self.readFirmware(triesLeft: triesLeft - 1)
+                }
             } else {
-                self.addLog("Firmware lezen lukt niet: \(error?.localizedDescription ?? "onbekende fout").")
+                self.status.firmwareUnknown = true
+                let reason = error?.localizedDescription ?? "geen antwoord"
+                self.addLog("Firmwarepakket lezen lukt niet: \(reason). Voor de Mavic Mini vraagt de DJI-software dit op bij DJI, via internet.")
+            }
+        }
+    }
+
+    private func readFlightControllerFirmware() {
+        aircraft?.flightController?.getFirmwareVersion { [weak self] version, error in
+            guard let self = self, self.status.aircraftConnected else { return }
+            if let version = version, !version.isEmpty {
+                self.status.flightControllerFirmware = version
+                self.addLog("Firmware van de vluchtcomputer: \(version).")
+            } else {
+                self.addLog("Firmware van de vluchtcomputer lezen lukt niet: \(error?.localizedDescription ?? "geen antwoord").")
             }
         }
     }

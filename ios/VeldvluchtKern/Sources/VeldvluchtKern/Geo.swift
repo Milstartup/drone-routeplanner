@@ -52,14 +52,7 @@ enum Geo {
     static func polygonAreaM2(_ points: [LatLng]) -> Double {
         guard points.count >= 3 else { return 0 }
         let projection = LocalProjection(origin: centroid(points))
-        let poly = points.map(projection.toXY)
-        var twice = 0.0
-        for i in poly.indices {
-            let a = poly[i]
-            let b = poly[(i + 1) % poly.count]
-            twice += a.x * b.y - b.x * a.y
-        }
-        return abs(twice) / 2
+        return polygonAreaXY(points.map(projection.toXY))
     }
 
     static func pointInPolygon(_ p: XY, _ poly: [XY]) -> Bool {
@@ -86,6 +79,79 @@ enum Geo {
 
     static func distanceToPolygonEdges(_ p: XY, _ poly: [XY]) -> Double {
         poly.indices.map { distancePointToSegment(p, poly[$0], poly[($0 + 1) % poly.count]) }.min() ?? .infinity
+    }
+
+    /// Straight interpolation in degrees; fine for the short legs inside one field.
+    static func interpolate(_ a: LatLng, _ b: LatLng, _ f: Double) -> LatLng {
+        LatLng(lat: a.lat + (b.lat - a.lat) * f, lng: a.lng + (b.lng - a.lng) * f)
+    }
+
+    static func polygonAreaXY(_ poly: [XY]) -> Double {
+        var twice = 0.0
+        for i in poly.indices {
+            let a = poly[i]
+            let b = poly[(i + 1) % poly.count]
+            twice += a.x * b.y - b.x * a.y
+        }
+        return abs(twice) / 2
+    }
+
+    private static func cross(_ o: XY, _ a: XY, _ b: XY) -> Double {
+        (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
+    }
+
+    private static func onSegment(_ a: XY, _ b: XY, _ p: XY) -> Bool {
+        min(a.x, b.x) - 1e-9 <= p.x && p.x <= max(a.x, b.x) + 1e-9
+            && min(a.y, b.y) - 1e-9 <= p.y && p.y <= max(a.y, b.y) + 1e-9
+    }
+
+    /// True when segments p1-p2 and p3-p4 cross or touch.
+    static func segmentsIntersect(_ p1: XY, _ p2: XY, _ p3: XY, _ p4: XY) -> Bool {
+        let d1 = cross(p3, p4, p1)
+        let d2 = cross(p3, p4, p2)
+        let d3 = cross(p1, p2, p3)
+        let d4 = cross(p1, p2, p4)
+        if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)) {
+            return true
+        }
+        let eps = 1e-9
+        return (abs(d1) < eps && onSegment(p3, p4, p1))
+            || (abs(d2) < eps && onSegment(p3, p4, p2))
+            || (abs(d3) < eps && onSegment(p1, p2, p3))
+            || (abs(d4) < eps && onSegment(p1, p2, p4))
+    }
+
+    /// True only when the segments cross in their interiors (touching does not count).
+    private static func properlyCross(_ p1: XY, _ p2: XY, _ p3: XY, _ p4: XY) -> Bool {
+        let eps = 1e-9
+        return cross(p3, p4, p1) * cross(p3, p4, p2) < -eps && cross(p1, p2, p3) * cross(p1, p2, p4) < -eps
+    }
+
+    /// The indexes of the first two non-neighbouring edges that intersect (edge i runs from
+    /// point i to point i + 1), or nil when the polygon is simple.
+    static func findSelfIntersection(_ poly: [XY]) -> (Int, Int)? {
+        let n = poly.count
+        guard n >= 4 else { return nil }
+        for i in 0..<n {
+            for j in (i + 1)..<n {
+                let neighbours = j == i + 1 || (i == 0 && j == n - 1)
+                if neighbours { continue }
+                if segmentsIntersect(poly[i], poly[(i + 1) % n], poly[j], poly[(j + 1) % n]) { return (i, j) }
+            }
+        }
+        return nil
+    }
+
+    /// True when segment a-b stays inside the polygon (its ends may touch the boundary).
+    static func segmentInsidePolygon(_ a: XY, _ b: XY, _ poly: [XY]) -> Bool {
+        for i in poly.indices where properlyCross(a, b, poly[i], poly[(i + 1) % poly.count]) {
+            return false
+        }
+        for f in [0.25, 0.5, 0.75] {
+            let p = XY(x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f)
+            if !pointInPolygon(p, poly), distanceToPolygonEdges(p, poly) > 1e-6 { return false }
+        }
+        return true
     }
 }
 

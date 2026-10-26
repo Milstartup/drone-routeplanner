@@ -41,7 +41,7 @@ Een browser-app om fotovluchten te plannen voor een **DJI Mavic Mini** (het orig
 
 | Commando | Wat het doet |
 |---|---|
-| `npm.cmd test` | Draait de 68 automatische tests (rekenkern, validatie, JSON, bewerken). |
+| `npm.cmd test` | Draait de 71 automatische tests (rekenkern, validatie, JSON, bewerken, voorbeeldvelden voor de app). |
 | `npm.cmd run typecheck` | Controleert de TypeScript-typen. |
 | `npm.cmd run build` | Maakt een productieversie in `dist/`. |
 | `npm.cmd run preview` | Toont die productieversie op <http://localhost:4173>. |
@@ -158,11 +158,13 @@ src/
 docs/        Routebestand, architectuur, stappenplan en onderzoek naar de DJI Mobile SDK.
   voorbeelden/  Voorbeeldbestanden in alle dataformaten.
 ios/         De iPhone-app Veldvlucht (Swift, Xcode op een Mac). Zie ios/README.md.
+sensor/      De software voor het sensorkastje (ESP32). Zie sensor/README.md.
+src/fixtures/  Maakt de voorbeeldvelden waarmee de app zijn routeberekening controleert.
 ```
 
 - De **routeplanner staat los van de dronebesturing.** `src/core` importeert alleen andere bestanden uit `src/core`.
 - Een test (`separation.test.ts`) bewaakt dat: hij faalt zodra er React, Leaflet of DJI-code in de kern terechtkomt.
-- Een latere iPhone-app hoeft alleen het JSON-bestand te lezen.
+- De iPhone-app leest het JSON-bestand, en rekent sinds 26 oktober 2026 ook zelf vliegbanen uit voor een veld dat je in de app tekent. Dat gaat precies zoals hier: de app wordt getest met voorbeeldvelden die deze planner maakt (`src/fixtures/fieldFixtures.test.ts`).
 
 **Gebruikte techniek:**
 
@@ -178,12 +180,11 @@ Leaflet is gekozen omdat het licht is, gewone kaarttegels toont en zelf geen sle
 De iPhone-app **Veldvlucht** staat in [`ios/`](ios/README.md). De haalbaarheidstest met de drone is op 26 oktober 2026 geslaagd:
 
 - **Drone:** de haalbaarheidstest (aanmelden bij DJI, verbinden, accu, GPS, firmware en één foto op de grond);
-- **Route:** een `.routeplan.json` van deze planner inlezen, opnieuw controleren en op de kaart tonen;
-- **Veldkaart:** het veld met wateradvies, markeringen, sensoren en weer, nu nog met voorbeeldgegevens.
+- **Route:** **een veld tekenen in de app** (hoeken aantikken; de app maakt de vliegbanen zoals deze planner), of een `.routeplan.json` van deze planner inlezen; daarna controleren, op de kaart tonen en vliegen;
+- **Veldkaart:** je eigen veld met sensoren, weer en wateradvies per strook, of voorbeeldgegevens;
+- **Vluchten:** de fotologs en logboeken.
 
-- **Vliegen in de simulator van DJI:** de app vliegt een route met Virtual Stick en maakt de foto's, maar alleen terwijl de simulator aan staat (stap 3).
-
-Echt vliegen kan de app nog niet. Zie verder:
+Vliegen kan eerst alleen in de **simulator van DJI**. Echt vliegen wordt pas vrijgegeven als de tests in de simulator gelukt zijn. Wat nog getest moet worden, staat in [docs/TESTLIJST.md](docs/TESTLIJST.md). Zie verder:
 
 - [docs/STAPPENPLAN.md](docs/STAPPENPLAN.md) voor de volgende stappen;
 - [docs/ARCHITECTUUR.md](docs/ARCHITECTUUR.md) voor het hele systeem (drone, bodemvochtsensoren, weer, centraal systeem met AI en de veldkaart in de app);

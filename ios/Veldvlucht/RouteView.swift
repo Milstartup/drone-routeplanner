@@ -1,14 +1,18 @@
-// The route screen (step 3 of docs/STAPPENPLAN.md): read a route file from the planner,
-// check it again, show it on a map and open the flight screen.
+// The route screen: draw a field in the app (tap its corners; FieldPlanner makes the route),
+// or open a route file from the planner. Then check it, see it on the map and fly it.
 import SwiftUI
 import UniformTypeIdentifiers
 
 final class RouteModel: ObservableObject {
     @Published private(set) var file: RoutePlanFile?
     @Published private(set) var fileName: String?
+    /// The field the route was made from, when it was drawn in the app.
+    @Published private(set) var field: FieldRecord?
     @Published private(set) var issues: [RouteIssue] = []
     @Published private(set) var summary: RouteSummary?
     @Published private(set) var error: String?
+    /// Changes with every load, so the screen can open the route that was just loaded.
+    @Published private(set) var loadCount = 0
 
     var errorCount: Int { issues.filter { $0.level == .error }.count }
 
@@ -32,15 +36,38 @@ final class RouteModel: ObservableObject {
         load(data: data, name: name)
     }
 
+    /// A field drawn in the app: its route comes from FieldPlanner.
+    func load(field: FieldRecord) {
+        let plan = field.plan()
+        self.field = field
+        file = plan.file
+        fileName = nil
+        issues = plan.issues.filter { $0.level == .error } + plan.issues.filter { $0.level == .warning }
+        summary = RouteCheck.summary(plan.file)
+        error = nil
+        loadCount += 1
+    }
+
+    /// The field was removed or changed elsewhere.
+    func forget(fieldId: String) {
+        guard field?.id == fieldId else { return }
+        file = nil
+        field = nil
+        issues = []
+        summary = nil
+    }
+
     private func load(data: Data, name: String) {
         do {
             let file = try RoutePlanFile.read(data)
             self.file = file
             fileName = name
+            field = nil
             let all = RouteCheck.check(file)
             issues = all.filter { $0.level == .error } + all.filter { $0.level == .warning }
             summary = RouteCheck.summary(file)
             error = nil
+            loadCount += 1
         } catch {
             show(error: error.localizedDescription, name: name)
         }
@@ -48,6 +75,7 @@ final class RouteModel: ObservableObject {
 
     private func show(error message: String, name: String) {
         file = nil
+        field = nil
         issues = []
         summary = nil
         fileName = name
@@ -55,34 +83,69 @@ final class RouteModel: ObservableObject {
     }
 }
 
+/// What the field drawing screen opens with: a new field, or one to change.
+struct FieldEditRequest: Identifiable {
+    let id = UUID()
+    var field: FieldRecord?
+}
+
 struct RouteView: View {
     @ObservedObject var model: RouteModel
+    @ObservedObject var fields: FieldStore
     let drone: DJIConnection
     @State private var importing = false
-    @State private var session: FlightSession?
-
-    private var canFly: Bool { model.file != nil && model.errorCount == 0 }
+    @State private var showRoute = false
+    @State private var editing: FieldEditRequest?
+    @State private var deleting: FieldRecord?
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Design.spacing) {
+                    newFieldCard
+                    if !fields.fields.isEmpty {
+                        SectionHeader(title: "Mijn velden", detail: "\(fields.fields.count)")
+                        ForEach(fields.fields) { field in
+                            Button {
+                                model.load(field: field)
+                            } label: {
+                                FieldRow(field: field, info: fields.info[field.id])
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    editing = FieldEditRequest(field: field)
+                                } label: {
+                                    Label("Veld bewerken", systemImage: "pencil")
+                                }
+                                Button(role: .destructive) {
+                                    deleting = field
+                                } label: {
+                                    Label("Veld verwijderen", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
                     if let error = model.error {
                         errorCard(error)
                     }
-                    if let file = model.file, let summary = model.summary {
-                        loaded(file, summary)
-                    } else {
-                        Card {
-                            EmptyState(
-                                symbol: "point.topleft.down.to.point.bottomright.curvepath",
-                                title: model.error == nil ? "Nog geen route" : "Kies een ander bestand",
-                                message: "Maak een route in de planner en kies Download JSON. Zet het bestand met AirDrop of iCloud Drive op de iPhone, of kies in de Bestanden-app Deel → Veldvlucht."
-                            ) {
-                                openButton.buttonStyle(ActionButtonStyle(color: .actionGo))
-                                sampleButton.buttonStyle(ActionButtonStyle(color: .veld, prominent: false))
-                            }
+                    SectionHeader(title: "Uit de planner")
+                    Card(spacing: 10) {
+                        Text("Een route die je op de computer in de routeplanner maakte (Download JSON), met AirDrop of iCloud Drive op de iPhone gezet.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Button {
+                            importing = true
+                        } label: {
+                            Label("Routebestand openen…", systemImage: "folder")
                         }
+                        .buttonStyle(ActionButtonStyle(color: .veld, prominent: false))
+                        Button {
+                            model.loadSample()
+                        } label: {
+                            Label("Voorbeeldroute laden", systemImage: "doc.text")
+                        }
+                        .buttonStyle(ActionButtonStyle(color: .gray, prominent: false))
                     }
                 }
                 .padding(.horizontal)
@@ -90,45 +153,57 @@ struct RouteView: View {
             }
             .screenBackground()
             .navigationTitle("Route")
-            .toolbar {
-                if model.file != nil || model.error != nil {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu {
-                            openButton
-                            sampleButton
-                        } label: {
-                            Label("Andere route", systemImage: "folder")
-                        }
-                    }
+            .navigationDestination(isPresented: $showRoute) {
+                RouteDetailView(model: model, drone: drone) { field in
+                    editing = FieldEditRequest(field: field)
+                } onDelete: { field in
+                    deleting = field
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
-                if canFly { flyBar }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
                 if case .success(let url) = result {
                     model.load(url: url)
                 }
             }
-            .fullScreenCover(item: $session) { session in
-                FlightView(session: session, drone: drone)
+            .fullScreenCover(item: $editing) { request in
+                FieldEditorView(field: request.field, fields: fields) { saved in
+                    model.load(field: saved)
+                }
+            }
+            .onChange(of: model.loadCount) { _, _ in
+                showRoute = model.file != nil
+            }
+            .confirmationDialog("Veld verwijderen?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                                titleVisibility: .visible, presenting: deleting) { field in
+                Button("Verwijder \(field.name)", role: .destructive) {
+                    model.forget(fieldId: field.id)
+                    fields.delete(field.id)
+                    showRoute = false
+                }
+            } message: { _ in
+                Text("Ook de sensormetingen en het weer van dit veld verdwijnen. Vluchten en foto's blijven bewaard.")
             }
         }
     }
 
-    private var openButton: some View {
-        Button {
-            importing = true
-        } label: {
-            Label("Routebestand openen…", systemImage: "folder")
-        }
-    }
-
-    private var sampleButton: some View {
-        Button {
-            model.loadSample()
-        } label: {
-            Label("Voorbeeldroute laden", systemImage: "doc.text")
+    private var newFieldCard: some View {
+        Card(spacing: 14) {
+            HStack(spacing: 14) {
+                IconBadge(symbol: "hand.tap.fill", color: .veld, size: 48)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Nieuw veld").font(.title3.weight(.bold))
+                    Text("Tik op de kaart de hoeken van je veld aan. De app maakt zelf de vliegbanen en de foto's.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Button {
+                editing = FieldEditRequest(field: nil)
+            } label: {
+                Label("Veld tekenen", systemImage: "plus")
+            }
+            .buttonStyle(ActionButtonStyle(color: .actionGo))
         }
     }
 
@@ -144,12 +219,157 @@ struct RouteView: View {
             }
         }
     }
+}
 
-    // MARK: A loaded route
+/// One field in the list: its shape, name and the figures of its route.
+private struct FieldRow: View {
+    let field: FieldRecord
+    let info: FieldStore.Info?
+
+    var body: some View {
+        HStack(spacing: 14) {
+            FieldShape(boundary: field.boundary)
+                .frame(width: 56, height: 56)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(field.name).font(.headline).lineLimit(1)
+                Text(details)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                if info?.hasErrors == true {
+                    Label("Nog niet te vliegen", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                } else if !field.sensors.isEmpty {
+                    Label(field.sensors.count == 1 ? "1 sensor" : "\(field.sensors.count) sensoren", systemImage: "drop.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.teal)
+                }
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Design.tileRadius, style: .continuous))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var details: String {
+        var parts = [FieldPlanner.hectares(field.areaM2)]
+        if let info {
+            parts.append("\(info.photoCount) foto's")
+            parts.append(RouteCheck.minutes(info.flightTimeS))
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// The outline of a field, as a small green tile.
+struct FieldShape: View {
+    let boundary: [LatLng]
+
+    var body: some View {
+        Canvas { context, size in
+            guard boundary.count >= 3 else { return }
+            let projection = LocalProjection(origin: Geo.centroid(boundary))
+            let points = boundary.map(projection.toXY)
+            let xs = points.map(\.x)
+            let ys = points.map(\.y)
+            guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return }
+            let scale = min((size.width - 14) / max(1, maxX - minX), (size.height - 14) / max(1, maxY - minY))
+            let offsetX = (size.width - (maxX - minX) * scale) / 2
+            let offsetY = (size.height - (maxY - minY) * scale) / 2
+            var path = Path()
+            for (i, p) in points.enumerated() {
+                let point = CGPoint(x: offsetX + (p.x - minX) * scale, y: size.height - offsetY - (p.y - minY) * scale)
+                if i == 0 { path.move(to: point) } else { path.addLine(to: point) }
+            }
+            path.closeSubpath()
+            context.fill(path, with: .color(Color.veld.opacity(0.3)))
+            context.stroke(path, with: .color(Color.veld), style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+        }
+        .background(Color.veld.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityHidden(true)
+    }
+}
+
+/// A loaded route: the map, the figures, the checks and the button to fly it.
+struct RouteDetailView: View {
+    @ObservedObject var model: RouteModel
+    let drone: DJIConnection
+    var onEdit: (FieldRecord) -> Void
+    var onDelete: (FieldRecord) -> Void
+    @State private var session: FlightSession?
+    @State private var exportURL: URL?
+
+    private var canFly: Bool { model.file != nil && model.errorCount == 0 }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Design.spacing) {
+                if let file = model.file, let summary = model.summary {
+                    loaded(file, summary)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 24)
+        }
+        .screenBackground()
+        .navigationTitle(model.field == nil ? "Route" : "Veld")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    if let field = model.field {
+                        Button {
+                            onEdit(field)
+                        } label: {
+                            Label("Veld bewerken", systemImage: "pencil")
+                        }
+                    }
+                    if let exportURL {
+                        ShareLink(item: exportURL) {
+                            Label("Route delen (voor de planner)", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                    if let field = model.field {
+                        Button(role: .destructive) {
+                            onDelete(field)
+                        } label: {
+                            Label("Veld verwijderen", systemImage: "trash")
+                        }
+                    }
+                } label: {
+                    Label("Meer", systemImage: "ellipsis.circle")
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if canFly { flyBar }
+        }
+        .fullScreenCover(item: $session) { session in
+            FlightView(session: session, drone: drone)
+        }
+        .onAppear(perform: writeExport)
+        .onChange(of: model.loadCount) { _, _ in writeExport() }
+    }
+
+    /// The route as a .routeplan.json, for AirDrop to the computer or the planner.
+    private func writeExport() {
+        guard let file = model.file, let data = try? file.encoded() else { return }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(FieldRecord.slug(file.name)).routeplan.json")
+        try? data.write(to: url, options: .atomic)
+        exportURL = url
+    }
 
     @ViewBuilder
     private func loaded(_ file: RoutePlanFile, _ summary: RouteSummary) -> some View {
-        let contentID = "\(model.fileName ?? "")|\(file.createdAt ?? "")"
+        let contentID = "\(model.fileName ?? model.field?.id ?? "")|\(file.createdAt ?? "")"
         NavigationLink {
             RouteMapView(file: file, contentID: contentID)
         } label: {
@@ -176,8 +396,12 @@ struct RouteView: View {
             Text(file.name)
                 .font(.title2.weight(.bold))
             HStack(spacing: 8) {
-                Pill(text: file.mode == .field ? "Veld met vliegbanen" : "Eigen route",
-                     symbol: file.mode == .field ? "square.split.diagonal.2x2" : "scribble.variable", color: .veld)
+                if model.field != nil {
+                    Pill(text: "Getekend in de app", symbol: "hand.tap", color: .veld)
+                } else {
+                    Pill(text: file.mode == .field ? "Veld met vliegbanen" : "Eigen route",
+                         symbol: file.mode == .field ? "square.split.diagonal.2x2" : "scribble.variable", color: .veld)
+                }
                 if let name = model.fileName {
                     Text(name).font(.footnote).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 }
@@ -193,7 +417,7 @@ struct RouteView: View {
                          detail: "\(summary.waypointCount) routepunten")
                 let time = Self.split(RouteCheck.minutes(summary.flightTimeS))
                 StatTile(title: "Vliegtijd", symbol: "timer", color: .purple, value: time.value, unit: time.unit,
-                         detail: "geschat, zonder wind")
+                         detail: batteryText(summary.flightTimeS, file.assumptions))
             }
             GridRow {
                 StatTile(title: "Foto's", symbol: "camera.fill", color: .teal, value: "\(summary.photoCount)",
@@ -210,16 +434,24 @@ struct RouteView: View {
         checkCard
     }
 
+    private func batteryText(_ seconds: Double, _ assumptions: RoutePlanFile.Assumptions) -> String {
+        guard assumptions.usableFlightTimeS > 0 else { return "geschat, zonder wind" }
+        return "\(Int((seconds / assumptions.usableFlightTimeS * 100).rounded())) % van een accu"
+    }
+
     private func detailRows(_ file: RoutePlanFile, _ summary: RouteSummary) -> [(String, String)] {
         var rows = [
             ("Snelheid", "\(RouteCheck.number(file.settings.speedMps)) m/s"),
             ("Foto-interval", "\(RouteCheck.number(file.settings.photoIntervalS)) s"),
         ]
+        if file.mode == .field {
+            rows.append(("Baanafstand", "\(RouteCheck.number(file.settings.lineSpacingM)) m"))
+        }
         if let far = summary.maxDistanceFromHomeM {
             rows.append(("Verste punt vanaf start", RouteCheck.meters(far)))
         }
         if let area = summary.fieldAreaM2 {
-            rows.append(("Veld", String(format: "%.2f ha", area / 10_000).replacingOccurrences(of: ".", with: ",")))
+            rows.append(("Veld", FieldPlanner.hectares(area)))
         }
         return rows
     }
@@ -254,7 +486,9 @@ struct RouteView: View {
                            color: issue.level == .error ? .red : .orange)
                 }
                 if model.errorCount > 0 {
-                    Text("Met fouten kan deze route niet gevlogen worden. Pas de route aan in de planner en sla hem opnieuw op.")
+                    Text(model.field == nil
+                         ? "Met fouten kan deze route niet gevlogen worden. Pas de route aan in de planner en sla hem opnieuw op."
+                         : "Met fouten kan deze route niet gevlogen worden. Kies Veld bewerken (rechtsboven) en pas het veld aan.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -266,7 +500,7 @@ struct RouteView: View {
         VStack(spacing: 6) {
             Button {
                 if let file = model.file {
-                    session = FlightSession(file: file, drone: drone)
+                    session = FlightSession(file: file, fieldId: model.field?.id, drone: drone)
                 }
             } label: {
                 Label(FlightClearance.realFlightsUnlocked ? "Vliegen…" : "Vliegen in de simulator…", systemImage: "airplane.departure")

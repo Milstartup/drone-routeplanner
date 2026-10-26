@@ -57,6 +57,8 @@
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Veldvlucht ontvangt de metingen van je sensorkastjes via de hotspot van je iPhone.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedExternalAccessoryProtocols</key>

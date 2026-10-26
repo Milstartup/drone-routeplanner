@@ -12,7 +12,9 @@ let package = Package(
         .testTarget(
             name: "VeldvluchtKernTests",
             dependencies: ["VeldvluchtKern"],
-            path: "Tests/VeldvluchtKernTests"
+            path: "Tests/VeldvluchtKernTests",
+            // An answer of the Open-Meteo API, read by the tests through its path.
+            exclude: ["open-meteo-voorbeeld.json"]
         ),
     ]
 )

@@ -1,6 +1,6 @@
 # Architectuur: drone, sensoren, weer en centraal systeem
 
-Vastgelegd op 25 oktober 2026. Dit is een **ontwerp**. Alleen de routeplanner bestaat al. De dataformaten hieronder zijn een eerste voorstel (versie 0) en nog nergens gebouwd.
+Vastgelegd op 25 oktober 2026, bijgewerkt op 26 oktober 2026. De routeplanner, de iPhone-app, de software voor het sensorkastje en een eerste centraal systeem (versie 0, zonder AI) zijn gebouwd. Wat nog niet met echte apparaten getest is, staat in [TESTLIJST.md](TESTLIJST.md).
 
 ## Doel
 
@@ -31,9 +31,10 @@ Een AI in het centrale systeem bepaalt daaruit **hoeveel water welke delen van h
 |---|---|---|
 | Routeplanner | **Klaar** (prototype) | Deze repository, `src/` |
 | Drone-app (vliegen + foto's) | Haalbaarheidstest **geslaagd** met de drone (26 oktober 2026). Route inlezen en **vliegen in de DJI-simulator** gebouwd, getest met een nep-drone. Echt vliegen nog niet. | [`ios/`](../ios/README.md), [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
-| Sensorkastje | Ontwerp | Dit document, hoofdstuk 2 |
-| Centraal systeem + AI | Ontwerp | Dit document, hoofdstuk 4 |
-| Veldkaart in de iPhone-app | **Gebouwd** met voorbeeldgegevens | [`ios/`](../ios/README.md), dit document, hoofdstuk 5 |
+| Veld tekenen in de app | **Gebouwd** (26 oktober 2026): hoeken aantikken, de app maakt de route op dezelfde manier als de planner | [`ios/`](../ios/README.md) |
+| Sensorkastje | Software **gebouwd**, nog niet getest met een echt bordje | [`sensor/`](../sensor/README.md), dit document, hoofdstuk 2 |
+| Centraal systeem | **Versie 0 gebouwd**: ontvangen, opslaan, weer en wateradvies met eenvoudige regels, in de app. Geen AI, geen accounts. | Dit document, hoofdstuk 4 |
+| Veldkaart in de iPhone-app | **Gebouwd**: je eigen veld met sensoren, weer en advies, of de voorbeeldgegevens | [`ios/`](../ios/README.md), dit document, hoofdstuk 5 |
 
 ## Scheidingsregels
 
@@ -43,7 +44,8 @@ Elk onderdeel heeft één taak en praat met de andere alleen via vastgelegde dat
 - **Het vluchtdeel van de iPhone-app** doet alleen vliegen en foto's maken. Tijdens een vlucht staan er geen sensor- of AI-schermen in de weg.
 - **De sensorkastjes** meten en versturen alleen. Ze nemen geen beslissingen.
 - **Het centrale systeem** is de enige plek waar gegevens worden gecombineerd en waar de AI draait.
-- **De veldkaart** toont alleen wat het centrale systeem klaarzet. De app rekent zelf geen advies uit.
+  - **Versie 0 draait voorlopig in de iPhone-app**, als apart onderdeel: `WaterAdvisor` in `ios/VeldvluchtKern`. Daarvoor is geen server en geen account nodig. Het praat alleen via de dataformaten van hoofdstuk 6, zodat het later naar een server kan verhuizen.
+- **De veldkaart** toont alleen wat het centrale systeem klaarzet. Het scherm zelf rekent geen advies uit.
 
 ## 1. Drone en foto's
 
@@ -71,7 +73,13 @@ Elk onderdeel heeft één taak en praat met de andere alleen via vastgelegde dat
 - een waterdicht kastje;
 - een vaste, bekende GPS-positie per sensor.
 
-**Versturen.** Op een akker is meestal geen wifi. De opties:
+**Versturen (gebouwd, 26 oktober 2026).** Het kastje stuurt zijn metingen via de **hotspot van de iPhone** naar de app Veldvlucht:
+- Het kastje meet elk uur en bewaart de metingen.
+- Ziet het de hotspot, dan stuurt het alles naar de iPhone, in het formaat `veld/sensorupload` (hoofdstuk 6).
+- De app moet daarvoor open zijn. Hij zet de metingen bij het veld waarin de sensor geplaatst is.
+- Hoe je het kastje bouwt, staat in [`sensor/README.md`](../sensor/README.md).
+
+**Andere manieren voor later.** Op een akker is meestal geen wifi. De opties:
 
 - **LoRaWAN**, bijvoorbeeld via The Things Network: weinig stroom en een groot bereik. Controleer de dekkingskaart voor je veld.
 - **Mobiel netwerk** (NB-IoT of LTE-M), met een simkaart per kastje.
@@ -107,6 +115,25 @@ Een app of server mag de weersverwachting uit de Google-zoekresultaten niet zoma
    - **Gebruik pas AI als er genoeg gegevens zijn** om haar mee te trainen en te controleren.
 3. **Planten of plekken markeren:** een AI-model op de drone-foto's herkent zichtbare problemen. Zo'n model moet getraind worden met voorbeeldfoto's waarvan bekend is wat er aan de hand is (gelabelde foto's). Die verzamel je bij de eerste vluchten.
 4. **Resultaten klaarzetten** als kaartlagen voor de app (zie hoofdstuk 6).
+
+**Versie 0 (gebouwd, 26 oktober 2026)** draait in de iPhone-app (`ios/VeldvluchtKern`):
+
+1. **Ontvangen en opslaan:** de metingen van de sensorkastjes (`SensorReceiver`), de fotologs van de vluchten en de veldgrens.
+2. **Weer:** de verwachting voor vijf dagen van Open-Meteo, met de vliegmomenten (`OpenMeteo`, `FlightWeather`).
+3. **Wateradvies per strook** met eenvoudige regels (`WaterAdvisor`):
+   - De stroken lopen langs de vliegbanen. Dat is ook de rijrichting van de tractor. Ze zijn standaard 24 m breed.
+   - Per strook telt de sensor in die strook, of anders een sensor die ernaast ligt.
+   - De sensor moet geijkt zijn, en de meting mag niet ouder zijn dan 2 dagen. Anders komt er geen advies, met de reden erbij.
+   - **Droger dan 35 %:**
+     - komt er de komende 2 dagen minder dan 10 mm regen → **nu water geven**;
+     - komt er 10 mm of meer → **binnenkort**: wacht op de regen.
+   - **Tussen 35 en 50 %:**
+     - minder dan 5 mm meer regen dan verdamping → **binnenkort water geven**;
+     - anders → **genoeg**.
+   - **50 % of natter:** **genoeg**.
+   - De hoeveelheid is ruwweg 0,4 mm per procent tot 55 %.
+   - De zekerheid is laag (20 tot 80 %): dit zijn eerste regels, die nog met het veld vergeleken moeten worden.
+4. **Nog niet:** foto-analyse en AI, accounts om anderen te laten meekijken, en terugkijken naar eerdere dagen.
 
 **Uitgangspunten:**
 
@@ -154,9 +181,33 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
 ```
 
 - `raw` is de ruwe sensorwaarde. Bij de school-sensor betekent een hogere waarde meestal droger.
-- `moisturePercent` en `calibration` blijven leeg tot de sensor geijkt is.
+- `moisturePercent` en `calibration` blijven leeg tot de sensor geijkt is. Bij het ijken in de app vul je de ruwe waarde in droge en in natte grond in; de app rekent dan `moisturePercent` uit.
 - Na het ijken: `"calibration": { "dryRaw": 860, "wetRaw": 340 }`, de ruwe waarden in droge en in verzadigde grond van het veld. Het centrale systeem rekent dan `moisturePercent` uit.
 - Meerdere metingen in één bestand: een JSON-lijst van zulke objecten (zie [`voorbeelden/voorbeeld-sensormetingen.json`](voorbeelden/voorbeeld-sensormetingen.json)).
+
+### Upload van een sensorkastje
+
+Nieuw op 26 oktober 2026. Zo stuurt een kastje zijn metingen naar de app (`POST /sensormetingen` op poort 8787 van de iPhone, via zijn hotspot):
+
+```json
+{
+  "format": "veld/sensorupload",
+  "version": 0,
+  "sensorId": "broccoli-west-s1",
+  "depthCm": 15,
+  "boot": 1840023117,
+  "measurements": [
+    { "nr": 41, "ageS": 7200, "raw": 2875, "batteryVolt": 3.91 },
+    { "nr": 42, "ageS": 3600, "raw": 2890, "batteryVolt": null }
+  ]
+}
+```
+
+- Het kastje heeft geen klok. `ageS` zegt hoeveel seconden geleden de meting was. De app maakt daar een tijd van.
+- `boot` is een willekeurig nummer van de laatste keer dat het kastje aanging, en `nr` telt de metingen sinds dan. Stuurt het kastje metingen nog eens (omdat het het antwoord miste), dan slaat de app die over. Beide zijn optioneel.
+- De plek (`location`) en het veld (`fieldId`) komen uit de app: daar plaats je de sensor met dezelfde `sensorId`.
+- De app antwoordt `200` met `{"ontvangen": 2}`. Pas dan gooit het kastje de metingen weg. Kent de app de sensor niet (`404`), dan houdt het kastje ze.
+- De app slaat de metingen op als `veld/sensormeting` (hierboven).
 
 ### Fotolog (per vlucht)
 
@@ -221,7 +272,7 @@ Soorten (`kind`):
 
 ### Weer (voor de veldkaart)
 
-Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weerdienst (hoofdstuk 3) en zet ze in dit formaat klaar, met de vliegmomenten uit hoofdstuk 7.
+Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weerdienst (hoofdstuk 3) en zet ze in dit formaat klaar, met de vliegmomenten uit hoofdstuk 7. In versie 0 haalt de app de verwachting zelf op bij Open-Meteo, voor het midden van het veld.
 
 ```json
 {
@@ -253,8 +304,8 @@ Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weer
 
 | Eis | Gevolg voor het ontwerp |
 |---|---|
-| Veld, plek en grootte zelf te kiezen in de app | Kan al in de routeplanner: zoeken en de grens tekenen, overal en in elke grootte. |
-| Aantal bodemvochtsensoren zelf te kiezen | Nieuwe functie "Sensoren plaatsen": kies een aantal, de app stelt een gelijkmatige verdeling over het veld voor, en de punten zijn te verslepen. Elke sensor krijgt een id en een vaste positie (`sensorId`, `location`). |
+| Veld, plek en grootte zelf te kiezen in de app | Kan in de routeplanner, en **sinds 26 oktober 2026 ook in de app zelf**: tik de hoeken aan, de app maakt de vliegbanen. |
+| Aantal bodemvochtsensoren zelf te kiezen | "Sensoren plaatsen" in de app (*gebouwd*): kies een aantal, de app stelt een gelijkmatige verdeling over het veld voor, en de punten zijn te verslepen. Elke sensor krijgt een id en een vaste positie (`sensorId`, `location`). |
 | De school-sensor van €1,50 wordt gebruikt | Prima voor het concept. Houd rekening met slijtage en ijken (hoofdstuk 2). Er wordt zelf gebouwd met een ESP32. |
 | Sensoren versturen via de **hotspot van de telefoon** | De ESP32 maakt verbinding met de hotspot. Omdat die er niet altijd is, **bewaart het kastje zijn metingen** en verstuurt het ze zodra de hotspot in de buurt is. Voor een echt groot veld: LoRaWAN of een simkaart per kastje. |
 
@@ -268,7 +319,7 @@ Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weer
 
 | Eis | Gevolg voor het ontwerp |
 |---|---|
-| Het systeem geeft aan wanneer je het beste kunt vliegen, met een melding | Het centrale systeem bekijkt de verwachting en zoekt een **vliegmoment**: wind en windstoten ruim onder 8 m/s, geen regen, daglicht. Een echte pushmelding van een server naar de iPhone vraagt een betaald Apple Developer-lidmaatschap. Gratis alternatieven: de app haalt het advies zelf op en zet een **lokale melding**, of het advies staat bovenaan de veldkaart. |
+| Het systeem geeft aan wanneer je het beste kunt vliegen, met een melding | Het centrale systeem bekijkt de verwachting en zoekt een **vliegmoment**: wind en windstoten ruim onder 8 m/s, geen regen, daglicht. *Gebouwd: minstens 2 uur achter elkaar met wind onder 5 m/s, windstoten onder 7 m/s, droog en licht. De app geeft een melding een uur van tevoren, als je die aanzet.* Een echte pushmelding van een server naar de iPhone vraagt een betaald Apple Developer-lidmaatschap. Gratis alternatieven: de app haalt het advies zelf op en zet een **lokale melding**, of het advies staat bovenaan de veldkaart. |
 | Advies na een vlucht: liefst snel, maar het moet kloppen | De analyse draait direct na het uploaden. Eerst komen snelle resultaten (sensoren en weer), daarna die van de foto's. |
 | **"Niemand vliegt de drone, hij vliegt zelf"** | De drone vliegt de route zelf: de app stuurt en maakt de foto's. Toch moet er bij elke vlucht iemand aanwezig zijn, om twee redenen. **Technisch:** de Mini heeft geen missies aan boord, dus de afstandsbediening en de iPhone-app moeten de hele vlucht aan staan. **Wettelijk:** in de open categorie van de EU-regels moet er een piloot zijn die de drone ziet en kan ingrijpen. Een drone die volledig zelfstandig vertrekt en landt, is met de Mavic Mini niet mogelijk. |
 
@@ -319,14 +370,15 @@ Deze volgorde staat ook in [STAPPENPLAN.md](STAPPENPLAN.md).
 
 1. **Dataformaten** van hoofdstuk 6 vastleggen, met voorbeeldbestanden. *Gedaan: [`voorbeelden/`](voorbeelden/).*
 2. **Veldkaart in de iPhone-app** met voorbeeldgegevens. *Gebouwd in [`ios/`](../ios/README.md); nog te testen in het veld.*
-3. **Drone-app:** de haalbaarheidstest, daarna vliegen en foto's. *Haalbaarheidstest geslaagd op 26 oktober 2026.*
-4. **Eén sensorkastje** met de huidige sensor: eerst op tafel, dan in het veld.
+3. **Drone-app:** de haalbaarheidstest, daarna vliegen en foto's. *Haalbaarheidstest geslaagd op 26 oktober 2026. Vliegen gebouwd, nog te testen.*
+4. **Eén sensorkastje** met de huidige sensor: eerst op tafel, dan in het veld. *Software gebouwd in [`sensor/`](../sensor/README.md), nog te testen met een bordje.*
 5. **Centraal systeem, stap voor stap:**
-   1. ontvangen en opslaan;
-   2. tonen op de veldkaart;
-   3. weer koppelen;
-   4. regels voor wateradvies;
-   5. AI voor wateradvies en markeringen.
+   1. ontvangen en opslaan; *versie 0 gebouwd, in de app*
+   2. tonen op de veldkaart; *gebouwd*
+   3. weer koppelen; *gebouwd (Open-Meteo)*
+   4. regels voor wateradvies; *gebouwd (eenvoudige regels, versie 0)*
+   5. foto-analyse op de laptop en AI voor wateradvies en markeringen; *nog te doen, na de eerste echte vluchten*
+   6. een server met accounts, zodat anderen kunnen meekijken; *nog te doen*
 6. **Betere sensoren** (capacitief of landbouwsensoren), verspreid over de zones.
 
 Bronnen:

@@ -17,8 +17,24 @@ struct RoutePlanFile: Codable, Equatable {
         var speedMps: Double
         var lineSpacingM: Double
         var photoIntervalS: Double
+        /// Compass bearing of the flight lines; nil = along the longest edge of the field.
         var lineAngleDeg: Double?
         var edgeMarginM: Double
+
+        /// The planner's defaults (src/core/defaults.ts).
+        static let planner = Settings(altitudeM: 30, speedMps: 4, lineSpacingM: 20, photoIntervalS: 3,
+                                      lineAngleDeg: nil, edgeMarginM: 5)
+
+        /// Writes "lineAngleDeg": null like the planner, which refuses a file without it.
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(altitudeM, forKey: .altitudeM)
+            try container.encode(speedMps, forKey: .speedMps)
+            try container.encode(lineSpacingM, forKey: .lineSpacingM)
+            try container.encode(photoIntervalS, forKey: .photoIntervalS)
+            try container.encode(lineAngleDeg, forKey: .lineAngleDeg)
+            try container.encode(edgeMarginM, forKey: .edgeMarginM)
+        }
     }
 
     struct Assumptions: Codable, Equatable {
@@ -103,6 +119,8 @@ struct RoutePlanFile: Codable, Equatable {
     var version: Int
     var notice: String?
     var createdAt: String?
+    var coordinateSystem: String?
+    var altitudeReference: String?
     var name: String
     var mode: Mode
     var settings: Settings
@@ -112,12 +130,37 @@ struct RoutePlanFile: Codable, Equatable {
     var routePoints: [RoutePoint]
     var derived: Derived
 
+    private enum CodingKeys: String, CodingKey {
+        case format, version, notice, createdAt, coordinateSystem, altitudeReference, name, mode, settings
+        case assumptions, home, boundary, routePoints, derived
+    }
+
+    init(name: String, mode: Mode, settings: Settings, assumptions: Assumptions, home: LatLng?,
+         boundary: [LatLng], routePoints: [RoutePoint], derived: Derived, createdAt: String?, notice: String?) {
+        format = Self.format
+        version = Self.version
+        self.notice = notice
+        self.createdAt = createdAt
+        coordinateSystem = "WGS84 (EPSG:4326), decimale graden"
+        altitudeReference = "meter boven het startpunt"
+        self.name = name
+        self.mode = mode
+        self.settings = settings
+        self.assumptions = assumptions
+        self.home = home
+        self.boundary = boundary
+        self.routePoints = routePoints
+        self.derived = derived
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         format = try container.decode(String.self, forKey: .format)
         version = try container.decode(Int.self, forKey: .version)
         notice = try container.decodeIfPresent(String.self, forKey: .notice)
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+        coordinateSystem = try container.decodeIfPresent(String.self, forKey: .coordinateSystem)
+        altitudeReference = try container.decodeIfPresent(String.self, forKey: .altitudeReference)
         let rawName = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
         name = rawName.trimmingCharacters(in: .whitespaces).isEmpty ? "Geladen route" : rawName
         mode = try container.decode(Mode.self, forKey: .mode)
@@ -127,6 +170,32 @@ struct RoutePlanFile: Codable, Equatable {
         boundary = try container.decodeIfPresent([LatLng].self, forKey: .boundary) ?? []
         routePoints = try container.decodeIfPresent([RoutePoint].self, forKey: .routePoints) ?? []
         derived = try container.decode(Derived.self, forKey: .derived)
+    }
+
+    /// Writes "home": null like the planner does.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(format, forKey: .format)
+        try container.encode(version, forKey: .version)
+        try container.encodeIfPresent(notice, forKey: .notice)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(coordinateSystem, forKey: .coordinateSystem)
+        try container.encodeIfPresent(altitudeReference, forKey: .altitudeReference)
+        try container.encode(name, forKey: .name)
+        try container.encode(mode, forKey: .mode)
+        try container.encode(settings, forKey: .settings)
+        try container.encode(assumptions, forKey: .assumptions)
+        try container.encode(home, forKey: .home)
+        try container.encode(boundary, forKey: .boundary)
+        try container.encode(routePoints, forKey: .routePoints)
+        try container.encode(derived, forKey: .derived)
+    }
+
+    /// The file as JSON text, readable by the planner (Download JSON gives the same structure).
+    func encoded() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        return try encoder.encode(self)
     }
 
     /// Reads a route file. Refuses other formats and versions and invalid coordinates

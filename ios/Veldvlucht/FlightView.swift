@@ -50,6 +50,8 @@ final class FlightSession: ObservableObject, Identifiable {
 
     let id = UUID()
     let file: RoutePlanFile
+    /// The field id in the photo log: the field drawn in the app, or one made from the route name.
+    let fieldId: String
     @Published private(set) var flight: RouteFlight
     @Published private(set) var mode = Mode.simulator
     @Published private(set) var continuing = false
@@ -60,10 +62,11 @@ final class FlightSession: ObservableObject, Identifiable {
     private var timer: Timer?
     private var observers: Set<AnyCancellable> = []
 
-    init(file: RoutePlanFile, drone: DJIConnection) {
+    init(file: RoutePlanFile, fieldId: String? = nil, drone: DJIConnection) {
         self.file = file
+        self.fieldId = fieldId ?? FlightRecorder.slug(file.name)
         self.drone = drone
-        flight = Self.makeFlight(file: file, drone: drone, mode: .simulator, startAtPhoto: 0)
+        flight = Self.makeFlight(file: file, fieldId: self.fieldId, drone: drone, mode: .simulator, startAtPhoto: 0)
         savedProgress = recorder.progress(for: file, simulator: true)
     }
 
@@ -75,14 +78,14 @@ final class FlightSession: ObservableObject, Identifiable {
         savedProgress = recorder.progress(for: file, simulator: mode == .simulator)
         let start = continuing ? savedProgress?.nextPhotoIndex : nil
         self.continuing = start != nil
-        flight = Self.makeFlight(file: file, drone: drone, mode: mode, startAtPhoto: start ?? 0)
+        flight = Self.makeFlight(file: file, fieldId: fieldId, drone: drone, mode: mode, startAtPhoto: start ?? 0)
         if let telemetry = drone.lastTelemetry {
             flight.update(telemetry)
         }
         observeFlight()
     }
 
-    private static func makeFlight(file: RoutePlanFile, drone: DJIConnection, mode: Mode, startAtPhoto: Int) -> RouteFlight {
+    private static func makeFlight(file: RoutePlanFile, fieldId: String, drone: DJIConnection, mode: Mode, startAtPhoto: Int) -> RouteFlight {
         var settings = RouteFlight.Settings()
         settings.requireSimulator = mode == .simulator
         if mode == .real {
@@ -91,7 +94,7 @@ final class FlightSession: ObservableObject, Identifiable {
         let suffix = mode == .simulator ? "-simulator" : ""
         return RouteFlight(plan: FlightPlan(file), drone: drone,
                            flightId: FlightRecorder.flightId(name: file.name, date: Date()) + suffix,
-                           fieldId: FlightRecorder.slug(file.name), settings: settings, startAtPhoto: startAtPhoto)
+                           fieldId: fieldId, settings: settings, startAtPhoto: startAtPhoto)
     }
 
     func open() {

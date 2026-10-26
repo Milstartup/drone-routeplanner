@@ -11,12 +11,19 @@
 		1121517FBB0685D688EDF41B /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F84BF4762899053DD69013 /* SampleData.swift */; };
 		17C9FD5A07CBFF4F2A8214B7 /* ScreenTour.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51549C02FBD1D338339CB08B /* ScreenTour.swift */; };
 		1E7B29D98B6322D70BFA3A09 /* JSONReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21EBE013B729452360E76CF6 /* JSONReading.swift */; };
+		201F56FECCE427BF880F7E87 /* FieldRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1708673D6DB7649B209B504F /* FieldRecord.swift */; };
+		2196F0F5B6877BDC41DDB916 /* SensorUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBCBEE06B8CCE80C7389E56 /* SensorUpload.swift */; };
+		28E1E06E50035DB0A3BD35DB /* FieldPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54549067B452C7A9F2214664 /* FieldPlanner.swift */; };
+		2D0F4FA3FD6AF2ADA5A0162C /* WeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB4A7843B4193A6D9144569 /* WeatherService.swift */; };
+		4976CF9B23908164DE9D4FFA /* FieldEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12DF91515646F6AE5D37B1BF /* FieldEditor.swift */; };
 		4CCE75F44F45FBD73E03D5AB /* MapCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2975965CB65A23A0E61D9F05 /* MapCanvas.swift */; };
 		5A8A0771F340A3A415542C39 /* FieldFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33BCA70B133C63171405D2E1 /* FieldFormats.swift */; };
 		5CFCA09372A6B17D9F98F8B3 /* FlightPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */; };
+		5E46F5FAFFBC1CAB9E2E3EFB /* FieldStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5A7AAF8E84568980D69577 /* FieldStore.swift */; };
 		608A3773ECBF14D5F87A2CF3 /* RouteFlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */; };
 		6FBBE37AB7484E4676754772 /* FieldMapScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD090855C6513C4C1763DF26 /* FieldMapScreen.swift */; };
 		75C09A2E6AAFBEBF688A57B4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CCFF1CFA2EF7072DC5242FF5 /* Assets.xcassets */; };
+		7A935DC0AE2A4D398528CEB1 /* OpenMeteo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC1F6D8E3C4039971DC3B31 /* OpenMeteo.swift */; };
 		9B7CF025BDBE104253616B47 /* FakeDrone.swift in Sources */ = {isa = PBXBuildFile; fileRef = C96CB1DF1F5ECAA70F4DEA9A /* FakeDrone.swift */; };
 		9BDB70F4E2D123DA5D756878 /* Design.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1AFA5AC24A94A5678DAD875 /* Design.swift */; };
 		9E7824971337DEE560EB2100 /* FlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A80118DE72C67FF2028E32 /* FlightView.swift */; };
@@ -25,18 +32,25 @@
 		A10000000000000000000031 /* DroneTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* DroneTestView.swift */; };
 		A10000000000000000000032 /* DroneStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* DroneStatus.swift */; };
 		A10000000000000000000033 /* DJIConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* DJIConnection.swift */; };
+		A7EE9295FE9C4F61EFD95EC2 /* SensorEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BADD5AD092EE2D315856E0 /* SensorEditor.swift */; };
+		B8E21943CDCF71D2364871EB /* WaterAdvisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D876B0356D1AA428E98EE22F /* WaterAdvisor.swift */; };
 		BE2070DC6A550CCBC114C375 /* voorbeelden in Resources */ = {isa = PBXBuildFile; fileRef = 7AB68BB2B3BF769F320CE850 /* voorbeelden */; };
 		C797E6387A18F6CF9884A089 /* RoutePlanFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47874DBBDB6A0249128B6373 /* RoutePlanFile.swift */; };
 		D1FD1C16A9BC94D5ADE61DFD /* FieldSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D7B41B1CDF10283ACE84DC /* FieldSummary.swift */; };
 		D95272E0B9BFFE5E5A0E9CC1 /* RouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C09B64073AF6A4E1287079 /* RouteView.swift */; };
 		DFC019F36CBF6B3B87CF0B04 /* Geo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A5632A804C2A0B1BBF3ADC /* Geo.swift */; };
+		E0329EB4E55C7B37690E8552 /* SensorReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F876017715E9EEBE9416D5 /* SensorReceiver.swift */; };
 		E17B7E3A2835D2FFE5F793D7 /* AxisMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCB970BDD03FEC3FB4058EBC /* AxisMapping.swift */; };
 		E211022A1AAC810BEEC35407 /* FlightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FA0B7EC295FC4D4062CC3D /* FlightsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		03BADD5AD092EE2D315856E0 /* SensorEditor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SensorEditor.swift; sourceTree = "<group>"; };
 		08D7B41B1CDF10283ACE84DC /* FieldSummary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldSummary.swift; sourceTree = "<group>"; };
 		11D2A5DEB79F0312E0C4F4DB /* Pods-Veldvlucht.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Veldvlucht.debug.xcconfig"; path = "Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht.debug.xcconfig"; sourceTree = "<group>"; };
+		12DF91515646F6AE5D37B1BF /* FieldEditor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldEditor.swift; sourceTree = "<group>"; };
+		1708673D6DB7649B209B504F /* FieldRecord.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldRecord.swift; sourceTree = "<group>"; };
+		1FC1F6D8E3C4039971DC3B31 /* OpenMeteo.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OpenMeteo.swift; sourceTree = "<group>"; };
 		21EBE013B729452360E76CF6 /* JSONReading.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JSONReading.swift; sourceTree = "<group>"; };
 		21F84BF4762899053DD69013 /* SampleData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
 		2975965CB65A23A0E61D9F05 /* MapCanvas.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MapCanvas.swift; sourceTree = "<group>"; };
@@ -45,9 +59,13 @@
 		47874DBBDB6A0249128B6373 /* RoutePlanFile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutePlanFile.swift; sourceTree = "<group>"; };
 		4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteFlight.swift; sourceTree = "<group>"; };
 		51549C02FBD1D338339CB08B /* ScreenTour.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenTour.swift; sourceTree = "<group>"; };
+		54549067B452C7A9F2214664 /* FieldPlanner.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldPlanner.swift; sourceTree = "<group>"; };
 		54C09B64073AF6A4E1287079 /* RouteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteView.swift; sourceTree = "<group>"; };
+		5EBCBEE06B8CCE80C7389E56 /* SensorUpload.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SensorUpload.swift; sourceTree = "<group>"; };
 		7AB68BB2B3BF769F320CE850 /* voorbeelden */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = voorbeelden; path = ../docs/voorbeelden; sourceTree = "<group>"; };
+		7B5A7AAF8E84568980D69577 /* FieldStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldStore.swift; sourceTree = "<group>"; };
 		835DF01A1D628FD32A7A9642 /* RouteCheck.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteCheck.swift; sourceTree = "<group>"; };
+		94F876017715E9EEBE9416D5 /* SensorReceiver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SensorReceiver.swift; sourceTree = "<group>"; };
 		99A5632A804C2A0B1BBF3ADC /* Geo.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Geo.swift; sourceTree = "<group>"; };
 		A10000000000000000000011 /* Veldvlucht.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Veldvlucht.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000020 /* VeldvluchtApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VeldvluchtApp.swift; sourceTree = "<group>"; };
@@ -60,8 +78,10 @@
 		C1AFA5AC24A94A5678DAD875 /* Design.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Design.swift; sourceTree = "<group>"; };
 		C96CB1DF1F5ECAA70F4DEA9A /* FakeDrone.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FakeDrone.swift; sourceTree = "<group>"; };
 		CCFF1CFA2EF7072DC5242FF5 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CFB4A7843B4193A6D9144569 /* WeatherService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WeatherService.swift; sourceTree = "<group>"; };
 		D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FlightPlan.swift; sourceTree = "<group>"; };
 		D4ACA47D0D5959639DEE4ECB /* libPods-Veldvlucht.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Veldvlucht.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D876B0356D1AA428E98EE22F /* WaterAdvisor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WaterAdvisor.swift; sourceTree = "<group>"; };
 		DA7944098F58BE630AB72597 /* Pods-Veldvlucht.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Veldvlucht.release.xcconfig"; path = "Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht.release.xcconfig"; sourceTree = "<group>"; };
 		DCB970BDD03FEC3FB4058EBC /* AxisMapping.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AxisMapping.swift; sourceTree = "<group>"; };
 		E8A80118DE72C67FF2028E32 /* FlightView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FlightView.swift; sourceTree = "<group>"; };
@@ -92,6 +112,11 @@
 				D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */,
 				DCB970BDD03FEC3FB4058EBC /* AxisMapping.swift */,
 				4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */,
+				54549067B452C7A9F2214664 /* FieldPlanner.swift */,
+				1708673D6DB7649B209B504F /* FieldRecord.swift */,
+				1FC1F6D8E3C4039971DC3B31 /* OpenMeteo.swift */,
+				D876B0356D1AA428E98EE22F /* WaterAdvisor.swift */,
+				5EBCBEE06B8CCE80C7389E56 /* SensorUpload.swift */,
 			);
 			name = Kern;
 			path = VeldvluchtKern/Sources/VeldvluchtKern;
@@ -154,6 +179,11 @@
 				C1AFA5AC24A94A5678DAD875 /* Design.swift */,
 				51549C02FBD1D338339CB08B /* ScreenTour.swift */,
 				CCFF1CFA2EF7072DC5242FF5 /* Assets.xcassets */,
+				7B5A7AAF8E84568980D69577 /* FieldStore.swift */,
+				12DF91515646F6AE5D37B1BF /* FieldEditor.swift */,
+				CFB4A7843B4193A6D9144569 /* WeatherService.swift */,
+				94F876017715E9EEBE9416D5 /* SensorReceiver.swift */,
+				03BADD5AD092EE2D315856E0 /* SensorEditor.swift */,
 			);
 			path = Veldvlucht;
 			sourceTree = "<group>";
@@ -332,6 +362,16 @@
 				9BDB70F4E2D123DA5D756878 /* Design.swift in Sources */,
 				17C9FD5A07CBFF4F2A8214B7 /* ScreenTour.swift in Sources */,
 				9B7CF025BDBE104253616B47 /* FakeDrone.swift in Sources */,
+				5E46F5FAFFBC1CAB9E2E3EFB /* FieldStore.swift in Sources */,
+				4976CF9B23908164DE9D4FFA /* FieldEditor.swift in Sources */,
+				28E1E06E50035DB0A3BD35DB /* FieldPlanner.swift in Sources */,
+				201F56FECCE427BF880F7E87 /* FieldRecord.swift in Sources */,
+				2D0F4FA3FD6AF2ADA5A0162C /* WeatherService.swift in Sources */,
+				E0329EB4E55C7B37690E8552 /* SensorReceiver.swift in Sources */,
+				A7EE9295FE9C4F61EFD95EC2 /* SensorEditor.swift in Sources */,
+				7A935DC0AE2A4D398528CEB1 /* OpenMeteo.swift in Sources */,
+				B8E21943CDCF71D2364871EB /* WaterAdvisor.swift in Sources */,
+				2196F0F5B6877BDC41DDB916 /* SensorUpload.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

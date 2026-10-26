@@ -4,13 +4,15 @@ Stand op 26 oktober 2026:
 
 - **Klaar:** de routeplanner (browser-app in deze repository).
 - **Haalbaarheidstest (stap 2) geslaagd op 26 oktober 2026:** de eigen app praat met de Mavic Mini.
-- **De iPhone-app Veldvlucht** in [`ios/`](../ios/README.md), met drie tabbladen:
+- **De iPhone-app Veldvlucht** in [`ios/`](../ios/README.md), met vier tabbladen:
   - **Drone:** de haalbaarheidstest (stap 2), getest met de drone;
-  - **Route:** routebestand inlezen, controleren en op de kaart tonen (eerste deel van stap 3);
-  - **Veldkaart:** met voorbeeldgegevens (stap 7).
-- **Nog te bouwen:**
-  - niets meer in de iPhone-app voor stap 3 t/m 7: alles is gebouwd en getest met een nep-drone. **Wat jij nog moet testen, staat in [TESTLIJST.md](TESTLIJST.md).**
-  - de bodemvochtsensoren en het centrale systeem met de AI (stap 8 en 9).
+  - **Route:** **een veld tekenen in de app** (hoeken aantikken, de app maakt de vliegbanen), of een routebestand van de planner inlezen; daarna vliegen (stap 3 t/m 5);
+  - **Veldkaart:** je eigen veld met sensoren, weer en wateradvies, of de voorbeeldgegevens (stap 7 t/m 9);
+  - **Vluchten:** fotologs en logboeken (stap 6).
+- **Het sensorkastje** (stap 8): de software staat in [`sensor/`](../sensor/README.md).
+- **Het centrale systeem, versie 0** (stap 9): ontvangen, opslaan, weer en wateradvies met eenvoudige regels. Het draait in de app.
+- **Nog te bouwen:** foto-analyse en AI (na de eerste echte vluchten), en een server met accounts om anderen te laten meekijken.
+- **Wat jij nog moet testen, staat in [TESTLIJST.md](TESTLIJST.md).**
 
 Achtergrond:
 
@@ -191,6 +193,8 @@ Vlieg hierbij nog niet.
 
 ## Stap 3: route en foto's, zonder te vliegen
 
+**Nieuw (26 oktober 2026): een veld tekenen in de app.** Tik op de kaart de hoeken van je veld aan; de app maakt meteen de vliegbanen en de foto's. Dat rekent hij precies zo uit als de routeplanner: getest met drie velden die de planner zelf maakte. De planner op de computer is daardoor niet meer nodig, maar werkt nog wel.
+
 - Het `.routeplan.json` inlezen (AirDrop of de Bestanden-app), opnieuw valideren en op een kaart tonen.
   - **Gebouwd (26 oktober 2026):** tabblad *Route* in de app.
   - De app gebruikt de regels van de planner, plus eigen controles op het blok `derived` dat hij straks vliegt.
@@ -298,6 +302,13 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
 
 ## Stap 8: sensorkastje
 
+**Gebouwd (26 oktober 2026), nog niet getest met een echt bordje:**
+- De software voor een ESP32-bordje staat in [`sensor/`](../sensor/README.md), met een handleiding voor het aansluiten en uploaden.
+- Het kastje meet elk uur, zet de sensor alleen aan tijdens het meten, en bewaart de metingen.
+- Het stuurt ze via de **hotspot van de iPhone** naar de app (het formaat `veld/sensorupload` uit [ARCHITECTUUR.md](ARCHITECTUUR.md)).
+- In de app plaats je de sensoren op je veld en ijk je ze met droge en natte grond.
+- Getest: het ontvangen in de app, met nep-metingen vanaf de Mac (`sensor/nep-sensorkastje.py`).
+
 1. Op tafel:
    - de huidige sensor op een ESP32- of LoRa-bordje aansluiten en de **analoge** uitgang uitlezen;
    - de voeding alleen aanzetten tijdens een meting, tegen slijtage.
@@ -309,6 +320,14 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
 5. Later: betere sensoren (capacitief of landbouwsensoren), minstens één per zone.
 
 ## Stap 9: centraal systeem en AI
+
+**Versie 0 gebouwd (26 oktober 2026)**, in de iPhone-app, zonder server en zonder account:
+- **ontvangen en opslaan** van de sensormetingen, per veld;
+- **tonen op de veldkaart**, met het verloop per sensor;
+- **weer koppelen** via Open-Meteo, met het beste vliegmoment en een melding;
+- **wateradvies met eenvoudige regels** per strook van 24 m langs de vliegbanen. Bij elk advies staat waarop het gebaseerd is.
+
+De regels staan in [ARCHITECTUUR.md](ARCHITECTUUR.md), hoofdstuk 4. **Nog niet:** foto-analyse en AI (punt 5 hieronder), en accounts.
 
 Stap voor stap, zodat elke stap zelf al nut heeft:
 

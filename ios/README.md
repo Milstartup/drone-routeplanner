@@ -7,8 +7,8 @@ De iPhone-app uit [STAPPENPLAN.md](../docs/STAPPENPLAN.md). Hij heeft vier tabbl
 | Tabblad | Wat het doet | Stap |
 |---|---|---|
 | **Drone** | De haalbaarheidstest: aanmelden bij DJI, verbinden met de Mavic Mini, accu, GPS en firmware tonen, en **op de grond één foto maken**. | 2 |
-| **Route** | Een routebestand van de planner inlezen, opnieuw controleren, op de luchtfoto tonen en **vliegen in de simulator van DJI**. | 3 |
-| **Veldkaart** | Het veld met stroken in blauw, geel of rood, markeringen, sensoren en het weer. Met **voorbeeldgegevens**, of met je eigen bestanden. | 7 |
+| **Route** | **Een veld tekenen**: tik de hoeken aan, de app maakt de vliegbanen. Of een routebestand van de planner inlezen. Daarna controleren, op de luchtfoto tonen en **vliegen**. | 3 |
+| **Veldkaart** | Je veld met stroken in blauw, geel of rood (wateradvies), je sensoren en het weer. Of de **voorbeeldgegevens**. | 7, 8, 9 |
 | **Vluchten** | Alle vluchten met hun fotolog en logboek, met een kaart en een knop om te delen (AirDrop). | 6 |
 
 **Wat de app niet doet:**
@@ -129,6 +129,31 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
 - Open hem in Voorvertoning en kies *Extra → Toon info*. Staat er een tabblad met GPS of een locatie, dan zet de Mavic Mini GPS in de foto's.
 - Dat zal alleen zo zijn als de drone op het moment van de foto GPS had.
 
+## Een veld tekenen (tabblad Route)
+
+Zo maak je een route zonder computer:
+
+1. Ga naar het tabblad **Route** en druk op **Veld tekenen**.
+2. De kaart gaat naar je eigen plek. Zoom in op je veld met twee vingers.
+3. **Tik de hoeken van je veld aan**, één voor één rondom. Na drie hoeken zie je de route al:
+   - gele lijnen = vliegbanen met foto's;
+   - oranje stippellijnen = overgangen zonder foto's, en de weg van en naar het startpunt;
+   - witte stipjes = de foto's.
+4. **Aanpassen:**
+   - een hoek verplaatsen: houd hem vast en sleep;
+   - een hoek weghalen: tik hem aan en kies **Verwijderen**;
+   - de vorige stap terugdraaien: de knop met de pijl terug.
+5. **Het startpunt** (blauw huisje) zet de app op de plek waar je staat. Sleep het als de drone ergens anders opstijgt. Met **Startpunt op mijn plek zetten** zet je het weer waar je nu bent.
+6. **Instellingen** (de knop met de schuifjes): vlieghoogte, baanafstand, snelheid, foto-interval, baanrichting en randmarge. De standaard is hetzelfde als in de planner: 30 m hoog, banen 20 m uit elkaar, 4 m/s, een foto elke 3 s.
+7. Druk op **Bewaren** en geef het veld een naam.
+
+**Wat er dan gebeurt:**
+
+- De app rekent de vliegbanen **precies zo uit als de routeplanner**. Dat is getest: voor drie voorbeeldvelden van de planner geeft de app exact hetzelfde bestand (`docs/voorbeelden/voorbeeld-veld*.routeplan.json`).
+- Het veld staat daarna onder **Mijn velden**. Tik erop voor de route, de controle en de knop **Vliegen in de simulator…**
+- Via **⋯** rechtsboven kun je het veld **bewerken**, **verwijderen** of de **route delen** als `.routeplan.json`, bijvoorbeeld om hem in de planner op de computer te openen.
+- Velden staan in de Bestanden-app onder *Op mijn iPhone → Veldvlucht → Velden*.
+
 ## Een route inlezen (tabblad Route)
 
 1. **Maak een route in de planner** en klik op *Download JSON*. Je krijgt een bestand `….routeplan.json`.
@@ -225,7 +250,18 @@ Tot die tijd staat er welke van de twee nog ontbreekt: een groen vinkje is geluk
 
 ## De veldkaart (tabblad Veldkaart)
 
-De veldkaart toont nu **voorbeeldgegevens** voor een verzonnen broccoliveld `veld-noord` bij Dronten. Zodra het centrale systeem bestaat, komen daar de echte gegevens.
+De veldkaart toont **je eigen veld** (getekend in de app), of de **voorbeeldgegevens** van een verzonnen broccoliveld bij Dronten. Kiezen doe je door op de regel onder de naam van het veld te tikken.
+
+**Voor je eigen veld:**
+
+- **Het weer** haalt de app zelf op bij Open-Meteo (gratis, met bronvermelding), voor het midden van het veld. Er is internet voor nodig. De app vernieuwt het elk uur dat je de veldkaart opent.
+- **Het beste vliegmoment:** minstens 2 uur achter elkaar met wind onder 5 m/s, windstoten onder 7 m/s, droog en licht.
+- **Melding bij goed vliegweer:** zet die aan in het menu onder de naam van het veld. Je krijgt dan een melding een uur voor het volgende goede moment. Die wordt gepland als je de veldkaart opent; zonder app open komt er geen nieuwe.
+- **Sensoren plaatsen en ijken:** in hetzelfde menu (zie "Sensoren" hieronder).
+- **Wateradvies per strook** (centraal systeem, versie 0): zie "Het wateradvies" hieronder.
+
+**Voor alle velden:**
+
 
 - **Bovenaan**, in een doorzichtig paneel: de naam van het veld, het **beste vliegmoment** en het weer voor vijf dagen. Een windstoot van 8 m/s of meer staat in oranje: dat is de grens van de Mavic Mini.
 - **Op de kaart:**
@@ -242,6 +278,44 @@ De veldkaart toont nu **voorbeeldgegevens** voor een verzonnen broccoliveld `vel
   - Tik op **Voorbeeldgegevens** onder de naam van het veld → **Eigen bestand laden…** en kies een bestand in een van de formaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md): resultaten (`.geojson`), sensormetingen of weer. De app controleert het eerst.
   - Wat je niet laadt, blijft voorbeeldgegevens. Onder de naam van het veld staat dan welke gegevens van jou zijn.
   - **Voorbeeldgegevens gebruiken** zet alles terug.
+  - Bij je eigen veld vervangt een resultatenbestand het berekende advies. **Berekend advies gebruiken** zet het terug.
+
+## Sensoren
+
+1. **Plaatsen:** Veldkaart → tik op de regel onder de naam van je veld → **Sensoren plaatsen en ijken…**
+   - Kies het aantal. De app verdeelt ze over het veld, dwars op de rijrichting van de tractor.
+   - Sleep een sensor (vasthouden) naar de plek waar hij echt in de grond zit.
+   - Elke sensor krijgt een naam, bijvoorbeeld `broccoli-west-s1`. **Die naam zet je in het kastje.**
+2. **Het kastje bouwen en instellen:** zie [sensor/README.md](../sensor/README.md).
+3. **Ontvangen:**
+   - Zet op de iPhone **Persoonlijke hotspot** aan, met **Maximaliseer compatibiliteit**. Het kastje werkt alleen met 2,4 GHz.
+   - Houd Veldvlucht open. Het kastje stuurt zijn metingen zodra het de hotspot ziet.
+   - Vraagt de iPhone of Veldvlucht apparaten op je **lokale netwerk** mag zoeken, kies dan **Sta toe**.
+   - In het sensorscherm zie je wat er binnenkwam, bijvoorbeeld *Sensor s1 (Broccoli west): 3 meting(en) ontvangen*.
+   - Staat de sensor in geen enkel veld, dan zegt de app dat ook. Het kastje bewaart zijn metingen dan tot je de sensor met dezelfde naam plaatst.
+   - De ontvanger neemt alleen verbindingen aan van een lokaal netwerk, zoals de hotspot. Vanaf internet kan niemand metingen sturen.
+4. **IJken** (nodig voor advies):
+   - Steek de sensor in een bak **droge** grond van het veld en wacht op een meting. Kies dan **Laatste = droog**.
+   - Doe hetzelfde met **kletsnatte** grond, en kies **Laatste = nat**.
+   - Daarna toont de app de metingen als **% vocht**: 0 % is je droge grond, 100 % je natte grond.
+5. **Bewaar** rechtsboven.
+
+De metingen staan in de Bestanden-app onder *Op mijn iPhone → Veldvlucht → Velden → (je veld) → sensormetingen.json*, in het formaat `veld/sensormeting`.
+
+## Het wateradvies (centraal systeem, versie 0)
+
+Het centrale systeem uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md) heeft nu een eerste versie. Die draait **in de app**, als apart onderdeel (`WaterAdvisor`). Er is dus geen server en geen account nodig.
+
+- **Stroken:** het veld wordt verdeeld in stroken van 24 m breed langs de vliegbanen. Dat is ook de rijrichting van de tractor; met de echte gegevens van de tractor kan dit later beter.
+- **Per strook** kijkt het naar de sensor in die strook (of anders een sensor ernaast), en naar de regen en verdamping van vandaag en morgen.
+- **De regels**, kort:
+  - droger dan 35 % en weinig regen op komst → **nu water geven** (rood);
+  - droger dan 35 % maar 10 mm regen of meer op komst → **binnenkort**, wacht op de regen (geel);
+  - tussen 35 en 50 % → **binnenkort**, tenzij er 5 mm meer regen dan verdamping komt (dan **genoeg**);
+  - 50 % of natter → **genoeg** (blauw).
+- **Geen advies** (grijs) als er geen sensor in de buurt is, de sensor nog niet geijkt is, of de laatste meting ouder is dan 2 dagen. De reden staat erbij.
+- **Tik op een strook** om te zien waarop het advies gebaseerd is: welke sensor, hoeveel vocht, hoeveel regen, en welke regel.
+- **Het is een advies.** De regels zijn een eerste versie zonder AI. Vergelijk ze met wat je in het veld ziet.
 
 ## Het ontwerp
 
@@ -288,7 +362,7 @@ Het rekenwerk (routebestand, controles, dataformaten) staat apart in `Veldvlucht
    swift test
    ```
 
-Onderaan moet staan: *Executed 69 tests, with 0 failures*.
+Onderaan moet staan: *Executed 101 tests, with 0 failures*.
 
 - De tests lezen ook alle voorbeeldbestanden uit `docs/voorbeelden`, dus een fout in zo'n bestand valt meteen op.
 - **De stuurlus wordt getest met een nep-drone** (`FakeDrone.swift`): een eenvoudig model dat reageert op stuurcommando's, met een vertraging, en eventueel met wind. Daarmee vliegt de test de hele voorbeeldroute en controleert hij:
@@ -299,6 +373,16 @@ Onderaan moet staan: *Executed 69 tests, with 0 failures*.
   - de eigen terugkeer van de drone, de failsafe, harde wind, landen door de piloot;
   - verder vanaf een foto van een eerdere vlucht, en de strengere controles van een echte vlucht;
   - de zes fouten uit de onafhankelijke review van 26 oktober 2026, elk met een eigen test (zie [TESTLIJST.md](../docs/TESTLIJST.md)).
+- **Veld tekenen** (`FieldPlannerTests`): voor drie velden die de routeplanner zelf maakte, geeft de app precies hetzelfde routebestand. Ook: rechthoeken, een U-vorm, te kleine velden en een veldgrens die zichzelf kruist.
+- **Weer, sensoren en advies** (`CentralTests`): een echt antwoord van Open-Meteo met de vliegmomenten, uploads van een kastje (ook dubbel verstuurd), en alle regels van het wateradvies.
+
+**De planner op de Mac.** Node.js staat alleen in de projectmap (`.tools/node`, niet in git). Zo draai je de 71 tests van de planner:
+```bash
+cd ~/Documents/GitHub/drone-routeplanner
+```
+```bash
+PATH="$PWD/.tools/node/bin:$PATH" npm test
+```
 
 ## Uitslag: go of no-go
 
@@ -366,12 +450,22 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `ScreenTour.swift` | Alleen in de testversie: een rondgang langs alle schermen die van elk scherm een afbeelding maakt (zie "Het ontwerp"). |
 | `DroneStatus.swift` | Wat het tabblad *Drone* laat zien (accu, GPS, firmware, foto...), in gewone Swift. |
 | `DJIConnection.swift` | De **enige** plek die de DJI-SDK aanroept (de "DJI-adapter" uit hoofdstuk 6.1 van [DJI-MOBILE-SDK-V4.md](../docs/DJI-MOBILE-SDK-V4.md)). Voert de commando's van de vluchtlogica uit: simulator, Virtual Stick, opstijgen, naar huis, foto. Meldt telemetrie en stickbewegingen terug. |
-| `RouteView.swift` | Tabblad *Route*: bestand kiezen, controle tonen, kaart, en de knop naar de vlucht. |
+| `RouteView.swift` | Tabblad *Route*: je velden, een bestand kiezen, en per route de kaart, de controle en de knop naar de vlucht. |
+| `FieldEditor.swift` | **Veld tekenen**: hoeken aantikken en verslepen, startpunt, instellingen. Ook de kaart waarop je sensoren versleept. |
+| `FieldStore.swift` | Bewaart de getekende velden, één bestand per veld in *Velden*. |
+| `SensorEditor.swift` | Sensoren plaatsen, hun naam voor het kastje, en ijken. |
+| `SensorReceiver.swift` | **De ontvanger:** neemt via de hotspot de metingen van de sensorkastjes aan (poort 8787) en zet ze bij het juiste veld. |
+| `WeatherService.swift` | Haalt het weer op bij Open-Meteo en plant de melding voor goed vliegweer. |
 | `FlightView.swift` | Het vluchtscherm (volledig scherm): kaart met de drone, de fase, voortgang, de knoppen Pauze, Overnemen en Naar huis, en de controlelijst voor de start. Laat de stuurlus 10 keer per seconde lopen. Bewaart fotolog, logboek en voortgang. Regelt het vrijgeven van echt vliegen. |
 | `FlightsView.swift` | Tabblad *Vluchten*: opgeslagen vluchten met kaart en delen. |
 | `FieldMapScreen.swift` | Tabblad *Veldkaart*: kaart over het hele scherm, het paneel met weer en gegevens, en de details na een tik. |
 | `MapCanvas.swift` | De kaart (Apple MapKit) met de PDOK-luchtfoto, vlakken, lijnen en punten. |
-| `SampleData.swift` | Leest de gegevens voor de veldkaart: je eigen bestanden, of anders de voorbeeldbestanden in de app. |
+| `SampleData.swift` | Leest de gegevens voor de veldkaart: je eigen veld met zijn metingen, weer en advies, of de voorbeeldbestanden in de app. |
+| `VeldvluchtKern/…/FieldPlanner.swift` | **Vliegbanen en foto's voor een veld**, dezelfde berekening als de planner (`src/core`). |
+| `VeldvluchtKern/…/FieldRecord.swift` | Een getekend veld, zijn sensoren, de stroken voor het advies en het beeld van de camera op de grond. |
+| `VeldvluchtKern/…/OpenMeteo.swift` | Het weer van Open-Meteo in het formaat `veld/weer`, met de vliegmomenten. |
+| `VeldvluchtKern/…/SensorUpload.swift` | Wat een kastje stuurt (`veld/sensorupload`) omzetten naar metingen, zonder dubbele. |
+| `VeldvluchtKern/…/WaterAdvisor.swift` | **Het centrale systeem, versie 0:** wateradvies per strook met eenvoudige regels. |
 | `VeldvluchtKern/…/RoutePlanFile.swift` | Het routebestand inlezen. Andere formaten en ongeldige coördinaten worden geweigerd. |
 | `VeldvluchtKern/…/RouteCheck.swift` | De controles op de route, en de eigen berekening van afstand en vliegtijd. |
 | `VeldvluchtKern/…/FieldFormats.swift` | De dataformaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md). |

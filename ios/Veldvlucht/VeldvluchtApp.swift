@@ -11,7 +11,17 @@ import UIKit
 struct VeldvluchtApp: App {
     @StateObject private var drone = DJIConnection()
     @StateObject private var route = RouteModel()
+    @StateObject private var fields: FieldStore
+    @StateObject private var receiver: SensorReceiver
+    @StateObject private var weather = WeatherService()
     @State private var screen = Screen.drone
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let fields = FieldStore()
+        _fields = StateObject(wrappedValue: fields)
+        _receiver = StateObject(wrappedValue: SensorReceiver(fields: fields))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -28,14 +38,18 @@ struct VeldvluchtApp: App {
     }
 
     private var main: some View {
-        MainTabs(drone: drone, route: route, screen: $screen)
+        MainTabs(drone: drone, route: route, fields: fields, receiver: receiver, weather: weather, screen: $screen)
+            .onChange(of: scenePhase) { _, phase in
+                // Sensor boxes can only send while the app is open.
+                if phase == .active { receiver.start() } else if phase == .background { receiver.stop() }
+            }
             .onAppear {
                 // The SDK drops the connection when the app goes to the background,
                 // so keep the screen from locking while the app is open.
                 UIApplication.shared.isIdleTimerDisabled = true
                 #if DEBUG
-                // The screenshots of an earlier screen tour are no longer needed.
-                try? FileManager.default.removeItem(at: ScreenTour.folder)
+                // The screenshots and examples of an earlier screen tour are no longer needed.
+                ScreenTour.cleanUp(fields)
                 #endif
                 drone.start()
             }
@@ -57,6 +71,9 @@ enum Screen {
 struct MainTabs: View {
     @ObservedObject var drone: DJIConnection
     @ObservedObject var route: RouteModel
+    @ObservedObject var fields: FieldStore
+    @ObservedObject var receiver: SensorReceiver
+    @ObservedObject var weather: WeatherService
     @Binding var screen: Screen
 
     var body: some View {
@@ -64,10 +81,10 @@ struct MainTabs: View {
             DroneTestView(drone: drone)
                 .tabItem { Label { Text("Drone") } icon: { Image(uiImage: DroneGlyph.tabImage) } }
                 .tag(Screen.drone)
-            RouteView(model: route, drone: drone)
+            RouteView(model: route, fields: fields, drone: drone)
                 .tabItem { Label("Route", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
                 .tag(Screen.route)
-            FieldMapScreen()
+            FieldMapScreen(fields: fields, receiver: receiver, weather: weather)
                 .tabItem { Label("Veldkaart", systemImage: "map") }
                 .tag(Screen.field)
             FlightsView()

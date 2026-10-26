@@ -1,19 +1,25 @@
-// Step 7 (docs/STAPPENPLAN.md): the field map, for now with the sample data from
-// docs/voorbeelden. It only shows what the central system provides; the app works out no
-// advice itself (docs/ARCHITECTUUR.md, chapter 5).
+// Step 7 (docs/STAPPENPLAN.md): the field map. For a field drawn in the app it shows the
+// sensors, the weather and the water advice per strip of the central system (WaterAdvisor,
+// version 0); otherwise the sample data from docs/voorbeelden. The screen itself works out
+// no advice (docs/ARCHITECTUUR.md, chapter 5).
 import Charts
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
 struct FieldMapScreen: View {
+    @ObservedObject var fields: FieldStore
+    @ObservedObject var receiver: SensorReceiver
+    @ObservedObject var weather: WeatherService
     /// Opens the details of this zone, marker or sensor right away (for the screen tour).
     var preselected: String?
-    @State private var data = SampleData.field()
+    @State private var data: Result<FieldData, FileReadError> = SampleData.field()
     @State private var baseLayer = BaseLayer.pdok
     @State private var selected: Selected?
     @State private var importing = false
+    @State private var editingSensors: FieldRecord?
     @State private var message: String?
+    @State private var notify = FlightNotifier.enabled
 
     private struct Selected: Identifiable {
         let id: String
@@ -32,9 +38,10 @@ struct FieldMapScreen: View {
                             }
                             Text(error.message).font(.subheadline)
                             Button {
-                                useSamples()
+                                useOwnAdviceOrSamples()
                             } label: {
-                                Label("Terug naar de voorbeeldgegevens", systemImage: "arrow.uturn.backward")
+                                Label(fields.selected == nil ? "Terug naar de voorbeeldgegevens" : "Terug naar het berekende advies",
+                                      systemImage: "arrow.uturn.backward")
                             }
                             .buttonStyle(ActionButtonStyle(color: .veld, prominent: false))
                         }
@@ -46,15 +53,26 @@ struct FieldMapScreen: View {
                     content(field)
                 }
             }
+            .onAppear(perform: reload)
+            .onChange(of: fields.selectedId) { _, _ in reload() }
+            .onChange(of: fields.fields) { _, _ in reload() }
+            .onChange(of: receiver.uploads) { _, _ in reload() }
+            .onChange(of: weather.updates) { _, _ in reload() }
+            .task(id: fields.selectedId) {
+                if let field = fields.selected { await weather.refresh(field) }
+            }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json, UTType(filenameExtension: "geojson") ?? .json]) { result in
                 guard case .success(let url) = result else { return }
                 do {
-                    let kind = try SampleData.importFile(url)
-                    data = SampleData.field()
+                    let kind = try SampleData.importFile(url, fieldId: fields.selectedId)
+                    reload()
                     message = "Geladen: \(kind). De rest blijft zoals het was."
                 } catch {
                     message = "Niet geladen: \(error.localizedDescription)"
                 }
+            }
+            .fullScreenCover(item: $editingSensors) { field in
+                SensorEditorView(field: field, fields: fields, receiver: receiver)
             }
             .alert("Veldkaart", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
                 Button("OK") { message = nil }
@@ -64,16 +82,28 @@ struct FieldMapScreen: View {
         }
     }
 
-    private func useSamples() {
-        SampleData.removeOwnData()
-        data = SampleData.field()
+    private func reload() {
+        if let field = fields.selected {
+            data = SampleData.field(field)
+        } else {
+            data = SampleData.field()
+        }
+    }
+
+    private func useOwnAdviceOrSamples() {
+        if let id = fields.selectedId {
+            SampleData.removeOwnResults(fieldId: id)
+        } else {
+            SampleData.removeOwnData()
+        }
+        reload()
     }
 
     private func content(_ field: FieldData) -> some View {
         MapCanvas(
             shapes: shapes(field),
             pins: pins(field),
-            contentID: "\(field.results.properties.fieldId)|\(field.results.properties.createdAt)",
+            contentID: "\(field.fieldId ?? "voorbeeld")|\(field.results.properties.createdAt)|\(field.waitingSensors.count)|\(field.sensors.count)",
             baseLayer: baseLayer,
             fitInsets: UIEdgeInsets(top: 380, left: 30, bottom: 130, right: 30),
             controlInsets: UIEdgeInsets(top: 320, left: 12, bottom: 100, right: 12)
@@ -88,7 +118,7 @@ struct FieldMapScreen: View {
         }
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
-                FieldLegend()
+                FieldLegend(showsNoAdvice: field.results.waterZones.contains { $0.properties.advice == nil })
                 MapAttribution(layer: baseLayer)
             }
             .padding(.bottom, 10)
@@ -115,7 +145,7 @@ struct FieldMapScreen: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(field.results.boundary?.properties.name ?? "Veldkaart")
+                    Text(field.name)
                         .font(.title3.weight(.bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -124,31 +154,103 @@ struct FieldMapScreen: View {
                 Spacer(minLength: 0)
                 BaseLayerMenu(layer: $baseLayer, style: .inCard)
             }
-            WeatherStrip(weather: field.weather)
+            if let forecast = field.weather {
+                WeatherStrip(weather: forecast)
+            } else if weather.loading {
+                Label("Weer ophalen…", systemImage: "cloud.sun")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else if let problem = weather.problem, field.fieldId != nil {
+                Notice(text: problem, symbol: "wifi.exclamationmark", color: .orange)
+            }
         }
         .padding(14)
         .glass()
     }
 
-    /// Own files or the samples. Tapping the line under the field name opens it.
+    private var sourceText: String {
+        guard case .success(let field) = data else { return "" }
+        if field.fieldId == nil {
+            return field.ownData.isEmpty ? "Voorbeeldgegevens" : "Eigen gegevens: \(field.ownData.joined(separator: ", "))"
+        }
+        if !field.ownData.isEmpty { return "Eigen resultaten-bestand" }
+        let count = field.sensors.count + field.waitingSensors.count
+        return count == 0 ? "Nog geen sensoren" : (count == 1 ? "1 sensor" : "\(count) sensoren")
+    }
+
+    /// Which field, own files, sensors and the notification. Tap the line under the name.
     private func dataMenu(_ field: FieldData) -> some View {
         Menu {
-            Section(field.ownData.isEmpty ? "Het centrale systeem bestaat nog niet" : "Eigen gegevens: \(field.ownData.joined(separator: ", "))") {
+            Section("Welk veld") {
+                ForEach(fields.fields) { record in
+                    Button {
+                        fields.selectedId = record.id
+                    } label: {
+                        if record.id == fields.selectedId {
+                            Label(record.name, systemImage: "checkmark")
+                        } else {
+                            Text(record.name)
+                        }
+                    }
+                }
+                Button {
+                    fields.selectedId = nil
+                } label: {
+                    if fields.selectedId == nil {
+                        Label("Voorbeeldveld", systemImage: "checkmark")
+                    } else {
+                        Text("Voorbeeldveld")
+                    }
+                }
+            }
+            if let record = fields.selected {
+                Section {
+                    Button {
+                        editingSensors = record
+                    } label: {
+                        Label("Sensoren plaatsen en ijken…", systemImage: "drop")
+                    }
+                    Button {
+                        Task { await weather.refresh(record, force: true) }
+                    } label: {
+                        Label("Weer vernieuwen", systemImage: "arrow.clockwise")
+                    }
+                }
+            }
+            Section {
+                Toggle(isOn: Binding(get: { notify }, set: { on in
+                    Task {
+                        if on {
+                            notify = await FlightNotifier.enable()
+                            if let record = fields.selected { await weather.refresh(record, force: true) }
+                            if !notify { message = "Meldingen staan uit voor Veldvlucht. Zet ze aan in Instellingen › Meldingen." }
+                        } else {
+                            FlightNotifier.disable()
+                            notify = false
+                        }
+                    }
+                })) {
+                    Label("Melding bij goed vliegweer", systemImage: "bell")
+                }
+            }
+            Section(fields.selected == nil ? "Het centrale systeem bestaat nog niet" : "Eigen bestanden") {
                 Button {
                     importing = true
                 } label: {
                     Label("Eigen bestand laden…", systemImage: "folder")
                 }
-                Button {
-                    useSamples()
-                } label: {
-                    Label("Voorbeeldgegevens gebruiken", systemImage: "arrow.uturn.backward")
+                if fields.selected == nil || !field.ownData.isEmpty {
+                    Button {
+                        useOwnAdviceOrSamples()
+                    } label: {
+                        Label(fields.selected == nil ? "Voorbeeldgegevens gebruiken" : "Berekend advies gebruiken", systemImage: "arrow.uturn.backward")
+                    }
                 }
             }
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: field.ownData.isEmpty ? "tray.full" : "person.crop.circle")
-                Text(field.ownData.isEmpty ? "Voorbeeldgegevens" : "Eigen gegevens: \(field.ownData.joined(separator: ", "))")
+                Image(systemName: field.fieldId == nil ? "tray.full" : "square.dashed.inset.filled")
+                Text(sourceText)
                     .lineLimit(1)
                 Image(systemName: "chevron.down").font(.caption2.weight(.bold))
             }
@@ -161,11 +263,16 @@ struct FieldMapScreen: View {
     @ViewBuilder
     private func detail(_ id: String, _ field: FieldData) -> some View {
         if let zone = feature(id, prefix: "zone-", in: field.results.waterZones) {
-            ZoneDetail(zone: zone)
+            ZoneDetail(zone: zone, computed: field.computedAdvice)
         } else if let marker = feature(id, prefix: "aandacht-", in: field.results.attention) {
             AttentionDetail(marker: marker)
         } else if let sensor = field.sensors.first(where: { "sensor-\($0.sensorId)" == id }) {
             SensorDetail(sensor: sensor)
+        } else if let sensor = field.waitingSensors.first(where: { "wacht-\($0.id)" == id }), let fieldId = field.fieldId {
+            WaitingSensorDetail(sensor: sensor, fieldId: fieldId, receiving: receiver.running) {
+                self.selected = nil
+                editingSensors = fields.field(fieldId)
+            }
         } else {
             Text("Niets gevonden.")
         }
@@ -180,13 +287,13 @@ struct FieldMapScreen: View {
 
     private func shapes(_ field: FieldData) -> [MapShape] {
         var shapes = field.results.waterZones.enumerated().map { index, zone -> MapShape in
-            let color = (zone.properties.advice ?? .genoeg).uiColor
+            let color = zone.properties.advice?.uiColor ?? .systemGray
             return MapShape(
                 id: "zone-\(index)",
                 kind: .polygon,
                 points: zone.geometry.outerRing,
                 stroke: color.withAlphaComponent(0.9),
-                fill: color.withAlphaComponent(0.35),
+                fill: color.withAlphaComponent(zone.properties.advice == nil ? 0.2 : 0.35),
                 lineWidth: 1,
                 tappable: true
             )
@@ -205,7 +312,11 @@ struct FieldMapScreen: View {
         let sensors = field.sensors.map {
             MapPin(id: "sensor-\($0.sensorId)", coordinate: $0.location, title: "\($0.shortName) · \($0.valueText)", style: .marker(symbol: "drop.fill", color: .systemTeal))
         }
-        return markers + sensors
+        let waiting = field.waitingSensors.map {
+            MapPin(id: "wacht-\($0.id)", coordinate: $0.location, title: "\($0.shortName(fieldId: field.fieldId ?? "")) · wacht",
+                   style: .marker(symbol: "drop", color: .systemGray))
+        }
+        return markers + sensors + waiting
     }
 }
 
@@ -238,6 +349,8 @@ extension WaterAdvice {
 }
 
 private struct FieldLegend: View {
+    var showsNoAdvice = false
+
     var body: some View {
         VStack(spacing: 6) {
             HStack(spacing: 12) {
@@ -246,16 +359,63 @@ private struct FieldLegend: View {
                 }
             }
             HStack(spacing: 12) {
+                if showsNoAdvice {
+                    LegendItem(color: Color(uiColor: .systemGray), text: "geen advies")
+                }
                 LegendItem(color: Color(uiColor: .systemPurple), text: "aandacht")
                 LegendItem(color: Color(uiColor: .systemTeal), text: "sensor")
-                Label("Tik voor details", systemImage: "hand.tap")
-                    .foregroundStyle(.secondary)
+                if !showsNoAdvice {
+                    Label("Tik voor details", systemImage: "hand.tap")
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .font(.footnote.weight(.medium))
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .glass(cornerRadius: 18)
+        .padding(.horizontal, 12)
+    }
+}
+
+/// A sensor that is placed but has not sent anything yet.
+private struct WaitingSensorDetail: View {
+    let sensor: FieldSensor
+    let fieldId: String
+    let receiving: Bool
+    var openSensors: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Design.spacing) {
+                Card(tint: .gray) {
+                    HStack(spacing: 14) {
+                        IconBadge(symbol: "drop", color: .gray, size: 52)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Nog geen meting").font(.title3.weight(.bold))
+                            Text("Sensor \(sensor.shortName(fieldId: fieldId))").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Card(spacing: 6) {
+                    Text("Naam voor in het kastje").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(sensor.id).font(.body.monospaced().weight(.semibold)).textSelection(.enabled)
+                    Text("Het kastje stuurt zijn metingen naar deze iPhone zodra het de hotspot ziet en Veldvlucht open is. \(receiving ? "De ontvanger staat aan." : "De ontvanger staat nu uit.")")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Button(action: openSensors) {
+                    Label("Sensoren plaatsen en ijken", systemImage: "drop")
+                }
+                .buttonStyle(ActionButtonStyle(color: .teal))
+            }
+            .padding()
+        }
+        .screenBackground()
+        .navigationTitle("Sensor")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -361,13 +521,15 @@ private struct TextCard: View {
 
 private struct ZoneDetail: View {
     let zone: FieldResults.Feature
+    /// Worked out by the central system in the app (WaterAdvisor), not loaded from a file.
+    var computed = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: Design.spacing) {
                 let advice = zone.properties.advice
-                DetailHeader(symbol: advice?.symbol ?? "square.dashed", color: advice?.color ?? .gray,
-                             title: advice?.label ?? "Geen advies", subtitle: zone.properties.name)
+                DetailHeader(symbol: advice?.symbol ?? "questionmark", color: advice?.color ?? .gray,
+                             title: advice?.label ?? "Nog geen advies", subtitle: zone.properties.name)
                 Grid(horizontalSpacing: 12, verticalSpacing: 12) {
                     GridRow {
                         StatTile(title: "Hoeveelheid", symbol: "drop.fill", color: .blue,
@@ -382,7 +544,10 @@ private struct ZoneDetail: View {
                 if let reason = zone.properties.reason {
                     TextCard(title: "Waarop gebaseerd", text: reason)
                 }
-                Notice(text: "Dit is een advies. Jij beslist en controleert het in het veld.", symbol: "info.circle", color: .secondary)
+                Notice(text: computed
+                       ? "Berekend in de app met eenvoudige regels (centraal systeem, versie 0), zonder AI. Dit is een advies: jij beslist en controleert het in het veld."
+                       : "Dit is een advies. Jij beslist en controleert het in het veld.",
+                       symbol: "info.circle", color: .secondary)
                     .padding(.horizontal, 4)
             }
             .padding()

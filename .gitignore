@@ -14,3 +14,9 @@ DerivedData/
 .DS_Store
 ios/VeldvluchtKern/.build/
 ios/VeldvluchtKern/.swiftpm/
+
+# Local tools installed only for this project (Node.js, arduino-cli)
+.tools/
+
+# Sensor box: the hotspot password stays on this Mac
+sensor/Veldsensor/Instellingen.h

@@ -1,0 +1,160 @@
+// The central system, version 0 (docs/ARCHITECTUUR.md, chapter 4): water advice per strip of
+// the field, with simple rules you can check, from the soil sensors and the weather. No AI.
+// For now it runs inside the app, as a part of its own: the field map only shows what this
+// returns, in the format veld/resultaten. Every advice says what it is based on.
+import Foundation
+
+enum WaterAdvisor {
+    /// Moisture between dry (0 %) and saturated (100 %) soil of the field, after calibration.
+    static let dryBelowPercent = 35.0
+    static let enoughFromPercent = 50.0
+    /// Watering brings a strip back to this.
+    static let targetPercent = 55.0
+    /// A rough rule for the root zone: 1 % moisture is about 0.4 mm of water.
+    static let mmPerPercent = 0.4
+    /// Older measurements give no advice.
+    static let maxAgeS = 48 * 3600.0
+    /// Dry, but this much rain is coming in two days: wait.
+    static let rainWaitMm = 10.0
+    /// In between, and this much more rain than evaporation in two days: enough.
+    static let netRainEnoughMm = 5.0
+
+    /// Strips with advice, plus the field boundary, for the field map.
+    static func results(field: FieldRecord, measurements: [SensorMeasurement], weather: WeatherForecast?,
+                        now: Date) -> FieldResults {
+        let strips = FieldStrips.strips(boundary: field.boundary, angleDeg: field.lineAngleDeg, widthM: field.stripWidthM)
+        let latest = Dictionary(grouping: measurements, by: \.sensorId).compactMapValues { $0.max { $0.time < $1.time } }
+        let water = expectedWater(weather, now: now)
+        let projection = LocalProjection(origin: Geo.centroid(field.boundary.isEmpty ? [LatLng(lat: 0, lng: 0)] : field.boundary))
+
+        var features: [FieldResults.Feature] = []
+        if field.boundary.count >= 3 {
+            features.append(FieldResults.Feature(type: "Feature", geometry: .polygon([closed(field.boundary)]),
+                                                 properties: .init(kind: .veldgrens, name: field.name)))
+        }
+        for (index, strip) in strips.enumerated() {
+            let advice = adviseStrip(strip, field: field, latest: latest, water: water, projection: projection, now: now)
+            features.append(FieldResults.Feature(
+                type: "Feature",
+                geometry: .polygon([closed(strip)]),
+                properties: .init(kind: .waterzone, name: "Strook \(index + 1)", advice: advice.advice,
+                                  amountMm: advice.amountMm, reason: advice.reason, confidence: advice.confidence)
+            ))
+        }
+        return FieldResults(type: "FeatureCollection",
+                            properties: .init(format: FieldResults.format, version: FieldResults.version, fieldId: field.id, createdAt: now),
+                            features: features)
+    }
+
+    struct Advice: Equatable {
+        var advice: WaterAdvice?
+        var amountMm: Double?
+        var reason: String
+        var confidence: Double?
+    }
+
+    /// Rain and evaporation expected today and tomorrow (Dutch time).
+    struct ExpectedWater: Equatable {
+        var rainMm: Double
+        var evaporationMm: Double
+    }
+
+    static func expectedWater(_ weather: WeatherForecast?, now: Date) -> ExpectedWater? {
+        guard let weather else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Europe/Amsterdam")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: now)
+        let days = weather.days.filter { $0.date >= today }.sorted { $0.date < $1.date }.prefix(2)
+        guard !days.isEmpty else { return nil }
+        return ExpectedWater(rainMm: days.map(\.precipitationMm).reduce(0, +),
+                             evaporationMm: days.map { $0.evaporationMm ?? 0 }.reduce(0, +))
+    }
+
+    static func adviseStrip(_ strip: [LatLng], field: FieldRecord, latest: [String: SensorMeasurement],
+                            water: ExpectedWater?, projection: LocalProjection, now: Date) -> Advice {
+        let polygon = strip.map(projection.toXY)
+        var near = false
+        var sensors = field.sensors.filter { Geo.pointInPolygon(projection.toXY($0.location), polygon) }
+        if sensors.isEmpty {
+            // No sensor in the strip: the nearest one, if it lies right next to it.
+            let distances = field.sensors.map { ($0, Geo.distanceToPolygonEdges(projection.toXY($0.location), polygon)) }
+            if let (sensor, distance) = distances.min(by: { $0.1 < $1.1 }), distance <= field.stripWidthM {
+                sensors = [sensor]
+                near = true
+            }
+        }
+        guard !sensors.isEmpty else {
+            return Advice(reason: "Geen sensor in of naast deze strook. Plaats er een bij Sensoren.")
+        }
+
+        var readings: [(name: String, percent: Double, time: Date)] = []
+        for sensor in sensors {
+            let name = sensor.shortName(fieldId: field.id)
+            guard let measurement = latest[sensor.id] else {
+                return Advice(reason: "Sensor \(name) heeft nog geen meting gestuurd.")
+            }
+            let age = now.timeIntervalSince(measurement.time)
+            if age > maxAgeS {
+                return Advice(reason: "De laatste meting van sensor \(name) is van \(FieldSummary.ageText(of: measurement.time, now: now)). Voor advies is een meting van de laatste 2 dagen nodig.")
+            }
+            guard let percent = measurement.moisturePercent ?? sensor.calibration?.percent(raw: measurement.raw) else {
+                return Advice(reason: "Sensor \(name) is nog niet geijkt (ruwe waarde \(Int(measurement.raw.rounded()))). IJk hem bij Sensoren: meet droge en natte grond van dit veld.")
+            }
+            readings.append((name, percent, measurement.time))
+        }
+        let moisture = readings.map(\.percent).reduce(0, +) / Double(readings.count)
+        let newest = readings.map(\.time).max() ?? now
+
+        let sensorText = readings.map { "\($0.name) \(Int($0.percent.rounded())) % vocht" }.joined(separator: ", ")
+        var reason = "Sensor \(sensorText), gemeten \(FieldSummary.ageText(of: newest, now: now))\(near ? " (naast deze strook)" : "")."
+        let rain = water?.rainMm ?? 0
+        let net = rain - (water?.evaporationMm ?? 0)
+        if let water {
+            reason += " Verwacht vandaag en morgen \(RouteCheck.number(rounded1(water.rainMm))) mm regen en \(RouteCheck.number(rounded1(water.evaporationMm))) mm verdamping."
+        } else {
+            reason += " Geen weersverwachting: regen telt niet mee."
+        }
+
+        let advice: WaterAdvice
+        var amount = 0.0
+        let needed = max(0, (targetPercent - moisture) * mmPerPercent)
+        if moisture < dryBelowPercent {
+            if rain >= rainWaitMm {
+                advice = .binnenkort
+                amount = max(0, needed - rain)
+                reason += " Regel: droger dan \(Int(dryBelowPercent)) %, maar \(Int(rainWaitMm)) mm regen of meer op komst → wacht op de regen en kijk morgen opnieuw."
+            } else {
+                advice = .water
+                amount = needed
+                reason += " Regel: droger dan \(Int(dryBelowPercent)) % en weinig regen op komst → nu water geven."
+            }
+        } else if moisture < enoughFromPercent {
+            if net >= netRainEnoughMm {
+                advice = .genoeg
+                reason += " Regel: tussen \(Int(dryBelowPercent)) en \(Int(enoughFromPercent)) %, maar \(Int(netRainEnoughMm)) mm meer regen dan verdamping → genoeg."
+            } else {
+                advice = .binnenkort
+                amount = needed
+                reason += " Regel: tussen \(Int(dryBelowPercent)) en \(Int(enoughFromPercent)) % en weinig regen → binnenkort water geven."
+            }
+        } else {
+            advice = .genoeg
+            reason += " Regel: \(Int(enoughFromPercent)) % of natter → genoeg."
+        }
+
+        var confidence = near ? 0.4 : 0.6
+        if now.timeIntervalSince(newest) < 12 * 3600 { confidence += 0.1 }
+        if water == nil { confidence -= 0.1 }
+        return Advice(advice: advice, amountMm: amount > 0 ? (amount * 2).rounded() / 2 : 0, reason: reason,
+                      confidence: min(0.8, max(0.2, confidence)))
+    }
+
+    private static func rounded1(_ value: Double) -> Double { (value * 10).rounded() / 10 }
+
+    private static func closed(_ ring: [LatLng]) -> [LatLng] {
+        guard let first = ring.first, ring.last != first else { return ring }
+        return ring + [first]
+    }
+}

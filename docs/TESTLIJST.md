@@ -17,7 +17,12 @@ Stand: 26 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - zonder GPS ging hervatten terug naar het begin van de route.
 - **Met de drone (stap 2, geslaagd):** aanmelden, verbinding, accu, GPS, firmware en één foto op de grond.
 - **Het nieuwe ontwerp (26 oktober 2026), bekeken op je iPhone:** de app liep zelf langs alle schermen met voorbeeldgegevens en de nep-drone, in licht en donker (de "schermtour", zie [ios/README.md](../ios/README.md)). Zo zijn ook het vluchtscherm tijdens een vlucht, na een pauze, na overnemen en aan het eind bekeken.
-- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; jouw eigen indruk van de schermen.
+- **Veld tekenen, weer en advies (26 oktober 2026, avond):**
+  - de app maakt voor drie voorbeeldvelden exact dezelfde route als de routeplanner;
+  - het weer van Open-Meteo, met de vliegmomenten;
+  - alle regels van het wateradvies;
+  - ontvangen van metingen: getest op je iPhone met nep-metingen die de Mac via wifi stuurde.
+- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; een echt sensorkastje; jouw eigen indruk van de schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
 
@@ -124,9 +129,34 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 - [ ] **D6** Op veilige hoogte: wat doet één druk op de **pauzeknop** van de afstandsbediening? Volgens de handleiding remt de drone af. (Hoofdstuk 6.5 van het DJI-document.)
 - [ ] **D7** Na 3 geslaagde echte vluchten vervalt de grens van 800 m. Ga daarna stap voor stap groter, tot een heel veld.
 
+## E. Veld tekenen, sensoren, weer en advies (nieuw, 26 oktober 2026)
+
+Wat al getest is: de berekening van de route (gelijk aan de planner), het weer, het wateradvies en het ontvangen van metingen. Dat laatste is getest met nep-metingen vanaf de Mac. Een echt kastje en echte velden nog niet.
+
+- [ ] **E1** Ga naar een veld en open *Route* → **Veld tekenen**. Je hoort dit te zien:
+  - de kaart springt naar je eigen plek (blauwe of groene stip);
+  - na 3 aangetikte hoeken verschijnen de gele vliegbanen en de witte fotostipjes;
+  - onderin staan afstand, vliegtijd, foto's en de grootte van het veld.
+- [ ] **E2** Sleep een hoek (vasthouden) en het huisje (startpunt). Haal een hoek weg (aantikken → *Verwijderen*). Probeer de knop met de pijl terug.
+- [ ] **E3** *Bewaren* → geef een naam. Het veld staat onder *Mijn velden*; tik erop. Klopt de route met je veld?
+- [ ] **E4** Vlieg dit veld in de simulator, net als in blok C (C2 t/m C11).
+- [ ] **E5** *⋯* → **Route delen** → AirDrop naar de Mac. Open het bestand in de planner (*JSON laden*): staat dezelfde route er?
+- [ ] **E6** *Veldkaart* → tik op de regel onder de naam → kies je veld. Je hoort dit te zien:
+  - je veld in grijze stroken (*geen advies*: er zijn nog geen sensoren);
+  - het weer van vandaag en de komende dagen, met het beste vliegmoment.
+- [ ] **E7** Zet in hetzelfde menu **Melding bij goed vliegweer** aan en sta meldingen toe. Komt er een melding, een uur voor het volgende goede moment?
+- [ ] **E8** **Sensoren plaatsen en ijken…**: kies 1 sensor en sleep hem naar de plek waar hij komt. Bewaar. Noteer de naam (bijvoorbeeld `mijn-veld-s1`): ____________________
+- [ ] **E9** Bouw het kastje op tafel volgens [sensor/README.md](../sensor/README.md), met die naam. Zet de hotspot aan (met *Maximaliseer compatibiliteit*) en houd Veldvlucht open. Je hoort dit te zien:
+  - vraagt de iPhone iets over het **lokale netwerk**, kies dan *Sta toe*;
+  - in het sensorscherm *Sensor s1 (…): … meting(en) ontvangen*;
+  - op de veldkaart een turquoise druppel met de ruwe waarde.
+- [ ] **E10** IJk de sensor met droge en natte grond (*Laatste = droog*, *Laatste = nat*). Staat er daarna een % vocht?
+- [ ] **E11** Steek de sensor in de grond van een strook. Na de volgende meting krijgt die strook een kleur. Tik erop: klopt de uitleg (sensor, vocht, regen, regel)?
+
 ## Wat je naar Claude stuurt
 
 - De logboeken van C2 t/m C12, en van elke echte vlucht.
 - Het antwoord bij **C3** (richting).
 - Bij D: hoeveel foto's gepland en gemaakt zijn, en of ze scherp zijn en GPS hebben.
+- Bij E: de naam bij E8, wat het kastje in de Serial Monitor zegt, en een schermafbeelding van het sensorscherm.
 - Alles wat er vreemd uitziet, met een schermafbeelding.

@@ -166,7 +166,7 @@ struct SavedFlightView: View {
                     GridRow {
                         StatTile(title: "Foto's", symbol: "camera.fill", color: .teal, value: "\(photos.count)",
                                  detail: "in het fotolog")
-                        let duration = RouteView.split(RouteCheck.minutes(durationS))
+                        let duration = RouteDetailView.split(RouteCheck.minutes(durationS))
                         StatTile(title: "Duur", symbol: "timer", color: .purple, value: photos.count > 1 ? duration.value : "–",
                                  unit: photos.count > 1 ? duration.unit : nil, detail: "eerste tot laatste foto")
                     }

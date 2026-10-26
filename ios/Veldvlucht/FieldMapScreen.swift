@@ -7,6 +7,8 @@ import UIKit
 import UniformTypeIdentifiers
 
 struct FieldMapScreen: View {
+    /// Opens the details of this zone, marker or sensor right away (for the screen tour).
+    var preselected: String?
     @State private var data = SampleData.field()
     @State private var baseLayer = BaseLayer.pdok
     @State private var selected: Selected?
@@ -22,37 +24,26 @@ struct FieldMapScreen: View {
             Group {
                 switch data {
                 case .failure(let error):
-                    VStack(spacing: 12) {
-                        Label(error.message, systemImage: "xmark.octagon.fill")
-                            .foregroundStyle(.red)
-                        Button("Terug naar de voorbeeldgegevens") {
-                            SampleData.removeOwnData()
-                            data = SampleData.field()
+                    ScrollView {
+                        Card(tint: .red) {
+                            HStack(spacing: 10) {
+                                IconBadge(symbol: "xmark.octagon.fill", color: .red, size: 30)
+                                Text("Gegevens niet te lezen").font(.headline)
+                            }
+                            Text(error.message).font(.subheadline)
+                            Button {
+                                useSamples()
+                            } label: {
+                                Label("Terug naar de voorbeeldgegevens", systemImage: "arrow.uturn.backward")
+                            }
+                            .buttonStyle(ActionButtonStyle(color: .veld, prominent: false))
                         }
+                        .padding()
                     }
-                    .padding()
+                    .screenBackground()
                     .navigationTitle("Veldkaart")
                 case .success(let field):
                     content(field)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button {
-                            importing = true
-                        } label: {
-                            Label("Eigen bestand laden…", systemImage: "folder")
-                        }
-                        Button {
-                            SampleData.removeOwnData()
-                            data = SampleData.field()
-                        } label: {
-                            Label("Voorbeeldgegevens gebruiken", systemImage: "arrow.uturn.backward")
-                        }
-                    } label: {
-                        Label("Gegevens", systemImage: "tray.and.arrow.down")
-                    }
                 }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json, UTType(filenameExtension: "geojson") ?? .json]) { result in
@@ -73,38 +64,39 @@ struct FieldMapScreen: View {
         }
     }
 
+    private func useSamples() {
+        SampleData.removeOwnData()
+        data = SampleData.field()
+    }
+
     private func content(_ field: FieldData) -> some View {
-        VStack(spacing: 0) {
-            WeatherBar(weather: field.weather)
-            MapCanvas(
-                shapes: shapes(field),
-                pins: pins(field),
-                contentID: "\(field.results.properties.fieldId)|\(field.results.properties.createdAt)",
-                baseLayer: baseLayer
-            ) { id in
-                selected = Selected(id: id)
-            }
-            .overlay(alignment: .top) {
-                Text(field.ownData.isEmpty
-                     ? "Voorbeeldgegevens: het centrale systeem bestaat nog niet"
-                     : "Eigen gegevens: \(field.ownData.joined(separator: ", "))")
-                    .font(.caption)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(.thinMaterial, in: Capsule())
-                    .padding(.top, 8)
-            }
-            .overlay(alignment: .bottom) {
-                VStack(spacing: 6) {
-                    FieldLegend()
-                    MapAttribution(layer: baseLayer)
-                }
-                .padding(.bottom, 8)
-            }
+        MapCanvas(
+            shapes: shapes(field),
+            pins: pins(field),
+            contentID: "\(field.results.properties.fieldId)|\(field.results.properties.createdAt)",
+            baseLayer: baseLayer,
+            fitInsets: UIEdgeInsets(top: 380, left: 30, bottom: 130, right: 30),
+            controlInsets: UIEdgeInsets(top: 320, left: 12, bottom: 100, right: 12)
+        ) { id in
+            selected = Selected(id: id)
         }
-        .navigationTitle(field.results.boundary?.properties.name ?? "Veldkaart")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { BaseLayerMenu(layer: $baseLayer) }
+        .ignoresSafeArea(edges: .top)
+        .overlay(alignment: .top) {
+            header(field)
+                .padding(.horizontal, 12)
+                .padding(.top, 4)
+        }
+        .overlay(alignment: .bottom) {
+            VStack(spacing: 8) {
+                FieldLegend()
+                MapAttribution(layer: baseLayer)
+            }
+            .padding(.bottom, 10)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            if let preselected { selected = Selected(id: preselected) }
+        }
         .sheet(item: $selected) { selected in
             NavigationStack {
                 detail(selected.id, field)
@@ -116,6 +108,54 @@ struct FieldMapScreen: View {
             }
             .presentationDetents([.medium, .large])
         }
+    }
+
+    /// The field name, where the data comes from, and the weather, in one glass card.
+    private func header(_ field: FieldData) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(field.results.boundary?.properties.name ?? "Veldkaart")
+                        .font(.title3.weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    dataMenu(field)
+                }
+                Spacer(minLength: 0)
+                BaseLayerMenu(layer: $baseLayer, style: .inCard)
+            }
+            WeatherStrip(weather: field.weather)
+        }
+        .padding(14)
+        .glass()
+    }
+
+    /// Own files or the samples. Tapping the line under the field name opens it.
+    private func dataMenu(_ field: FieldData) -> some View {
+        Menu {
+            Section(field.ownData.isEmpty ? "Het centrale systeem bestaat nog niet" : "Eigen gegevens: \(field.ownData.joined(separator: ", "))") {
+                Button {
+                    importing = true
+                } label: {
+                    Label("Eigen bestand laden…", systemImage: "folder")
+                }
+                Button {
+                    useSamples()
+                } label: {
+                    Label("Voorbeeldgegevens gebruiken", systemImage: "arrow.uturn.backward")
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: field.ownData.isEmpty ? "tray.full" : "person.crop.circle")
+                Text(field.ownData.isEmpty ? "Voorbeeldgegevens" : "Eigen gegevens: \(field.ownData.joined(separator: ", "))")
+                    .lineLimit(1)
+                Image(systemName: "chevron.down").font(.caption2.weight(.bold))
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.veld)
+        }
+        .accessibilityLabel("Gegevens")
     }
 
     @ViewBuilder
@@ -179,30 +219,17 @@ extension WaterAdvice {
     }
 
     var color: Color { Color(uiColor: uiColor) }
-}
 
-private struct FieldLegend: View {
-    var body: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 10) {
-                ForEach(WaterAdvice.allCases, id: \.self) { advice in
-                    LegendItem(color: advice.color, text: shortLabel(advice))
-                }
-            }
-            HStack(spacing: 10) {
-                LegendItem(color: Color(uiColor: .systemPurple), text: "aandacht")
-                LegendItem(color: Color(uiColor: .systemTeal), text: "sensor")
-                Text("Tik voor details").foregroundStyle(.secondary)
-            }
+    var symbol: String {
+        switch self {
+        case .genoeg: return "checkmark"
+        case .binnenkort: return "clock.fill"
+        case .water: return "drop.fill"
         }
-        .font(.caption)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private func shortLabel(_ advice: WaterAdvice) -> String {
-        switch advice {
+    var shortLabel: String {
+        switch self {
         case .genoeg: return "genoeg"
         case .binnenkort: return "binnenkort"
         case .water: return "nu water"
@@ -210,21 +237,46 @@ private struct FieldLegend: View {
     }
 }
 
+private struct FieldLegend: View {
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 12) {
+                ForEach(WaterAdvice.allCases, id: \.self) { advice in
+                    LegendItem(color: advice.color, text: advice.shortLabel)
+                }
+            }
+            HStack(spacing: 12) {
+                LegendItem(color: Color(uiColor: .systemPurple), text: "aandacht")
+                LegendItem(color: Color(uiColor: .systemTeal), text: "sensor")
+                Label("Tik voor details", systemImage: "hand.tap")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.footnote.weight(.medium))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glass(cornerRadius: 18)
+    }
+}
+
 // MARK: - Weather
 
-private struct WeatherBar: View {
+private struct WeatherStrip: View {
     let weather: WeatherForecast
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             if let window = weather.flightWindows?.first {
-                Label {
+                HStack(spacing: 10) {
+                    IconBadge(symbol: "airplane", color: .actionGo, size: 32)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Beste vliegmoment: \(FieldSummary.windowLabel(window))").font(.subheadline.bold())
-                        Text(window.reason).font(.caption).foregroundStyle(.secondary)
+                        Text("Beste vliegmoment: \(FieldSummary.windowLabel(window))")
+                            .font(.subheadline.weight(.bold))
+                        Text(window.reason)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
                     }
-                } icon: {
-                    Image(systemName: "airplane").foregroundStyle(.green)
                 }
             }
             ScrollView(.horizontal, showsIndicators: false) {
@@ -232,11 +284,12 @@ private struct WeatherBar: View {
                     ForEach(weather.days) { DayCell(day: $0) }
                 }
             }
-            Text(weather.attribution).font(.caption2).foregroundStyle(.secondary)
+            Text(weather.attribution)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(Color(uiColor: .secondarySystemBackground))
     }
 }
 
@@ -244,20 +297,22 @@ private struct DayCell: View {
     let day: WeatherForecast.Day
 
     var body: some View {
-        VStack(spacing: 2) {
-            Text(FieldSummary.dayLabel(day.date)).font(.caption.bold())
-            Image(systemName: symbol).symbolRenderingMode(.multicolor)
-            Text(String(format: "%.1f mm", day.precipitationMm).replacingOccurrences(of: ".", with: ","))
-                .font(.caption)
-            Text("\(Int(day.tempMinC.rounded()))–\(Int(day.tempMaxC.rounded())) °C").font(.caption2)
-            Text("wind \(Int(day.windMaxMps.rounded())) · stoot \(Int(day.gustMaxMps.rounded())) m/s")
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Image(systemName: symbol).symbolRenderingMode(.multicolor)
+                Text(FieldSummary.dayLabel(day.date)).font(.caption.weight(.bold))
+            }
+            Text("\(Int(day.tempMinC.rounded()))–\(Int(day.tempMaxC.rounded()))° · \(dutchNumber(day.precipitationMm, digits: 1)) mm")
                 .font(.caption2)
+            Text("wind \(Int(day.windMaxMps.rounded())) · stoot \(Int(day.gustMaxMps.rounded())) m/s")
+                .font(.caption2.weight(day.gustMaxMps >= 8 ? .bold : .medium))
                 // The Mavic Mini handles wind up to 8 m/s.
-                .foregroundStyle(day.gustMaxMps >= 8 ? .orange : .secondary)
+                .foregroundStyle(day.gustMaxMps >= 8 ? Color.orange : Color.primary)
         }
-        .padding(6)
-        .frame(minWidth: 96)
-        .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 
     private var symbol: String {
@@ -269,37 +324,70 @@ private struct DayCell: View {
 
 // MARK: - Details
 
+/// The top of a detail sheet: a big coloured icon, a title and a subtitle.
+private struct DetailHeader: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    var subtitle: String?
+
+    var body: some View {
+        Card(tint: color) {
+            HStack(spacing: 14) {
+                IconBadge(symbol: symbol, color: color, size: 52)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.title3.weight(.bold))
+                    if let subtitle {
+                        Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// A short text card with a heading, such as "Waarop gebaseerd".
+private struct TextCard: View {
+    let title: String
+    let text: String
+
+    var body: some View {
+        Card(spacing: 6) {
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text(text).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 private struct ZoneDetail: View {
     let zone: FieldResults.Feature
 
     var body: some View {
-        List {
-            Section {
-                if let advice = zone.properties.advice {
-                    Label {
-                        Text(advice.label).bold()
-                    } icon: {
-                        Circle().fill(advice.color).frame(width: 14, height: 14)
+        ScrollView {
+            VStack(spacing: Design.spacing) {
+                let advice = zone.properties.advice
+                DetailHeader(symbol: advice?.symbol ?? "square.dashed", color: advice?.color ?? .gray,
+                             title: advice?.label ?? "Geen advies", subtitle: zone.properties.name)
+                Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+                    GridRow {
+                        StatTile(title: "Hoeveelheid", symbol: "drop.fill", color: .blue,
+                                 value: zone.properties.amountMm.map(RouteCheck.number) ?? "–", unit: "mm",
+                                 detail: "water geven")
+                        StatTile(title: "Zekerheid", symbol: "gauge.with.dots.needle.67percent", color: .purple,
+                                 value: zone.properties.confidence.map { "\(Int(($0 * 100).rounded()))" } ?? "–", unit: "%") {
+                            ProgressBar(fraction: zone.properties.confidence ?? 0)
+                        }
                     }
                 }
-                if let amount = zone.properties.amountMm {
-                    Row(label: "Hoeveelheid", value: "\(RouteCheck.number(amount)) mm")
+                if let reason = zone.properties.reason {
+                    TextCard(title: "Waarop gebaseerd", text: reason)
                 }
-                if let confidence = zone.properties.confidence {
-                    Row(label: "Zekerheid", value: "\(Int((confidence * 100).rounded())) %")
-                }
+                Notice(text: "Dit is een advies. Jij beslist en controleert het in het veld.", symbol: "info.circle", color: .secondary)
+                    .padding(.horizontal, 4)
             }
-            if let reason = zone.properties.reason {
-                Section("Waarop gebaseerd") {
-                    Text(reason)
-                }
-            }
-            Section {
-                Text("Dit is een advies. Jij beslist en controleert het in het veld.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            .padding()
         }
+        .screenBackground()
         .navigationTitle(zone.properties.name ?? "Strook")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -309,24 +397,23 @@ private struct AttentionDetail: View {
     let marker: FieldResults.Feature
 
     var body: some View {
-        List {
-            Section("Waarom") {
-                Text(marker.properties.reason ?? "Geen reden opgegeven.")
+        ScrollView {
+            VStack(spacing: Design.spacing) {
+                DetailHeader(symbol: "exclamationmark", color: .purple, title: "Aandacht nodig",
+                             subtitle: marker.properties.confidence.map { "Zekerheid \(Int(($0 * 100).rounded())) %" })
+                TextCard(title: "Waarom", text: marker.properties.reason ?? "Geen reden opgegeven.")
+                let rows = [("Foto", marker.properties.photoFile), ("Vlucht", marker.properties.flightId)]
+                    .compactMap { label, value in value.map { (label, $0) } }
+                if !rows.isEmpty {
+                    Card { Rows(rows: rows) }
+                }
+                Notice(text: "De foto zelf staat op de SD-kaart van de drone. Die komt later via het centrale systeem in de app.",
+                       symbol: "info.circle", color: .secondary)
+                    .padding(.horizontal, 4)
             }
-            Section {
-                if let confidence = marker.properties.confidence {
-                    Row(label: "Zekerheid", value: "\(Int((confidence * 100).rounded())) %")
-                }
-                if let photo = marker.properties.photoFile {
-                    Row(label: "Foto", value: photo)
-                }
-                if let flight = marker.properties.flightId {
-                    Row(label: "Vlucht", value: flight)
-                }
-            } footer: {
-                Text("De foto zelf staat op de SD-kaart van de drone. Die komt later via het centrale systeem in de app.")
-            }
+            .padding()
         }
+        .screenBackground()
         .navigationTitle("Aandacht nodig")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -338,34 +425,70 @@ private struct SensorDetail: View {
     private var calibrated: Bool { sensor.history.allSatisfy { $0.moisturePercent != nil } }
 
     var body: some View {
-        List {
-            Section {
-                Row(label: "Laatste meting", value: sensor.valueText)
-                Row(label: "Gemeten", value: "\(sensor.latest.time.formatted(date: .abbreviated, time: .shortened)) (\(FieldSummary.ageText(of: sensor.latest.time, now: Date())))")
-                Row(label: "Diepte", value: "\(RouteCheck.number(sensor.latest.depthCm)) cm")
-                if let volt = sensor.latest.batteryVolt {
-                    Row(label: "Accu", value: String(format: "%.2f V", volt))
+        ScrollView {
+            VStack(spacing: Design.spacing) {
+                DetailHeader(symbol: "drop.fill", color: .teal, title: sensor.valueText,
+                             subtitle: "Gemeten \(FieldSummary.ageText(of: sensor.latest.time, now: Date()))")
+                Card {
+                    Text(calibrated ? "Verloop (% vocht)" : "Verloop (ruwe waarde)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Chart(sensor.history) { measurement in
+                        let value = self.value(measurement)
+                        AreaMark(x: .value("Tijd", measurement.time), yStart: .value("Onder", chartFloor), yEnd: .value("Waarde", value))
+                            .foregroundStyle(LinearGradient(colors: [Color.teal.opacity(0.35), Color.teal.opacity(0.02)],
+                                                            startPoint: .top, endPoint: .bottom))
+                        LineMark(x: .value("Tijd", measurement.time), y: .value("Waarde", value))
+                            .foregroundStyle(Color.teal)
+                            .lineStyle(StrokeStyle(lineWidth: 2.5))
+                        PointMark(x: .value("Tijd", measurement.time), y: .value("Waarde", value))
+                            .foregroundStyle(Color.teal)
+                            .symbolSize(30)
+                    }
+                    .chartYScale(domain: .automatic(includesZero: false))
+                    .frame(height: 190)
+                    Text(calibrationText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Card {
+                    Rows(rows: rows)
                 }
             }
-            Section {
-                Chart(sensor.history) { measurement in
-                    let value = calibrated ? (measurement.moisturePercent ?? 0) : measurement.raw
-                    LineMark(x: .value("Tijd", measurement.time), y: .value("Waarde", value))
-                    PointMark(x: .value("Tijd", measurement.time), y: .value("Waarde", value))
-                }
-                .chartYScale(domain: .automatic(includesZero: false))
-                .frame(height: 180)
-            } header: {
-                Text(calibrated ? "Verloop (% vocht)" : "Verloop (ruwe waarde)")
-            } footer: {
-                if let calibration = sensor.latest.calibration {
-                    Text("Geijkt: droog = \(RouteCheck.number(calibration.dryRaw)), nat = \(RouteCheck.number(calibration.wetRaw)).")
-                } else {
-                    Text("Nog niet geijkt. Bij deze sensor betekent een hogere ruwe waarde meestal droger.")
-                }
-            }
+            .padding()
         }
+        .screenBackground()
         .navigationTitle("Sensor \(sensor.shortName)")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func value(_ measurement: SensorMeasurement) -> Double {
+        calibrated ? (measurement.moisturePercent ?? 0) : measurement.raw
+    }
+
+    /// A little below the lowest value, so the line is not squashed against the top.
+    private var chartFloor: Double {
+        let values = sensor.history.map(value)
+        guard let low = values.min(), let high = values.max() else { return 0 }
+        return low - max(1, (high - low) * 0.3)
+    }
+
+    private var calibrationText: String {
+        if let calibration = sensor.latest.calibration {
+            return "Geijkt: droog = \(RouteCheck.number(calibration.dryRaw)), nat = \(RouteCheck.number(calibration.wetRaw))."
+        }
+        return "Nog niet geijkt. Bij deze sensor betekent een hogere ruwe waarde meestal droger."
+    }
+
+    private var rows: [(String, String)] {
+        var rows = [
+            ("Laatste meting", sensor.valueText),
+            ("Gemeten", sensor.latest.time.formatted(date: .abbreviated, time: .shortened)),
+            ("Diepte", "\(RouteCheck.number(sensor.latest.depthCm)) cm"),
+        ]
+        if let volt = sensor.latest.batteryVolt {
+            rows.append(("Accu", "\(dutchNumber(volt, digits: 2)) V"))
+        }
+        return rows
     }
 }

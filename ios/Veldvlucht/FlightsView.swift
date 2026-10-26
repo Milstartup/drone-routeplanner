@@ -1,6 +1,7 @@
 // Step 6 (docs/STAPPENPLAN.md): the flights saved on this iPhone, each with its photo log
 // (veld/fotolog) and log. Share them with AirDrop, together with the photos from the SD card.
 import SwiftUI
+import UIKit
 
 struct SavedFlight: Identifiable {
     let photoLog: PhotoLog
@@ -47,36 +48,46 @@ struct FlightsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if model.flights.isEmpty {
-                    Text("Nog geen vluchten met foto's. Na een vlucht (ook in de simulator) staan hier het fotolog en het logboek.")
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(model.flights) { flight in
-                    NavigationLink {
-                        SavedFlightView(flight: flight)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(flight.photoLog.routePlanName).font(.headline)
-                            Text("\(flight.photoLog.photos.count) foto's · \(flight.isSimulator ? "simulator" : "echte vlucht")")
-                                .font(.subheadline)
-                                .foregroundStyle(flight.isSimulator ? .secondary : .primary)
-                            if let first = flight.photoLog.photos.first {
-                                Text(first.time.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption).foregroundStyle(.secondary)
+            Group {
+                if model.flights.isEmpty && model.problems.isEmpty {
+                    ScrollView {
+                        Card {
+                            EmptyState(
+                                symbol: "airplane.departure",
+                                title: "Nog geen vluchten",
+                                message: "Na een vlucht, ook in de simulator, staan hier het fotolog en het logboek. Deel ze met AirDrop naar de Mac."
+                            ) {
+                                EmptyView()
+                            }
+                        }
+                        .padding()
+                    }
+                } else {
+                    List {
+                        Section {
+                            ForEach(model.flights) { flight in
+                                NavigationLink {
+                                    SavedFlightView(flight: flight)
+                                } label: {
+                                    FlightRow(flight: flight)
+                                }
+                            }
+                            .onDelete { offsets in
+                                offsets.map { model.flights[$0] }.forEach(model.delete)
+                            }
+                        } footer: {
+                            Text("Veeg naar links om een vlucht te verwijderen. In de Bestanden-app: Op mijn iPhone › Veldvlucht › Vluchten.")
+                        }
+                        if !model.problems.isEmpty {
+                            Section("Niet te lezen") {
+                                ForEach(model.problems, id: \.self) { Text($0).font(.footnote) }
                             }
                         }
                     }
-                }
-                .onDelete { offsets in
-                    offsets.map { model.flights[$0] }.forEach(model.delete)
-                }
-                if !model.problems.isEmpty {
-                    Section("Niet te lezen") {
-                        ForEach(model.problems, id: \.self) { Text($0).font(.footnote) }
-                    }
+                    .scrollContentBackground(.hidden)
                 }
             }
+            .screenBackground()
             .navigationTitle("Vluchten")
             .onAppear { model.reload() }
             .refreshable { model.reload() }
@@ -84,46 +95,119 @@ struct FlightsView: View {
     }
 }
 
-private struct SavedFlightView: View {
+private struct FlightRow: View {
     let flight: SavedFlight
-    @State private var baseLayer = BaseLayer.pdok
+
+    var body: some View {
+        HStack(spacing: 12) {
+            IconBadge(symbol: flight.isSimulator ? "cube.transparent" : "airplane",
+                      color: flight.isSimulator ? .indigo : .actionGo, size: 42)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(flight.photoLog.routePlanName)
+                    .font(.headline)
+                    .lineLimit(2)
+                Text(flight.isSimulator ? "Simulator" : "Echte vlucht")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(flight.isSimulator ? Color.indigo : Color.actionGo)
+                if let first = flight.photoLog.photos.first {
+                    Text(first.time.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute()))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 4)
+            VStack(alignment: .trailing, spacing: 0) {
+                Text("\(flight.photoLog.photos.count)")
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .monospacedDigit()
+                Text("foto's").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct SavedFlightView: View {
+    let flight: SavedFlight
 
     private var photos: [PhotoLog.Photo] { flight.photoLog.photos }
 
     var body: some View {
-        VStack(spacing: 0) {
-            MapCanvas(
-                shapes: [],
-                pins: photos.map {
-                    MapPin(id: "foto-\($0.index)", coordinate: LatLng(lat: $0.lat, lng: $0.lng), title: nil,
-                           style: .dot(.systemGreen))
-                },
-                contentID: flight.id,
-                baseLayer: baseLayer
-            )
-            .frame(height: 260)
-            .overlay(alignment: .bottom) { MapAttribution(layer: baseLayer).padding(.bottom, 4) }
-            List {
-                Section {
-                    Row(label: "Route", value: flight.photoLog.routePlanName)
-                    Row(label: "Soort", value: flight.isSimulator ? "Simulator" : "Echte vlucht")
-                    Row(label: "Foto's", value: "\(photos.count)")
-                    if let first = photos.first, let last = photos.last {
-                        Row(label: "Bestanden", value: "\(first.file) t/m \(last.file)")
-                        Row(label: "Tijd", value: "\(first.time.formatted(date: .abbreviated, time: .shortened)) – \(last.time.formatted(date: .omitted, time: .shortened))")
+        ScrollView {
+            VStack(spacing: Design.spacing) {
+                MapCanvas(
+                    shapes: track,
+                    pins: photos.map {
+                        MapPin(id: "foto-\($0.index)", coordinate: LatLng(lat: $0.lat, lng: $0.lng), title: nil,
+                               style: .dot(.systemGreen))
+                    },
+                    contentID: flight.id,
+                    interactive: false,
+                    fitInsets: UIEdgeInsets(top: 30, left: 24, bottom: 40, right: 24)
+                )
+                .frame(height: 250)
+                .overlay(alignment: .bottomLeading) { MapAttribution(layer: .pdok).padding(8) }
+                .clipShape(RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(flight.photoLog.routePlanName).font(.title2.weight(.bold))
+                    HStack(spacing: 8) {
+                        Pill(text: flight.isSimulator ? "Simulator" : "Echte vlucht",
+                             symbol: flight.isSimulator ? "cube.transparent" : "airplane",
+                             color: flight.isSimulator ? .indigo : .actionGo)
+                        Text(flight.id).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     }
                 }
-                Section {
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+
+                Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+                    GridRow {
+                        StatTile(title: "Foto's", symbol: "camera.fill", color: .teal, value: "\(photos.count)",
+                                 detail: "in het fotolog")
+                        let duration = RouteView.split(RouteCheck.minutes(durationS))
+                        StatTile(title: "Duur", symbol: "timer", color: .purple, value: photos.count > 1 ? duration.value : "–",
+                                 unit: photos.count > 1 ? duration.unit : nil, detail: "eerste tot laatste foto")
+                    }
+                }
+
+                if let first = photos.first, let last = photos.last {
+                    Card {
+                        Rows(rows: [
+                            ("Bestanden", "\(first.file) t/m \(last.file)"),
+                            ("Begin", first.time.formatted(date: .abbreviated, time: .shortened)),
+                            ("Einde", last.time.formatted(date: .omitted, time: .shortened)),
+                        ])
+                    }
+                }
+
+                VStack(spacing: 8) {
                     ShareLink(items: flight.files) {
                         Label("Fotolog en logboek delen", systemImage: "square.and.arrow.up")
                     }
-                } footer: {
+                    .buttonStyle(ActionButtonStyle(color: .actionGo))
                     Text("Bijvoorbeeld met AirDrop naar de Mac. Zet de foto's van de SD-kaart in dezelfde map: het fotolog zegt welk bestand bij welke geplande fotopositie hoort.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
+            .padding()
         }
-        .navigationTitle(flight.id)
+        .screenBackground()
+        .navigationTitle("Vlucht")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { BaseLayerMenu(layer: $baseLayer) }
+    }
+
+    /// The photos in order, as the line the drone flew.
+    private var track: [MapShape] {
+        guard photos.count >= 2 else { return [] }
+        return [MapShape(id: "spoor", kind: .polyline, points: photos.map { LatLng(lat: $0.lat, lng: $0.lng) },
+                         stroke: UIColor.systemGreen.withAlphaComponent(0.8), lineWidth: 2)]
+    }
+
+    private var durationS: Double {
+        guard let first = photos.first, let last = photos.last else { return 0 }
+        return last.time.timeIntervalSince(first.time)
     }
 }

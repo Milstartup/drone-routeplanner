@@ -569,3 +569,43 @@ extension DJIConnection: DroneControl {
         fc.cancelGoHome { [weak self] error in self?.onMain { completion(error) } }
     }
 }
+
+#if DEBUG
+// MARK: - Screen tour
+
+extension DJIConnection {
+    /// Example values for the screen tour (ScreenTour.swift). The SDK is never started there.
+    func showTourStatus(connected: Bool, simulator: Bool) {
+        var example = DroneStatus()
+        example.sdkVersion = "4.16.2"
+        example.registration = .done
+        example.remoteConnected = connected
+        example.aircraftConnected = connected
+        if connected {
+            example.model = "Mavic Mini"
+            example.firmware = expectedFirmware
+            example.flightControllerFirmware = "03.04.06.43"
+            example.batteryPercent = 91
+            example.batteryVolts = 8.12
+            example.satelliteCount = 12
+            example.gpsLevel = 4
+            example.simulatorActive = simulator
+            example.hasCamera = true
+            example.sdCard = "ruimte voor 2314 foto's"
+            example.sdCardReady = true
+            example.photo = .done("DJI_0096.JPG (4,0 MB)")
+        }
+        status = example
+        let start = Date().addingTimeInterval(-90)
+        log = [
+            "Aanmelden bij DJI (SDK 4.16.2)…",
+            "Aangemeld bij DJI.",
+            "Afstandsbediening verbonden.",
+            "Drone verbonden: Mavic Mini.",
+            "Accu 91 % (8,12 V).",
+            "GPS: 12 satellieten, signaal 4 van 5.",
+            "Foto opgeslagen op de SD-kaart: DJI_0096.JPG (4,0 MB).",
+        ].enumerated().map { LogLine(time: start.addingTimeInterval(Double($0.offset) * 12), text: $0.element) }
+    }
+}
+#endif

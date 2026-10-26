@@ -1,5 +1,5 @@
-// Step 3, first part (docs/STAPPENPLAN.md): read a route file from the planner, check it
-// again and show it on a map. Flying comes later, after the ground test with the drone.
+// The route screen (step 3 of docs/STAPPENPLAN.md): read a route file from the planner,
+// check it again, show it on a map and open the flight screen.
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -61,58 +61,50 @@ struct RouteView: View {
     @State private var importing = false
     @State private var session: FlightSession?
 
+    private var canFly: Bool { model.file != nil && model.errorCount == 0 }
+
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Button {
-                        importing = true
-                    } label: {
-                        Label("Routebestand openen…", systemImage: "folder")
+            ScrollView {
+                VStack(spacing: Design.spacing) {
+                    if let error = model.error {
+                        errorCard(error)
                     }
-                    Button {
-                        model.loadSample()
-                    } label: {
-                        Label("Voorbeeldroute laden", systemImage: "doc.text")
-                    }
-                } footer: {
-                    Text("Sla de route in de planner op met Download JSON. Zet het bestand op de iPhone met AirDrop of iCloud Drive en open het hier, of kies in de Bestanden-app Deel → Veldvlucht.")
-                }
-
-                if let error = model.error {
-                    Section("Kan niet gelezen worden") {
-                        Label(error, systemImage: "xmark.octagon.fill")
-                            .foregroundStyle(.red)
-                        if let name = model.fileName {
-                            Text(name).font(.footnote).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-
-                if let file = model.file, let summary = model.summary {
-                    routeSection(file, summary)
-                    checkSection
-                    Section {
-                        NavigationLink {
-                            RouteMapView(file: file, contentID: "\(model.fileName ?? "")|\(file.createdAt ?? "")")
-                        } label: {
-                            Label("Toon op de kaart", systemImage: "map")
-                        }
-                    }
-                    if model.errorCount == 0 {
-                        Section {
-                            Button {
-                                session = FlightSession(file: file, drone: drone)
-                            } label: {
-                                Label("Vliegen in de simulator…", systemImage: "airplane.departure")
+                    if let file = model.file, let summary = model.summary {
+                        loaded(file, summary)
+                    } else {
+                        Card {
+                            EmptyState(
+                                symbol: "point.topleft.down.to.point.bottomright.curvepath",
+                                title: model.error == nil ? "Nog geen route" : "Kies een ander bestand",
+                                message: "Maak een route in de planner en kies Download JSON. Zet het bestand met AirDrop of iCloud Drive op de iPhone, of kies in de Bestanden-app Deel → Veldvlucht."
+                            ) {
+                                openButton.buttonStyle(ActionButtonStyle(color: .actionGo))
+                                sampleButton.buttonStyle(ActionButtonStyle(color: .veld, prominent: false))
                             }
-                        } footer: {
-                            Text("Stap 3: de drone blijft met de propellers eraf op de grond. Alleen de simulator van DJI vliegt de route.")
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 24)
+            }
+            .screenBackground()
+            .navigationTitle("Route")
+            .toolbar {
+                if model.file != nil || model.error != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            openButton
+                            sampleButton
+                        } label: {
+                            Label("Andere route", systemImage: "folder")
                         }
                     }
                 }
             }
-            .navigationTitle("Route")
+            .safeAreaInset(edge: .bottom) {
+                if canFly { flyBar }
+            }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
                 if case .success(let url) = result {
                     model.load(url: url)
@@ -124,49 +116,173 @@ struct RouteView: View {
         }
     }
 
-    private func routeSection(_ file: RoutePlanFile, _ summary: RouteSummary) -> some View {
-        Section("Route") {
-            Row(label: "Naam", value: file.name)
-            Row(label: "Soort", value: file.mode == .field ? "Veld met vliegbanen" : "Eigen route")
-            Row(label: "Vlieghoogte", value: "\(RouteCheck.number(file.settings.altitudeM)) m boven het startpunt")
-            Row(label: "Snelheid", value: "\(RouteCheck.number(file.settings.speedMps)) m/s")
-            Row(label: "Foto-interval", value: "\(RouteCheck.number(file.settings.photoIntervalS)) s (elke \(RouteCheck.number(file.settings.speedMps * file.settings.photoIntervalS)) m)")
-            Row(label: "Routepunten", value: "\(summary.waypointCount)")
-            Row(label: "Foto's", value: "\(summary.photoCount)")
-            Row(label: "Afstand", value: RouteCheck.meters(summary.totalDistanceM))
-            Row(label: "Geschatte vliegtijd", value: RouteCheck.minutes(summary.flightTimeS))
-            if let far = summary.maxDistanceFromHomeM {
-                Row(label: "Verste punt vanaf start", value: RouteCheck.meters(far))
+    private var openButton: some View {
+        Button {
+            importing = true
+        } label: {
+            Label("Routebestand openen…", systemImage: "folder")
+        }
+    }
+
+    private var sampleButton: some View {
+        Button {
+            model.loadSample()
+        } label: {
+            Label("Voorbeeldroute laden", systemImage: "doc.text")
+        }
+    }
+
+    private func errorCard(_ error: String) -> some View {
+        Card(tint: .red) {
+            HStack(spacing: 10) {
+                IconBadge(symbol: "xmark.octagon.fill", color: .red, size: 30)
+                Text("Kan niet gelezen worden").font(.headline)
             }
-            if let area = summary.fieldAreaM2 {
-                Row(label: "Veld", value: String(format: "%.2f ha", area / 10_000).replacingOccurrences(of: ".", with: ","))
+            Text(error).font(.subheadline)
+            if let name = model.fileName {
+                Label(name, systemImage: "doc").font(.footnote).foregroundStyle(.secondary)
             }
         }
     }
 
-    private var checkSection: some View {
-        Section {
-            if model.issues.isEmpty {
-                Label("Geen fouten of waarschuwingen", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            }
-            ForEach(model.issues) { issue in
-                Label {
-                    Text(issue.message)
-                } icon: {
-                    Image(systemName: issue.level == .error ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
-                        .foregroundStyle(issue.level == .error ? .red : .orange)
+    // MARK: A loaded route
+
+    @ViewBuilder
+    private func loaded(_ file: RoutePlanFile, _ summary: RouteSummary) -> some View {
+        let contentID = "\(model.fileName ?? "")|\(file.createdAt ?? "")"
+        NavigationLink {
+            RouteMapView(file: file, contentID: contentID)
+        } label: {
+            MapCanvas(shapes: RouteMapView.shapes(for: file), pins: RouteMapView.pins(for: file),
+                      contentID: contentID, interactive: false,
+                      fitInsets: UIEdgeInsets(top: 50, left: 24, bottom: 40, right: 24))
+                .frame(height: 230)
+                .overlay(alignment: .topTrailing) {
+                    Label("Toon op de kaart", systemImage: "arrow.up.left.and.arrow.down.right")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .glass(Capsule())
+                        .padding(10)
+                }
+                .overlay(alignment: .bottomLeading) {
+                    MapAttribution(layer: .pdok).padding(8)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
+        }
+        .buttonStyle(.plain)
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text(file.name)
+                .font(.title2.weight(.bold))
+            HStack(spacing: 8) {
+                Pill(text: file.mode == .field ? "Veld met vliegbanen" : "Eigen route",
+                     symbol: file.mode == .field ? "square.split.diagonal.2x2" : "scribble.variable", color: .veld)
+                if let name = model.fileName {
+                    Text(name).font(.footnote).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 }
             }
-        } header: {
-            Text("Controle in de app")
-        } footer: {
-            if model.errorCount > 0 {
-                Text("Met fouten kan deze route niet gevlogen worden. Pas de route aan in de planner en sla hem opnieuw op.")
-            } else {
-                Text("Vliegen komt in een volgende stap: eerst de test met de drone (stap 2), daarna de simulator van DJI (stap 3).")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+
+        Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+            GridRow {
+                let distance = Self.split(RouteCheck.meters(summary.totalDistanceM))
+                StatTile(title: "Afstand", symbol: "ruler", color: .blue, value: distance.value, unit: distance.unit,
+                         detail: "\(summary.waypointCount) routepunten")
+                let time = Self.split(RouteCheck.minutes(summary.flightTimeS))
+                StatTile(title: "Vliegtijd", symbol: "timer", color: .purple, value: time.value, unit: time.unit,
+                         detail: "geschat, zonder wind")
+            }
+            GridRow {
+                StatTile(title: "Foto's", symbol: "camera.fill", color: .teal, value: "\(summary.photoCount)",
+                         detail: "elke \(RouteCheck.number(file.settings.speedMps * file.settings.photoIntervalS)) m")
+                StatTile(title: "Hoogte", symbol: "arrow.up.to.line", color: .orange,
+                         value: RouteCheck.number(file.settings.altitudeM), unit: "m", detail: "boven het startpunt")
             }
         }
+
+        Card {
+            Rows(rows: detailRows(file, summary))
+        }
+
+        checkCard
+    }
+
+    private func detailRows(_ file: RoutePlanFile, _ summary: RouteSummary) -> [(String, String)] {
+        var rows = [
+            ("Snelheid", "\(RouteCheck.number(file.settings.speedMps)) m/s"),
+            ("Foto-interval", "\(RouteCheck.number(file.settings.photoIntervalS)) s"),
+        ]
+        if let far = summary.maxDistanceFromHomeM {
+            rows.append(("Verste punt vanaf start", RouteCheck.meters(far)))
+        }
+        if let area = summary.fieldAreaM2 {
+            rows.append(("Veld", String(format: "%.2f ha", area / 10_000).replacingOccurrences(of: ".", with: ",")))
+        }
+        return rows
+    }
+
+    /// "2,52 km" → ("2,52", "km"), for a big number with a small unit.
+    static func split(_ text: String) -> (value: String, unit: String?) {
+        guard let space = text.lastIndex(of: " ") else { return (text, nil) }
+        return (String(text[..<space]), String(text[text.index(after: space)...]))
+    }
+
+    private var checkCard: some View {
+        Card(tint: model.errorCount > 0 ? .red : (model.issues.isEmpty ? .green : .orange)) {
+            if model.issues.isEmpty {
+                HStack(spacing: 12) {
+                    IconBadge(symbol: "checkmark.seal.fill", color: .green, size: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Route is in orde").font(.headline)
+                        Text("Geen fouten of waarschuwingen bij de controle in de app.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                HStack(spacing: 10) {
+                    IconBadge(symbol: model.errorCount > 0 ? "xmark.octagon.fill" : "exclamationmark.triangle.fill",
+                              color: model.errorCount > 0 ? .red : .orange, size: 30)
+                    Text("Controle in de app").font(.headline)
+                }
+                ForEach(model.issues) { issue in
+                    Notice(text: issue.message,
+                           symbol: issue.level == .error ? "xmark.octagon.fill" : "exclamationmark.triangle.fill",
+                           color: issue.level == .error ? .red : .orange)
+                }
+                if model.errorCount > 0 {
+                    Text("Met fouten kan deze route niet gevlogen worden. Pas de route aan in de planner en sla hem opnieuw op.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var flyBar: some View {
+        VStack(spacing: 6) {
+            Button {
+                if let file = model.file {
+                    session = FlightSession(file: file, drone: drone)
+                }
+            } label: {
+                Label(FlightClearance.realFlightsUnlocked ? "Vliegen…" : "Vliegen in de simulator…", systemImage: "airplane.departure")
+            }
+            .buttonStyle(ActionButtonStyle(color: .actionGo))
+            Text(FlightClearance.realFlightsUnlocked
+                 ? "In het vluchtscherm kies je: simulator of echt vliegen."
+                 : "De drone blijft met de propellers eraf op de grond. Alleen de simulator van DJI vliegt.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(.bar)
     }
 }
 
@@ -176,14 +292,15 @@ struct RouteMapView: View {
     @State private var baseLayer = BaseLayer.pdok
 
     var body: some View {
-        MapCanvas(shapes: shapes, pins: pins, contentID: contentID, baseLayer: baseLayer)
+        MapCanvas(shapes: shapes, pins: pins, contentID: contentID, baseLayer: baseLayer,
+                  fitInsets: UIEdgeInsets(top: 50, left: 50, bottom: 130, right: 50))
             .ignoresSafeArea(edges: .bottom)
             .overlay(alignment: .bottom) {
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
                     legend
                     MapAttribution(layer: baseLayer)
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 10)
             }
             .navigationTitle(file.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -191,15 +308,15 @@ struct RouteMapView: View {
     }
 
     private var legend: some View {
-        HStack(spacing: 12) {
-            LegendItem(color: .yellow, text: "met foto's")
-            LegendItem(color: .orange, text: "zonder foto's")
+        HStack(spacing: 14) {
+            LegendItem(color: .yellow, text: "met foto's", mark: .line)
+            LegendItem(color: .orange, text: "zonder foto's", mark: .dashed)
             LegendItem(color: .white, text: "foto")
         }
-        .font(.caption)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.thinMaterial, in: Capsule())
+        .font(.footnote.weight(.medium))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glass(Capsule())
     }
 
     private var shapes: [MapShape] { Self.shapes(for: file) }
@@ -244,13 +361,27 @@ struct RouteMapView: View {
 }
 
 struct LegendItem: View {
+    enum Mark {
+        case dot
+        case line
+        case dashed
+    }
+
     let color: Color
     let text: String
+    var mark = Mark.dot
 
     var body: some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 10, height: 10)
-                .overlay(Circle().stroke(.black.opacity(0.4), lineWidth: 0.5))
+        HStack(spacing: 5) {
+            switch mark {
+            case .dot:
+                Circle().fill(color).frame(width: 11, height: 11)
+                    .overlay(Circle().stroke(.black.opacity(0.35), lineWidth: 0.5))
+            case .line, .dashed:
+                Capsule()
+                    .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: mark == .dashed ? [4, 3] : []))
+                    .frame(width: 18, height: 3)
+            }
             Text(text)
         }
     }

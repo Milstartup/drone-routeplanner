@@ -16,17 +16,20 @@ Stand: 26 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - één gemiste camerabevestiging liet het fotolog opschuiven;
   - zonder GPS ging hervatten terug naar het begin van de route.
 - **Met de drone (stap 2, geslaagd):** aanmelden, verbinding, accu, GPS, firmware en één foto op de grond.
-- **Nog nooit getest:** de schermen Route, Veldkaart en Vluchten op je iPhone; alles in de simulator van DJI; echt vliegen.
+- **Het nieuwe ontwerp (26 oktober 2026), bekeken op je iPhone:** de app liep zelf langs alle schermen met voorbeeldgegevens en de nep-drone, in licht en donker (de "schermtour", zie [ios/README.md](../ios/README.md)). Zo zijn ook het vluchtscherm tijdens een vlucht, na een pauze, na overnemen en aan het eind bekeken.
+- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; jouw eigen indruk van de schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
 
 ## A. Zonder drone (binnen, ongeveer 10 minuten)
 
 - [ ] **A1** De app opent met onderaan vier tabbladen: *Drone*, *Route*, *Veldkaart* en *Vluchten*.
+  - Op het beginscherm van de iPhone staat het nieuwe icoon: een groen veld met witte vliegbanen en een drone.
 - [ ] **A2** *Route* → **Voorbeeldroute laden**. Je hoort dit te zien:
-  - 20 routepunten, 180 foto's, 2,52 km en 12:04 min;
-  - een groen vinkje bij de controle.
-- [ ] **A3** *Route* → **Toon op de kaart**. Je hoort dit te zien:
+  - vier tegels: *Afstand* 2,52 km (20 routepunten), *Vliegtijd* 12:04 min, *Foto's* 180 en *Hoogte* 30 m;
+  - een groene kaart *Route is in orde*;
+  - onderaan de groene knop **Vliegen in de simulator…**
+- [ ] **A3** *Route* → tik op het kaartje bovenaan (**Toon op de kaart**). Je hoort dit te zien:
   - de luchtfoto met 10 gele banen, oranje stippellijnen en witte stipjes;
   - een blauw huisje en een groene vlag.
   - Wissel met *Kaart* rechtsboven naar Apple en terug.
@@ -41,19 +44,24 @@ Stand: 26 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - 5 stroken (blauw, blauw, geel, geel, rood), 3 paarse markeringen en 3 turquoise druppels.
 - [ ] **A7** Tik op een strook (*Waarop gebaseerd*), een druppel (grafiek) en een paarse markering (reden).
 - [ ] **A8** De app vraagt om je locatie. Kies *Bij gebruik van app*: op de kaart hoort een blauwe stip te staan waar je bent.
-- [ ] **A9** *Veldkaart* → **Gegevens** (linksboven):
-  - kies **Eigen bestand laden…** en neem een bestand uit `docs/voorbeelden`. Bovenaan staat dan *Eigen gegevens: …*;
+- [ ] **A9** *Veldkaart* → tik op **Voorbeeldgegevens**, onder de naam van het veld:
+  - kies **Eigen bestand laden…** en neem een bestand uit `docs/voorbeelden`. Onder de naam staat dan *Eigen gegevens: …*;
   - kies daarna **Voorbeeldgegevens gebruiken**.
-- [ ] **A10** *Vluchten* toont nog "Nog geen vluchten met foto's".
-- [ ] **A11** Buiten in de zon: is de veldkaart in één oogopslag te lezen? (stap 7, punt 3)
+- [ ] **A10** *Vluchten* toont nog *Nog geen vluchten*.
+- [ ] **A11** Buiten in de zon: is de veldkaart in één oogopslag te lezen? (stap 7, punt 3) En de tegels op het tabblad *Drone*?
+- [ ] **A12** Zet de iPhone op donker (*Instellingen → Weergave en helderheid → Donker*). Is alles nog goed te lezen? Zet hem daarna terug zoals je wilt.
 
 ## B. Drone op tafel, zonder simulator (propellers eraf)
 
 - [ ] **B1** *Drone*:
-  - *afstandsbediening ↔ drone* wordt pas groen als de **drone** aan staat, niet al bij alleen de afstandsbediening;
-  - je ziet de accu, de GPS-satellieten, de firmware **01.00.0500** en een regel *Vluchtcomputer*.
+  - de lijn tussen *Afstandsbediening* en *Drone* wordt pas groen als de **drone** aan staat, niet al bij alleen de afstandsbediening;
+  - je ziet de tegels *Accu*, *GPS* (satellieten en signaalstreepjes), *SD-kaart* en *Motoren*;
+  - bij *Firmware*: **01.00.0500** met *Zoals verwacht*, en een regel *Vluchtcomputer*.
 - [ ] **B2** Maak buiten één foto met *Maak één foto*. Bekijk hem op de Mac in Voorvertoning (*Extra → Toon info*): staat er GPS of een locatie in?
-- [ ] **B3** *Route* → **Vliegen in de simulator…** zonder de simulator te starten. Er hoort een oranje melding *De simulator staat uit* te staan, en **Route starten** hoort grijs te zijn.
+- [ ] **B3** *Route* → **Vliegen in de simulator…** zonder de simulator te starten. Je hoort dit te zien:
+  - bovenaan de oranje badge *SIMULATOR UIT*;
+  - onderin een oranje melding *De simulator staat uit*;
+  - **Route starten** is grijs.
 
 ## C. In de simulator van DJI (stap 3), met de propellers eraf
 
@@ -64,7 +72,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - het rode vliegtuigje springt naar het startpunt van de route.
 
   Lukt dit niet, stuur dan het logboek: of de simulator van de SDK op de Mavic Mini werkt, is nog onbekend.
-- [ ] **C2** **Route starten** → bevestigen. De fases gaan voorbij: *Voorbereiden → Opstijgen → Klimmen → Richtingtest → Naar het begin → Route vliegen*.
+- [ ] **C2** **Route starten** → vink de drie punten af → **Starten**. Onderin gaan de fases voorbij: *Voorbereiden → Opstijgen → Klimmen → Richtingtest → Naar het begin → Route vliegen*.
 - [ ] **C3** **Vraag 1, de richting:** wat staat er na de richtingtest in het logboek? (Bijvoorbeeld *pitch = oost, roll = noord*.) Schrijf het hier op: ____________________
 - [ ] **C4** **Vraag 2, de foto's:**
   - vliegt het vliegtuigje over de gele lijnen?
@@ -106,7 +114,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - de accu is minstens 50 %;
   - de drone geeft geen windwaarschuwing;
   - de drone staat binnen 30 m van het startpunt.
-- [ ] **D3** **Echt vliegen** → lees de controlelijst → opstijgen. **Houd de afstandsbediening vast.** Na de richtingtest, op hoogte:
+- [ ] **D3** **Echt vliegen** → vink de controlelijst af → **Alles gecontroleerd: opstijgen**. **Houd de afstandsbediening vast.** Na de richtingtest, op hoogte:
   - probeer **Pauze** en **Hervatten**;
   - probeer **Overnemen** met een stick.
 - [ ] **D4** Volgt de drone de banen? Maakt hij de foto's? Landt hij weer bij het startpunt?

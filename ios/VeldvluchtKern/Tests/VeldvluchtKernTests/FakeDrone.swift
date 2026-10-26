@@ -1,9 +1,13 @@
 // A fake drone for the flight tests (docs/DJI-MOBILE-SDK-V4.md, 6.1: "test bijna alles met
 // een nep-drone"). Simple physics: the velocity follows the stick command with a delay, the
 // height moves towards the commanded height, and the camera needs time per photo.
+// The app's debug build also uses it, for the screen tour (Veldvlucht/ScreenTour.swift).
+#if SWIFT_PACKAGE
 @testable import VeldvluchtKern
+#endif
 import Foundation
 
+#if DEBUG || SWIFT_PACKAGE
 final class FakeDrone: DroneControl {
     /// How this drone moves for raw pitch and roll. A real drone may differ from DJI's text.
     var mapping = AxisMapping.documented
@@ -208,3 +212,4 @@ final class FakeDrone: DroneControl {
         completion(nil)
     }
 }
+#endif

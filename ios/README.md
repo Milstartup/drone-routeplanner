@@ -23,6 +23,8 @@ De iPhone-app uit [STAPPENPLAN.md](../docs/STAPPENPLAN.md). Hij heeft vier tabbl
 | `Veldvlucht.xcworkspace` | **Dit open je in Xcode.** Bundelt de app en de DJI-SDK. | Ja |
 | `Veldvlucht.xcodeproj` | Het Xcode-project van de app. Niet los openen, maar via de workspace. | Ja |
 | `Veldvlucht/` | De schermen en de DJI-koppeling (Swift), plus `Info.plist`. | Ja |
+| `Veldvlucht/Assets.xcassets` | Het app-icoon (licht en donker) en de groene kleur van de app. | Ja |
+| `Scripts/AppIcon.swift` | Tekent het app-icoon opnieuw, als je het wilt aanpassen (zie "Het ontwerp"). | Ja |
 | `VeldvluchtKern/` | Het rekenwerk zonder drone of scherm: routebestand, controles, dataformaten. Met tests. | Ja |
 | `../docs/voorbeelden/` | Voorbeeldbestanden in alle dataformaten. Gaan mee in de app als map `voorbeelden`. | Ja |
 | `Config/Veldvlucht.xcconfig` | Instellingen; leest `Lokaal.xcconfig` in. | Ja |
@@ -52,11 +54,12 @@ De iPhone-app uit [STAPPENPLAN.md](../docs/STAPPENPLAN.md). Hij heeft vier tabbl
 
 **Erbij gekomen op 26 oktober 2026:**
 
+- **Een nieuw ontwerp** voor alle schermen, met een eigen app-icoon (zie "Het ontwerp").
 - Het tabblad **Route** (zie "Een route inlezen" hieronder).
 - Het tabblad **Veldkaart** (zie "De veldkaart" hieronder).
 - Het rekenpakket `VeldvluchtKern` met tests die allemaal slagen (nu 69, zie "Het rekenpakket testen").
 - De app bouwt nog steeds zonder fouten of waarschuwingen.
-- **Niet getest:** hoe de schermen er op de iPhone uitzien. De simulator werkte niet, dus dat zie je pas als je de app op je iPhone zet. Laat het Claude weten als iets er vreemd uitziet.
+- **Bekeken op je iPhone:** alle schermen, in licht en donker, met de schermtour en voorbeeldgegevens (zie "Het ontwerp"). Met de echte drone zijn alleen het tabblad *Drone* en de testfoto getest. Laat het Claude weten als iets er vreemd uitziet.
 
 ## Eenmalig: je App Key invullen
 
@@ -107,19 +110,19 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
 
 **Zo doe je de test:**
 
-1. **Open Veldvlucht** op de iPhone. Stap 1 op het scherm moet groen worden: **Aangemeld**.
+1. **Open Veldvlucht** op de iPhone. Onderaan de bovenste kaart hoort te staan: **Aangemeld bij DJI**, met een groen vinkje.
    - Vraagt de app om je locatie of Bluetooth: kies *Sta toe bij gebruik van app*. De DJI-software gebruikt die voor de Fly Safe-regels.
 2. **Zet de afstandsbediening aan** en sluit de iPhone met de kabel aan op de afstandsbediening.
    - Vraagt de iPhone om DJI Fly te openen, kies dan **Negeer**.
-   - In stap 2 wordt *iPhone ↔ afstandsbediening* groen.
-3. **Zet de drone aan.** Na een tijdje wordt *Afstandsbediening ↔ drone* groen en verschijnt het model.
-4. **Bekijk stap 3:**
+   - Bovenaan staan drie rondjes: *iPhone*, *Afstandsbediening* en *Drone*. De lijn tussen iPhone en afstandsbediening wordt **groen**.
+3. **Zet de drone aan.** Na een tijdje wordt ook de lijn naar de *Drone* groen. Rechtsboven staat dan **Verbonden**.
+4. **Bekijk de tegels:**
    - **Accu:** percentage en spanning.
-   - **GPS-satellieten:** buiten na een paar minuten liefst 10 of meer.
-   - **Firmware:** hoort **01.00.0500** te zijn (groen). Een andere versie staat in oranje.
-5. **Bekijk stap 4.** Bij *SD-kaart* staat hoeveel foto's er nog op passen.
-6. **Druk op "Maak één foto".** Gelukt als er staat: *Gelukt: DJI_xxxx.JPG*.
-7. **Druk op "Kopieer logboek"** en plak de tekst in een bericht aan Claude, of in een notitie. Daarmee staat de uitslag vast.
+   - **GPS:** het aantal satellieten en de signaalstreepjes. Buiten na een paar minuten liefst 10 of meer.
+   - **SD-kaart:** hoeveel foto's er nog op passen.
+   - **Firmware:** hoort **01.00.0500** te zijn, met *Zoals verwacht*. Bij een andere versie staat er *Controleer*.
+5. **Druk op "Maak één foto".** Gelukt als er staat: *Gelukt: DJI_xxxx.JPG*.
+6. **Druk onderaan op "Kopieer logboek"** en plak de tekst in een bericht aan Claude, of in een notitie. Daarmee staat de uitslag vast.
 
 **Na de test:** haal de microSD-kaart uit de drone en bekijk de foto op de Mac.
 
@@ -138,7 +141,7 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
    - **Rood** = fout: met een fout kan de route straks niet gevlogen worden. Pas de route aan in de planner.
    - **Oranje** = waarschuwing: lees hem en beslis zelf.
    - De app controleert met de regels van de planner én met eigen regels (zie [ROUTEBESTAND.md](../docs/ROUTEBESTAND.md)). Een foto-interval onder 2 s is in de app altijd een fout.
-5. **Toon op de kaart:**
+5. **Toon op de kaart:** tik op het kaartje bovenaan.
    - geel = stukken met foto's;
    - oranje gestippeld = stukken zonder foto's, en de weg van en naar het startpunt;
    - witte stippen = de geplande foto's.
@@ -164,11 +167,11 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
 
 **Zo doe je de test:**
 1. Haal de **propellers eraf**. Zet de drone op een vlakke plek, met de SD-kaart erin, en sluit DJI Fly af.
-2. Verbind iPhone, afstandsbediening en drone. Op het tabblad *Drone* moeten beide lampjes groen zijn.
+2. Verbind iPhone, afstandsbediening en drone. Op het tabblad *Drone* moeten beide lijnen groen zijn.
 3. Ga naar het tabblad **Route** en kies **Voorbeeldroute laden**, of je eigen route. Kies daarna **Vliegen in de simulator…**
 4. Druk op **Simulator starten**. De drone "staat" dan op het startpunt van de route, met 12 GPS-satellieten.
-5. Onder de knoppen mogen geen oranje punten meer staan. Druk op **Route starten** en bevestig.
-6. **Kijk mee.** Bovenaan staat de fase: *Voorbereiden → Opstijgen → Klimmen → Richtingtest → Naar het begin → Route vliegen → Naar huis en landen → Klaar*. Op de kaart vliegt het rode vliegtuigje mee. Gemaakte foto's worden **groen**, gemiste **rood**.
+5. In het onderste deel van het scherm mogen geen oranje punten meer staan; er staat dan *Alles klaar om te starten*. Druk op **Route starten**, vink de drie punten af en druk op **Starten**.
+6. **Kijk mee.** Onderin staat de fase: *Voorbereiden → Opstijgen → Klimmen → Richtingtest → Naar het begin → Route vliegen → Naar huis en landen → Klaar*. Op de kaart vliegt het rode vliegtuigje mee. Gemaakte foto's worden **groen**, gemiste **rood**.
 7. **Beantwoord de drie vragen uit het stappenplan:**
    - *Klopt de vliegrichting?* In het logboek staat na de richtingtest bijvoorbeeld "pitch = oost, roll = noord (zoals DJI beschrijft)". Vliegt het vliegtuigje over de gele lijnen?
    - *Worden de foto's op de goede plekken gemaakt?* Worden de stippen groen op de lijnen, zonder rode?
@@ -178,7 +181,7 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
    - Aan het eind vliegt de drone in de simulator naar huis en landt.
    - Druk op **Simulator stoppen**.
    - Zet de drone uit en weer aan voordat je ooit echt vliegt.
-9. **Logboek:** knop rechtsboven → **Kopieer logboek** → plak het hier in de chat.
+9. **Logboek:** de ronde knop rechtsboven (het lijstje) → **Kopieer logboek** → plak het hier in de chat.
 10. **Fotolog en logboek op de iPhone:** open de Bestanden-app en ga naar *Op mijn iPhone → Veldvlucht → Vluchten*. Per vlucht staan daar:
     - het fotolog (`….fotolog.json`, formaat `veld/fotolog`);
     - het logboek (`….logboek.txt`).
@@ -187,11 +190,11 @@ Vergeet je dit, dan stopt Xcode het bouwen met de melding *"De DJI App Key ontbr
 
 ## Echt vliegen (stap 5)
 
-**Pas na de simulator.** De keuze **Echt vliegen** verschijnt bovenin het vluchtscherm zodra op deze iPhone twee dingen zijn gelukt:
+**Pas na de simulator.** De keuze **Echt vliegen** verschijnt onderin het vluchtscherm zodra op deze iPhone twee dingen zijn gelukt:
 1. een simulatorvlucht tot *Klaar*, met minstens 90 % van de foto's;
 2. overnemen door een stick te bewegen tijdens een simulatorvlucht.
 
-Tot die tijd staat er welke van de twee nog ontbreekt (✓ of ✗).
+Tot die tijd staat er welke van de twee nog ontbreekt: een groen vinkje is gelukt, een leeg rondje nog niet.
 
 **Strengere controles bij een echte vlucht:**
 - minstens 10 GPS-satellieten en GPS-signaal 4 van 5;
@@ -203,7 +206,7 @@ Tot die tijd staat er welke van de twee nog ontbreekt (✓ of ✗).
 
 **Korte routes eerst:** tot er 3 echte vluchten klaar zijn, accepteert de app alleen routes tot 800 m, oftewel 2 à 3 banen (stap 5 van het stappenplan).
 
-**Voor het opstijgen** toont de app een controlelijst:
+**Voor het opstijgen** toont de app een controlelijst. Pas als je alles hebt afgevinkt, werkt de knop **Alles gecontroleerd: opstijgen**:
 - propellers erop;
 - je ziet de drone de hele vlucht;
 - geen mensen of dieren onder de route;
@@ -224,7 +227,7 @@ Tot die tijd staat er welke van de twee nog ontbreekt (✓ of ✗).
 
 De veldkaart toont nu **voorbeeldgegevens** voor een verzonnen broccoliveld `veld-noord` bij Dronten. Zodra het centrale systeem bestaat, komen daar de echte gegevens.
 
-- **Bovenaan:** het weer voor vijf dagen en het **beste vliegmoment**. Een windstoot van 8 m/s of meer staat in oranje: dat is de grens van de Mavic Mini.
+- **Bovenaan**, in een doorzichtig paneel: de naam van het veld, het **beste vliegmoment** en het weer voor vijf dagen. Een windstoot van 8 m/s of meer staat in oranje: dat is de grens van de Mavic Mini.
 - **Op de kaart:**
   - **stroken** in **blauw** (genoeg water), **geel** (binnenkort water geven) of **rood** (nu water geven);
   - **paarse** markeringen: planten of plekken die aandacht nodig hebben;
@@ -233,12 +236,44 @@ De veldkaart toont nu **voorbeeldgegevens** voor een verzonnen broccoliveld `vel
   - bij een strook: **waarop het advies gebaseerd is**;
   - bij een markering: de reden en de naam van de foto;
   - bij een sensor: een grafiek van de afgelopen dagen.
-- **Kaart wisselen:** rechtsboven, knop *Kaart*. Kies tussen de luchtfoto van PDOK (alleen Nederland, scherper) en de satellietkaart van Apple.
+- **Kaart wisselen:** het knopje met de lagen rechtsboven in het paneel. Kies tussen de luchtfoto van PDOK (alleen Nederland, scherper) en de satellietkaart van Apple.
 - **Je eigen plek:** de eerste keer vraagt de app of hij je locatie mag gebruiken. Dan zie je in het veld een blauwe stip.
 - **Eigen gegevens:**
-  - Kies linksboven **Gegevens → Eigen bestand laden…** en kies een bestand in een van de formaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md): resultaten (`.geojson`), sensormetingen of weer. De app controleert het eerst.
-  - Wat je niet laadt, blijft voorbeeldgegevens. Bovenaan staat welke gegevens van jou zijn.
+  - Tik op **Voorbeeldgegevens** onder de naam van het veld → **Eigen bestand laden…** en kies een bestand in een van de formaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md): resultaten (`.geojson`), sensormetingen of weer. De app controleert het eerst.
+  - Wat je niet laadt, blijft voorbeeldgegevens. Onder de naam van het veld staat dan welke gegevens van jou zijn.
   - **Voorbeeldgegevens gebruiken** zet alles terug.
+
+## Het ontwerp
+
+Sinds 26 oktober 2026 heeft de app een nieuw uiterlijk, in de stijl van iOS 26 en 27. Apple noemt die stijl *Liquid Glass*.
+
+- **Kaarten met ronde hoeken** op een lichtgrijze achtergrond, zoals in de apps Instellingen en Gezondheid.
+- **Glas boven de kaart.** Knoppen en panelen zweven boven de luchtfoto, met een matte, doorschijnende achtergrond.
+  - In iOS 27 maakte Apple dat glas minder doorzichtig, zodat tekst beter te lezen is. De app doet hetzelfde: handig buiten in de zon.
+- **Grote, ronde cijfers** voor accu, GPS, hoogte en snelheid: in één oogopslag te lezen.
+- **Elke kleur betekent iets:**
+  - groen = goed, of starten;
+  - blauw = pauze;
+  - oranje = let op, of overnemen;
+  - rood = een probleem, of naar huis.
+- **Grote knoppen**, minstens 54 punten hoog. De kleuren zijn donker genoeg voor witte tekst in de zon.
+- **Licht en donker:** de app volgt de instelling van de iPhone.
+- **Je voelt het:** de iPhone tikt kort als de app stopt met sturen (overgenomen of gestopt) en als een route klaar is.
+- **Een eigen app-icoon:** een groen veld met vliegbanen en een drone.
+
+**Waarom niet het echte Liquid Glass van Apple?** Dat kan pas met Xcode 26 of nieuwer, en deze Mac heeft Xcode 16.4. De app bootst het glas na met de matte lagen van iOS 18. Met een nieuwere Xcode wordt ook de tabbalk onderaan van glas.
+
+**Alles over het uiterlijk staat in `Veldvlucht/Design.swift`.** Een kleur of knop aanpassen doe je daar, en dan verandert hij overal.
+
+**Het icoon aanpassen:** pas de tekening aan in `Scripts/AppIcon.swift`. Maak daarna in de map `ios` het icoon opnieuw:
+```bash
+swift Scripts/AppIcon.swift Veldvlucht/Assets.xcassets/AppIcon.appiconset
+```
+
+**De schermtour (voor Claude).** De testversie van de app kan alle schermen zelf langslopen. Ze gebruikt dan voorbeeldgegevens en de nep-drone uit de tests, en maakt van elk scherm een afbeelding, in licht en donker. Zo kon Claude het ontwerp op je iPhone bekijken zonder simulator.
+- De tour start alleen met de opstartoptie `-schermtour`. Die geeft Claude mee vanaf de Mac; jij komt hem nooit tegen.
+- De tour maakt geen verbinding met de drone.
+- De afbeeldingen komen in de map *Schermtour* van de app. Claude haalt ze op naar de Mac. Bij de volgende gewone start van de app verdwijnt die map weer.
 
 ## Het rekenpakket testen
 
@@ -288,12 +323,12 @@ Onderaan moet staan: *Executed 69 tests, with 0 failures*.
 | Xcode: *"De DJI App Key ontbreekt"* | Vul de App Key in, zie hierboven. |
 | Xcode: *"The sandbox is not in sync with the Podfile.lock"* | Draai `bundle exec pod install` in de map `ios` (zie hieronder). |
 | Xcode: iets met *Signing* of *Provisioning profile* | Kies bij *Signing & Capabilities* je Personal Team. Controleer dat de iPhone met de kabel verbonden en ontgrendeld is. |
-| Stap 1: *Geen internet* (DJI-code −1) | Zet wifi of 4G aan en druk op **Opnieuw proberen**. |
-| Stap 1: *De App Key klopt niet* (code −2, −9 of −15) | Controleer de sleutel in `Lokaal.xcconfig`: geen spaties of aanhalingstekens, niets vergeten. Bouw daarna opnieuw met ▶. |
-| Stap 1: *De Bundle ID past niet* (code −5) | De App Key hoort bij een andere Bundle ID. Die moet op developer.dji.com `nl.milanmehrzad.veldvlucht` zijn. |
-| Stap 1: *Te veel toestellen* (code −7 of −16) | De sleutel is al op te veel toestellen gebruikt. Kijk op developer.dji.com of maak een nieuwe App Key. |
-| *iPhone ↔ afstandsbediening* blijft rood | Is DJI Fly echt afgesloten? Probeer de kabel opnieuw, zet de afstandsbediening uit en aan, en houd Veldvlucht op de voorgrond. Werkt het in DJI Fly wel, stuur dan het logboek naar Claude. |
-| *Afstandsbediening ↔ drone* blijft rood | Staat de drone aan? Werkt dezelfde combinatie in DJI Fly? |
+| Aanmelden bij DJI: *Geen internet* (DJI-code −1) | Zet wifi of 4G aan en druk op **Opnieuw proberen**. |
+| Aanmelden bij DJI: *De App Key klopt niet* (code −2, −9 of −15) | Controleer de sleutel in `Lokaal.xcconfig`: geen spaties of aanhalingstekens, niets vergeten. Bouw daarna opnieuw met ▶. |
+| Aanmelden bij DJI: *De Bundle ID past niet* (code −5) | De App Key hoort bij een andere Bundle ID. Die moet op developer.dji.com `nl.milanmehrzad.veldvlucht` zijn. |
+| Aanmelden bij DJI: *Te veel toestellen* (code −7 of −16) | De sleutel is al op te veel toestellen gebruikt. Kijk op developer.dji.com of maak een nieuwe App Key. |
+| De lijn *iPhone ↔ afstandsbediening* blijft grijs | Is DJI Fly echt afgesloten? Probeer de kabel opnieuw, zet de afstandsbediening uit en aan, en houd Veldvlucht op de voorgrond. Werkt het in DJI Fly wel, stuur dan het logboek naar Claude. |
+| De lijn *afstandsbediening ↔ drone* blijft grijs | Staat de drone aan? Werkt dezelfde combinatie in DJI Fly? |
 | De fotoknop blijft grijs | De knop werkt alleen als de drone verbonden is, er een bruikbare SD-kaart in zit en de drone niet vliegt. Kijk wat er bij *SD-kaart* staat. |
 | *Geen bevestiging van een nieuw bestand* | Kijk op de SD-kaart of de foto er toch staat, en stuur het logboek naar Claude. |
 | DJI Fly of de afstandsbediening vraagt om een firmware-update | **Niet doen.** De iOS-SDK noemt alleen 01.00.0500. |
@@ -325,14 +360,16 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 
 | Bestand | Wat het doet |
 |---|---|
-| `VeldvluchtApp.swift` | Start de app met de drie tabbladen, houdt het scherm aan en start de aanmelding bij DJI. Vangt ook routebestanden op die via AirDrop of *Deel* binnenkomen. |
-| `DroneTestView.swift` | Tabblad *Drone*: de vier stappen en het logboek. Bevat geen DJI-code. |
+| `VeldvluchtApp.swift` | Start de app met de vier tabbladen, houdt het scherm aan en start de aanmelding bij DJI. Vangt ook routebestanden op die via AirDrop of *Deel* binnenkomen. |
+| `DroneTestView.swift` | Tabblad *Drone*: de verbinding, de tegels voor accu, GPS, SD-kaart en motoren, de firmware, de testfoto en het logboek. Bevat geen DJI-code. |
+| `Design.swift` | **Het ontwerp op één plek:** kleuren, kaarten, glas boven de kaart, tegels, grote knoppen en de getekende drone. |
+| `ScreenTour.swift` | Alleen in de testversie: een rondgang langs alle schermen die van elk scherm een afbeelding maakt (zie "Het ontwerp"). |
 | `DroneStatus.swift` | Wat het tabblad *Drone* laat zien (accu, GPS, firmware, foto...), in gewone Swift. |
 | `DJIConnection.swift` | De **enige** plek die de DJI-SDK aanroept (de "DJI-adapter" uit hoofdstuk 6.1 van [DJI-MOBILE-SDK-V4.md](../docs/DJI-MOBILE-SDK-V4.md)). Voert de commando's van de vluchtlogica uit: simulator, Virtual Stick, opstijgen, naar huis, foto. Meldt telemetrie en stickbewegingen terug. |
 | `RouteView.swift` | Tabblad *Route*: bestand kiezen, controle tonen, kaart, en de knop naar de vlucht. |
-| `FlightView.swift` | Het vluchtscherm (volledig scherm): fase, kaart met de drone, voortgang en de knoppen Pauze, Overnemen en Naar huis. Laat de stuurlus 10 keer per seconde lopen. Bewaart fotolog, logboek en voortgang. Regelt het vrijgeven van echt vliegen. |
+| `FlightView.swift` | Het vluchtscherm (volledig scherm): kaart met de drone, de fase, voortgang, de knoppen Pauze, Overnemen en Naar huis, en de controlelijst voor de start. Laat de stuurlus 10 keer per seconde lopen. Bewaart fotolog, logboek en voortgang. Regelt het vrijgeven van echt vliegen. |
 | `FlightsView.swift` | Tabblad *Vluchten*: opgeslagen vluchten met kaart en delen. |
-| `FieldMapScreen.swift` | Tabblad *Veldkaart*: weerbalk, kaart en de details na een tik. |
+| `FieldMapScreen.swift` | Tabblad *Veldkaart*: kaart over het hele scherm, het paneel met weer en gegevens, en de details na een tik. |
 | `MapCanvas.swift` | De kaart (Apple MapKit) met de PDOK-luchtfoto, vlakken, lijnen en punten. |
 | `SampleData.swift` | Leest de gegevens voor de veldkaart: je eigen bestanden, of anders de voorbeeldbestanden in de app. |
 | `VeldvluchtKern/…/RoutePlanFile.swift` | Het routebestand inlezen. Andere formaten en ongeldige coördinaten worden geweigerd. |

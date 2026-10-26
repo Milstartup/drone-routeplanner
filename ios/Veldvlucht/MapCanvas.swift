@@ -68,6 +68,12 @@ struct MapCanvas: UIViewRepresentable {
     var pinColors: [String: UIColor] = [:]
     /// A pin that moves without redrawing the rest, such as the drone itself.
     var movingPin: MapPin?
+    /// false: a still preview without your own position, compass or scale.
+    var interactive = true
+    /// Room around the shapes when the map zooms to fit, for panels floating over the map.
+    var fitInsets = UIEdgeInsets(top: 40, left: 30, bottom: 70, right: 30)
+    /// Keeps the compass, scale and Apple's legal text clear of floating panels.
+    var controlInsets: UIEdgeInsets?
     var onSelect: ((String) -> Void)?
 
     /// Same 8 cm aerial photo as the planner (src/map/providers.ts). Open data, no key needed.
@@ -78,13 +84,26 @@ struct MapCanvas: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> MKMapView {
-        let map = MKMapView()
+        let map = FittingMapView()
         map.delegate = context.coordinator
         map.mapType = .satellite
         map.pointOfInterestFilter = .excludingAll
+        if let controlInsets {
+            map.layoutMargins = controlInsets
+        }
+        guard interactive else {
+            map.isUserInteractionEnabled = false
+            return map
+        }
         map.showsUserLocation = true
         map.showsCompass = true
         map.showsScale = true
+        // Once you pan, pinch or turn the map yourself, it no longer zooms back to the route.
+        for gesture in [UIPanGestureRecognizer(), UIPinchGestureRecognizer(), UIRotationGestureRecognizer()] {
+            gesture.addTarget(context.coordinator, action: #selector(Coordinator.handleMove(_:)))
+            gesture.delegate = context.coordinator
+            map.addGestureRecognizer(gesture)
+        }
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         tap.delegate = context.coordinator
         map.addGestureRecognizer(tap)
@@ -101,6 +120,7 @@ struct MapCanvas: UIViewRepresentable {
     func updateUIView(_ map: MKMapView, context: Context) {
         let coordinator = context.coordinator
         coordinator.onSelect = onSelect
+        coordinator.fitInsets = fitInsets
         if coordinator.baseLayer != baseLayer {
             coordinator.setBaseLayer(baseLayer, on: map)
         }
@@ -116,6 +136,7 @@ struct MapCanvas: UIViewRepresentable {
         var onSelect: ((String) -> Void)?
         var contentID: String?
         var baseLayer: BaseLayer?
+        var fitInsets = UIEdgeInsets.zero
         private var tiles: MKTileOverlay?
         private var styles: [ObjectIdentifier: MapShape] = [:]
         private var annotationsByID: [String: PinAnnotation] = [:]
@@ -173,11 +194,10 @@ struct MapCanvas: UIViewRepresentable {
                 let point = MKMapPoint(annotation.coordinate)
                 visible = visible.union(MKMapRect(x: point.x, y: point.y, width: 0, height: 0))
             }
-            guard !visible.isNull else { return }
-            // Wait for the first layout, otherwise the map has no size to fit into yet.
-            DispatchQueue.main.async {
-                map.setVisibleMapRect(visible, edgePadding: UIEdgeInsets(top: 40, left: 30, bottom: 70, right: 30), animated: false)
-            }
+            guard !visible.isNull, let map = map as? FittingMapView else { return }
+            map.fitInsets = fitInsets
+            map.userMoved = false
+            map.fitRect = visible
         }
 
         func apply(colors: [String: UIColor], on map: MKMapView) {
@@ -261,7 +281,8 @@ struct MapCanvas: UIViewRepresentable {
                 view.annotation = annotation
                 view.markerTintColor = color
                 view.glyphImage = UIImage(systemName: symbol)
-                view.titleVisibility = .adaptive
+                // A still preview stays clean: no names under the markers.
+                view.titleVisibility = mapView.isUserInteractionEnabled ? .adaptive : .hidden
                 view.displayPriority = .required
                 return view
             }
@@ -271,6 +292,12 @@ struct MapCanvas: UIViewRepresentable {
             guard let annotation = view.annotation as? PinAnnotation else { return }
             mapView.deselectAnnotation(annotation, animated: false)
             onSelect?(annotation.pin.id)
+        }
+
+        @objc func handleMove(_ gesture: UIGestureRecognizer) {
+            if gesture.state == .began {
+                (gesture.view as? FittingMapView)?.userMoved = true
+            }
         }
 
         /// Taps inside a tappable polygon, for example a strip with water advice.
@@ -315,6 +342,52 @@ struct MapCanvas: UIViewRepresentable {
     }
 }
 
+/// Zooms to its shapes and pins after every change of size, until you move the map yourself.
+/// Fitting only once goes wrong when the map first appears at another size than it ends up.
+final class FittingMapView: MKMapView {
+    var fitRect: MKMapRect? {
+        didSet {
+            fittedSize = nil
+            setNeedsLayout()
+        }
+    }
+    var fitInsets = UIEdgeInsets.zero
+    /// You panned, pinched or turned the map: it stays where you put it.
+    var userMoved = false
+    private var fittedSize: CGSize?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let rect = fitRect, !userMoved, bounds.width > 0, bounds.height > 0, bounds.size != fittedSize else { return }
+        fittedSize = bounds.size
+        setVisibleMapRect(rect, edgePadding: usableInsets, animated: false)
+    }
+
+    /// The insets for floating panels, smaller when the map is too small for them. MapKit
+    /// adds its own layout margins (with the safe area) to the padding, so those come off.
+    private var usableInsets: UIEdgeInsets {
+        var insets = fitInsets
+        let vertical = insets.top + insets.bottom
+        if vertical > bounds.height * 0.7 {
+            let factor = bounds.height * 0.7 / vertical
+            insets.top *= factor
+            insets.bottom *= factor
+        }
+        let horizontal = insets.left + insets.right
+        if horizontal > bounds.width * 0.7 {
+            let factor = bounds.width * 0.7 / horizontal
+            insets.left *= factor
+            insets.right *= factor
+        }
+        let margins = layoutMarginsGuide.layoutFrame
+        insets.top = max(8, insets.top - (margins.minY - bounds.minY))
+        insets.left = max(8, insets.left - (margins.minX - bounds.minX))
+        insets.bottom = max(8, insets.bottom - (bounds.maxY - margins.maxY))
+        insets.right = max(8, insets.right - (bounds.maxX - margins.maxX))
+        return insets
+    }
+}
+
 private final class PinAnnotation: NSObject, MKAnnotation {
     let pin: MapPin
     let coordinate: CLLocationCoordinate2D
@@ -347,15 +420,27 @@ struct MapAttribution: View {
     var body: some View {
         Text(layer.attribution)
             .font(.caption2)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 4))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(.regularMaterial, in: Capsule())
     }
 }
 
 /// Menu to switch between the PDOK aerial photo and Apple's satellite map.
 struct BaseLayerMenu: View {
+    enum Style {
+        /// A button in the navigation bar.
+        case toolbar
+        /// A round glass button floating over the map.
+        case floating
+        /// A small round button inside a glass card.
+        case inCard
+    }
+
     @Binding var layer: BaseLayer
+    var style = Style.toolbar
 
     var body: some View {
         Menu {
@@ -363,7 +448,19 @@ struct BaseLayerMenu: View {
                 ForEach(BaseLayer.allCases) { Text($0.label).tag($0) }
             }
         } label: {
-            Label("Kaart", systemImage: "square.3.layers.3d")
+            switch style {
+            case .toolbar:
+                Label("Kaart", systemImage: "square.3.layers.3d")
+            case .floating:
+                GlassCircle(symbol: "square.3.layers.3d").accessibilityLabel("Kaart")
+            case .inCard:
+                Image(systemName: "square.3.layers.3d")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 38, height: 38)
+                    .background(Color(uiColor: .tertiarySystemFill), in: Circle())
+                    .accessibilityLabel("Kaart")
+            }
         }
     }
 }

@@ -9,12 +9,16 @@
 /* Begin PBXBuildFile section */
 		097FBB36F9BD370DCC3BC607 /* libPods-Veldvlucht.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4ACA47D0D5959639DEE4ECB /* libPods-Veldvlucht.a */; };
 		1121517FBB0685D688EDF41B /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F84BF4762899053DD69013 /* SampleData.swift */; };
+		17C9FD5A07CBFF4F2A8214B7 /* ScreenTour.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51549C02FBD1D338339CB08B /* ScreenTour.swift */; };
 		1E7B29D98B6322D70BFA3A09 /* JSONReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21EBE013B729452360E76CF6 /* JSONReading.swift */; };
 		4CCE75F44F45FBD73E03D5AB /* MapCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2975965CB65A23A0E61D9F05 /* MapCanvas.swift */; };
 		5A8A0771F340A3A415542C39 /* FieldFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33BCA70B133C63171405D2E1 /* FieldFormats.swift */; };
 		5CFCA09372A6B17D9F98F8B3 /* FlightPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */; };
 		608A3773ECBF14D5F87A2CF3 /* RouteFlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */; };
 		6FBBE37AB7484E4676754772 /* FieldMapScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD090855C6513C4C1763DF26 /* FieldMapScreen.swift */; };
+		75C09A2E6AAFBEBF688A57B4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CCFF1CFA2EF7072DC5242FF5 /* Assets.xcassets */; };
+		9B7CF025BDBE104253616B47 /* FakeDrone.swift in Sources */ = {isa = PBXBuildFile; fileRef = C96CB1DF1F5ECAA70F4DEA9A /* FakeDrone.swift */; };
+		9BDB70F4E2D123DA5D756878 /* Design.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1AFA5AC24A94A5678DAD875 /* Design.swift */; };
 		9E7824971337DEE560EB2100 /* FlightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A80118DE72C67FF2028E32 /* FlightView.swift */; };
 		A0714BABA6CA6E850429BB4A /* RouteCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 835DF01A1D628FD32A7A9642 /* RouteCheck.swift */; };
 		A10000000000000000000030 /* VeldvluchtApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000020 /* VeldvluchtApp.swift */; };
@@ -40,6 +44,7 @@
 		39FA0B7EC295FC4D4062CC3D /* FlightsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FlightsView.swift; sourceTree = "<group>"; };
 		47874DBBDB6A0249128B6373 /* RoutePlanFile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutePlanFile.swift; sourceTree = "<group>"; };
 		4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteFlight.swift; sourceTree = "<group>"; };
+		51549C02FBD1D338339CB08B /* ScreenTour.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenTour.swift; sourceTree = "<group>"; };
 		54C09B64073AF6A4E1287079 /* RouteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteView.swift; sourceTree = "<group>"; };
 		7AB68BB2B3BF769F320CE850 /* voorbeelden */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = voorbeelden; path = ../docs/voorbeelden; sourceTree = "<group>"; };
 		835DF01A1D628FD32A7A9642 /* RouteCheck.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteCheck.swift; sourceTree = "<group>"; };
@@ -52,6 +57,9 @@
 		A10000000000000000000024 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000025 /* Veldvlucht.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Veldvlucht.xcconfig; sourceTree = "<group>"; };
 		A10000000000000000000026 /* Lokaal.voorbeeld.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Lokaal.voorbeeld.xcconfig; sourceTree = "<group>"; };
+		C1AFA5AC24A94A5678DAD875 /* Design.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Design.swift; sourceTree = "<group>"; };
+		C96CB1DF1F5ECAA70F4DEA9A /* FakeDrone.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FakeDrone.swift; sourceTree = "<group>"; };
+		CCFF1CFA2EF7072DC5242FF5 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D1326CCD0419C43BEF31EEE5 /* FlightPlan.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FlightPlan.swift; sourceTree = "<group>"; };
 		D4ACA47D0D5959639DEE4ECB /* libPods-Veldvlucht.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Veldvlucht.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA7944098F58BE630AB72597 /* Pods-Veldvlucht.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Veldvlucht.release.xcconfig"; path = "Target Support Files/Pods-Veldvlucht/Pods-Veldvlucht.release.xcconfig"; sourceTree = "<group>"; };
@@ -117,6 +125,7 @@
 				7AB68BB2B3BF769F320CE850 /* voorbeelden */,
 				A10000000000000000000003 /* Products */,
 				0C24E96C4DA15D58AF75BD5B /* Pods */,
+				CF522B0B74D24CDE42B3A293 /* Testhulp */,
 			);
 			sourceTree = "<group>";
 		};
@@ -142,6 +151,9 @@
 				21F84BF4762899053DD69013 /* SampleData.swift */,
 				E8A80118DE72C67FF2028E32 /* FlightView.swift */,
 				39FA0B7EC295FC4D4062CC3D /* FlightsView.swift */,
+				C1AFA5AC24A94A5678DAD875 /* Design.swift */,
+				51549C02FBD1D338339CB08B /* ScreenTour.swift */,
+				CCFF1CFA2EF7072DC5242FF5 /* Assets.xcassets */,
 			);
 			path = Veldvlucht;
 			sourceTree = "<group>";
@@ -153,6 +165,15 @@
 				A10000000000000000000026 /* Lokaal.voorbeeld.xcconfig */,
 			);
 			path = Config;
+			sourceTree = "<group>";
+		};
+		CF522B0B74D24CDE42B3A293 /* Testhulp */ = {
+			isa = PBXGroup;
+			children = (
+				C96CB1DF1F5ECAA70F4DEA9A /* FakeDrone.swift */,
+			);
+			name = Testhulp;
+			path = VeldvluchtKern/Tests/VeldvluchtKernTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -217,6 +238,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE2070DC6A550CCBC114C375 /* voorbeelden in Resources */,
+				75C09A2E6AAFBEBF688A57B4 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -307,6 +329,9 @@
 				E17B7E3A2835D2FFE5F793D7 /* AxisMapping.swift in Sources */,
 				608A3773ECBF14D5F87A2CF3 /* RouteFlight.swift in Sources */,
 				E211022A1AAC810BEEC35407 /* FlightsView.swift in Sources */,
+				9BDB70F4E2D123DA5D756878 /* Design.swift in Sources */,
+				17C9FD5A07CBFF4F2A8214B7 /* ScreenTour.swift in Sources */,
+				9B7CF025BDBE104253616B47 /* FakeDrone.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,7 +362,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -364,7 +389,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -376,6 +401,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 11D2A5DEB79F0312E0C4F4DB /* Pods-Veldvlucht.debug.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = Veldvlucht/Info.plist;
@@ -399,6 +426,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = DA7944098F58BE630AB72597 /* Pods-Veldvlucht.release.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = Veldvlucht/Info.plist;

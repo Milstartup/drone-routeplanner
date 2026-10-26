@@ -27,6 +27,7 @@
 		D95272E0B9BFFE5E5A0E9CC1 /* RouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C09B64073AF6A4E1287079 /* RouteView.swift */; };
 		DFC019F36CBF6B3B87CF0B04 /* Geo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99A5632A804C2A0B1BBF3ADC /* Geo.swift */; };
 		E17B7E3A2835D2FFE5F793D7 /* AxisMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCB970BDD03FEC3FB4058EBC /* AxisMapping.swift */; };
+		E211022A1AAC810BEEC35407 /* FlightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FA0B7EC295FC4D4062CC3D /* FlightsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +37,7 @@
 		21F84BF4762899053DD69013 /* SampleData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
 		2975965CB65A23A0E61D9F05 /* MapCanvas.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MapCanvas.swift; sourceTree = "<group>"; };
 		33BCA70B133C63171405D2E1 /* FieldFormats.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldFormats.swift; sourceTree = "<group>"; };
+		39FA0B7EC295FC4D4062CC3D /* FlightsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FlightsView.swift; sourceTree = "<group>"; };
 		47874DBBDB6A0249128B6373 /* RoutePlanFile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RoutePlanFile.swift; sourceTree = "<group>"; };
 		4D4FF44D1C59318C0EF5BC3F /* RouteFlight.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteFlight.swift; sourceTree = "<group>"; };
 		54C09B64073AF6A4E1287079 /* RouteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RouteView.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				2975965CB65A23A0E61D9F05 /* MapCanvas.swift */,
 				21F84BF4762899053DD69013 /* SampleData.swift */,
 				E8A80118DE72C67FF2028E32 /* FlightView.swift */,
+				39FA0B7EC295FC4D4062CC3D /* FlightsView.swift */,
 			);
 			path = Veldvlucht;
 			sourceTree = "<group>";
@@ -303,6 +306,7 @@
 				5CFCA09372A6B17D9F98F8B3 /* FlightPlan.swift in Sources */,
 				E17B7E3A2835D2FFE5F793D7 /* AxisMapping.swift in Sources */,
 				608A3773ECBF14D5F87A2CF3 /* RouteFlight.swift in Sources */,
+				E211022A1AAC810BEEC35407 /* FlightsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

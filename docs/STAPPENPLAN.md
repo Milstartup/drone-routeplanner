@@ -9,7 +9,7 @@ Stand op 26 oktober 2026:
   - **Route:** routebestand inlezen, controleren en op de kaart tonen (eerste deel van stap 3);
   - **Veldkaart:** met voorbeeldgegevens (stap 7).
 - **Nog te bouwen:**
-  - het echt vliegen: eerst de simulatortest van stap 3 met de drone, dan stap 4 t/m 6;
+  - niets meer in de iPhone-app voor stap 3 t/m 7: alles is gebouwd en getest met een nep-drone. **Wat jij nog moet testen, staat in [TESTLIJST.md](TESTLIJST.md).**
   - de bodemvochtsensoren en het centrale systeem met de AI (stap 8 en 9).
 
 Achtergrond:
@@ -212,7 +212,7 @@ Vlieg hierbij nog niet.
   - de neus langs de vliegbanen.
 - **Foto's:** een losse foto bij elke geplande positie, met minstens 2 s ertussen. Een foto telt pas als de camera het bestand meldt. Het fotolog (`veld/fotolog`) staat per vlucht in de Bestanden-app.
 - **Alleen in de simulator:** zonder actieve simulator start de route niet.
-- **Getest met een nep-drone** (49 tests in `ios/VeldvluchtKern`):
+- **Getest met een nep-drone** (nu 69 tests in `ios/VeldvluchtKern`, na een onafhankelijke review met zes herstelde fouten):
   - de hele voorbeeldroute, met alle 180 foto's binnen 2 m van hun plek;
   - verwisselde assen en zijwind;
   - pauze en hervatten, overnemen en verbindingsverlies.
@@ -225,8 +225,10 @@ Vlieg hierbij nog niet.
 - de drie knoppen;
 - overnemen bij stickbewegingen;
 - failsafe GoHome met een terugkeerhoogte van minstens 20 m;
-- naar huis bij een bijna lege accu;
-- nooit automatisch hervatten.
+- naar huis bij een bijna lege accu (DJI's schatting + 10 procentpunt, of DJI's "ernstig laag");
+- nooit automatisch hervatten;
+- de eigen terugkeer van de drone volgen in plaats van ertegenin sturen;
+- naar huis bij een melding van zeer harde wind.
 
 Werk dit uit volgens hoofdstuk 6 van het DJI-document:
 
@@ -248,11 +250,23 @@ Werk dit uit volgens hoofdstuk 6 van het DJI-document:
    - Bevatten ze GPS-gegevens?
 3. Daarna stap voor stap groter, tot een heel veld (verdeeld over meerdere accu's als de planner dat aangeeft).
 
+**Gebouwd (26 oktober 2026), nog niet getest:**
+- **Echt vliegen wordt vrijgegeven** na een simulatorvlucht tot het eind en een geteste overname met een stick, op dezelfde iPhone.
+- **Strengere controles:** GPS, thuispunt, accu minstens 50 %, geen windwaarschuwing en de simulator uit.
+- **Korte routes:** tot 800 m, totdat 3 echte vluchten klaar zijn.
+- **Controlelijst** vóór het opstijgen.
+- **Meerdere accu's:** een volgende vlucht gaat verder vanaf de eerste foto die nog niet gemaakt is.
+
 ## Stap 6: foto's naar het centrale systeem
 
 - Foto's van de microSD-kaart kopiëren, samen met het fotolog van de app.
 - Het fotolog volgt het formaat `veld/fotolog` uit hoofdstuk 6 van [ARCHITECTUUR.md](ARCHITECTUUR.md).
 - Zolang het centrale systeem er nog niet is: bewaar foto's en fotolog per vlucht in een eigen map.
+
+**Gebouwd (26 oktober 2026):**
+- De app bewaart per vlucht het fotolog (`….fotolog.json`) en het logboek (`….logboek.txt`).
+- Het tabblad *Vluchten* toont ze en kan ze delen, bijvoorbeeld met AirDrop naar de Mac.
+- Ze staan ook in de Bestanden-app: *Op mijn iPhone → Veldvlucht → Vluchten*.
 
 ## Stap 7: veldkaart in de iPhone-app (met voorbeeldgegevens)
 
@@ -280,6 +294,7 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
   - stap 3: testen in het veld;
   - later: echte gegevens van het centrale systeem in plaats van de voorbeeldbestanden;
   - terugkijken naar eerdere datums.
+- **Erbij gekomen:** eigen bestanden laden in de veldkaart (*Gegevens → Eigen bestand laden…*), bijvoorbeeld zelf gemaakte resultaten of sensormetingen.
 
 ## Stap 8: sensorkastje
 

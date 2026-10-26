@@ -12,8 +12,22 @@ final class FakeDrone: DroneControl {
     var batteryPercent = 90
     var batteryNeededToGoHome = 12
     var satellites = 12
+    var gpsLevel: Int? = 5
+    var homePointSet = true
+    var windWarning = 0
+    var seriousLowBattery = false
     /// Constant wind pushing the drone (m/s, x = east, y = north).
     var wind = XY(x: 0, y: 0)
+    /// Seconds before switching Virtual Stick on or off is confirmed.
+    var enableDelay = 0.0
+    var disableDelay = 0.0
+    /// How many times switching Virtual Stick off fails first.
+    var failDisableCount = 0
+    /// Shot numbers (1, 2, ...) whose new file the camera does not report.
+    var unreportedFiles: Set<Int> = []
+    /// Shot numbers where the camera reports an error although the photo is taken.
+    var falseErrors: Set<Int> = []
+    var gpsLost = false
 
     private(set) var now = Date(timeIntervalSince1970: 1_793_000_000)
     private(set) var position: XY
@@ -45,7 +59,7 @@ final class FakeDrone: DroneControl {
             time: now,
             connected: connected,
             simulatorActive: simulatorActive,
-            position: projection.toLatLng(position),
+            position: gpsLost ? nil : projection.toLatLng(position),
             satelliteCount: satellites,
             altitudeM: altitude,
             headingDeg: heading,
@@ -55,7 +69,12 @@ final class FakeDrone: DroneControl {
             isFlying: flying,
             motorsOn: motorsOn,
             batteryPercent: batteryPercent,
-            batteryNeededToGoHome: batteryNeededToGoHome
+            batteryNeededToGoHome: batteryNeededToGoHome,
+            gpsLevel: gpsLevel,
+            homePointSet: homePointSet,
+            windWarning: windWarning,
+            seriousLowBattery: seriousLowBattery,
+            droneReturningHome: goingHome
         )
     }
 
@@ -99,6 +118,21 @@ final class FakeDrone: DroneControl {
         }
     }
 
+    /// The pilot flies the drone down and switches the motors off.
+    func landByPilot() {
+        virtualStick = false
+        altitude = 0
+        velocity = XY(x: 0, y: 0)
+        flying = false
+        motorsOn = false
+    }
+
+    /// The drone decides to go home by itself, as on low battery or the RC button.
+    func startOwnReturn() {
+        virtualStick = false
+        goingHome = true
+    }
+
     private func after(_ seconds: Double, _ action: @escaping () -> Void) {
         events.append((now.addingTimeInterval(seconds), action))
     }
@@ -119,8 +153,26 @@ final class FakeDrone: DroneControl {
     }
 
     func setVirtualStick(enabled: Bool, completion: @escaping (Error?) -> Void) {
-        virtualStick = enabled
-        completion(nil)
+        if !enabled, failDisableCount > 0 {
+            failDisableCount -= 1
+            completion(FlightError(message: "geen antwoord"))
+            return
+        }
+        let delay = enabled ? enableDelay : disableDelay
+        guard delay > 0 else {
+            virtualStick = enabled
+            completion(nil)
+            return
+        }
+        after(delay) { [self] in
+            virtualStick = enabled
+            completion(nil)
+        }
+    }
+
+    /// A gust pushes the drone.
+    func nudge(_ push: XY) {
+        velocity = XY(x: velocity.x + push.x, y: velocity.y + push.y)
     }
 
     func send(_ sticks: StickValues) {
@@ -135,10 +187,13 @@ final class FakeDrone: DroneControl {
             return
         }
         shots.append((now, position))
-        completion(nil)
+        let shotNumber = shots.count
+        completion(falseErrors.contains(shotNumber) ? FlightError(message: "time-out") : nil)
         after(0.6) { [self] in
             fileNumber += 1
-            flight?.photoSaved(fileName: String(format: "DJI_%04d.JPG", fileNumber))
+            if !unreportedFiles.contains(shotNumber) {
+                flight?.photoSaved(fileName: String(format: "DJI_%04d.JPG", fileNumber))
+            }
         }
     }
 

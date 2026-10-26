@@ -4,11 +4,14 @@
 import Charts
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct FieldMapScreen: View {
     @State private var data = SampleData.field()
     @State private var baseLayer = BaseLayer.pdok
     @State private var selected: Selected?
+    @State private var importing = false
+    @State private var message: String?
 
     private struct Selected: Identifiable {
         let id: String
@@ -16,14 +19,56 @@ struct FieldMapScreen: View {
 
     var body: some View {
         NavigationStack {
-            switch data {
-            case .failure(let error):
-                Label(error.message, systemImage: "xmark.octagon.fill")
-                    .foregroundStyle(.red)
+            Group {
+                switch data {
+                case .failure(let error):
+                    VStack(spacing: 12) {
+                        Label(error.message, systemImage: "xmark.octagon.fill")
+                            .foregroundStyle(.red)
+                        Button("Terug naar de voorbeeldgegevens") {
+                            SampleData.removeOwnData()
+                            data = SampleData.field()
+                        }
+                    }
                     .padding()
                     .navigationTitle("Veldkaart")
-            case .success(let field):
-                content(field)
+                case .success(let field):
+                    content(field)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button {
+                            importing = true
+                        } label: {
+                            Label("Eigen bestand laden…", systemImage: "folder")
+                        }
+                        Button {
+                            SampleData.removeOwnData()
+                            data = SampleData.field()
+                        } label: {
+                            Label("Voorbeeldgegevens gebruiken", systemImage: "arrow.uturn.backward")
+                        }
+                    } label: {
+                        Label("Gegevens", systemImage: "tray.and.arrow.down")
+                    }
+                }
+            }
+            .fileImporter(isPresented: $importing, allowedContentTypes: [.json, UTType(filenameExtension: "geojson") ?? .json]) { result in
+                guard case .success(let url) = result else { return }
+                do {
+                    let kind = try SampleData.importFile(url)
+                    data = SampleData.field()
+                    message = "Geladen: \(kind). De rest blijft zoals het was."
+                } catch {
+                    message = "Niet geladen: \(error.localizedDescription)"
+                }
+            }
+            .alert("Veldkaart", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
+                Button("OK") { message = nil }
+            } message: {
+                Text(message ?? "")
             }
         }
     }
@@ -40,7 +85,9 @@ struct FieldMapScreen: View {
                 selected = Selected(id: id)
             }
             .overlay(alignment: .top) {
-                Text("Voorbeeldgegevens: het centrale systeem bestaat nog niet")
+                Text(field.ownData.isEmpty
+                     ? "Voorbeeldgegevens: het centrale systeem bestaat nog niet"
+                     : "Eigen gegevens: \(field.ownData.joined(separator: ", "))")
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)

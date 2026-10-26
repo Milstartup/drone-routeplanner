@@ -21,7 +21,8 @@ final class DJIConnection: NSObject, ObservableObject {
 
     /// Set by the flight screen while a route flight is open.
     var onTelemetry: ((DroneTelemetry) -> Void)?
-    var onSticksMoved: (() -> Void)?
+    /// true while a stick is out of the centre.
+    var onSticks: ((Bool) -> Void)?
     var onPhotoSaved: ((String) -> Void)?
     private(set) var lastTelemetry: DroneTelemetry?
     private var sticksDeflected = false
@@ -372,6 +373,15 @@ extension DJIConnection: DJIFlightControllerDelegate {
         let east = Double(state.velocityY)
         let needed = Int(state.goHomeAssessment.batteryPercentageNeededToGoHome)
         let simulator = fc.simulator?.isSimulatorActive ?? false
+        let homeSet = state.isHomeLocationSet
+        let seriousLow = state.isLowerThanSeriousBatteryWarningThreshold
+        let returning = [.goHome, .autoLanding, .confirmLanding].contains(state.flightMode)
+        let wind: Int
+        switch state.windWarning {
+        case .level1: wind = 1
+        case .level2: wind = 2
+        default: wind = 0
+        }
         onMain { [self] in
             status.satelliteCount = satellites
             status.gpsLevel = level
@@ -382,7 +392,9 @@ extension DJIConnection: DJIFlightControllerDelegate {
                 time: Date(), connected: status.aircraftConnected, simulatorActive: simulator,
                 position: position, satelliteCount: satellites, altitudeM: altitude, headingDeg: heading,
                 velocityNorth: north, velocityEast: east, isFlying: isFlying, motorsOn: motorsOn,
-                batteryPercent: status.batteryPercent, batteryNeededToGoHome: needed
+                batteryPercent: status.batteryPercent, batteryNeededToGoHome: needed,
+                gpsLevel: level, homePointSet: homeSet, windWarning: wind,
+                seriousLowBattery: seriousLow, droneReturningHome: returning
             )
             lastTelemetry = telemetry
             onTelemetry?(telemetry)
@@ -464,14 +476,15 @@ extension DJIConnection: DJICameraDelegate {
 // MARK: - Sticks
 
 extension DJIConnection: DJIRemoteControllerDelegate {
-    /// Tells the flight when the pilot moves a stick: the app then stops steering
-    /// (docs/DJI-MOBILE-SDK-V4.md, 6.5). Sticks run from -660 to 660; 150 is a clear push.
+    /// Tells the flight where the sticks are: moving one makes the app stop steering, and
+    /// it will not start or resume while one is held (docs/DJI-MOBILE-SDK-V4.md, 6.5).
+    /// Sticks run from -660 to 660; 150 is a clear push.
     func remoteController(_ rc: DJIRemoteController, didUpdate state: DJIRCHardwareState) {
         let values = [state.leftStick.horizontalPosition, state.leftStick.verticalPosition,
                       state.rightStick.horizontalPosition, state.rightStick.verticalPosition]
         let deflected = values.contains { abs($0) > 150 }
         onMain { [self] in
-            if deflected && !sticksDeflected { onSticksMoved?() }
+            if deflected != sticksDeflected { onSticks?(deflected) }
             sticksDeflected = deflected
         }
     }

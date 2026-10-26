@@ -2,7 +2,8 @@
 // - Drone: the feasibility test of step 2 (register, connect, telemetry, one photo);
 // - Route: read and check a route file from the planner, and fly it in DJI's simulator
 //   (step 3);
-// - Veldkaart: the field map with sample data (step 7).
+// - Veldkaart: the field map with sample data or your own files (step 7);
+// - Vluchten: the saved photo logs and logs, to share (step 6).
 // Flight commands only go out while DJI's simulator runs (RouteFlight.Settings).
 import SwiftUI
 import UIKit
@@ -17,6 +18,7 @@ struct VeldvluchtApp: App {
         case drone
         case route
         case field
+        case flights
     }
 
     var body: some Scene {
@@ -31,6 +33,9 @@ struct VeldvluchtApp: App {
                 FieldMapScreen()
                     .tabItem { Label("Veldkaart", systemImage: "map") }
                     .tag(Screen.field)
+                FlightsView()
+                    .tabItem { Label("Vluchten", systemImage: "tray.full") }
+                    .tag(Screen.flights)
             }
             .onAppear {
                 // The SDK drops the connection when the app goes to the background,

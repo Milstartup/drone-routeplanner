@@ -254,3 +254,328 @@ final class FlightPlanTests: XCTestCase {
         XCTAssertEqual(east.crossM, 3, accuracy: 1e-6) // east of a northward line is on the right
     }
 }
+
+final class RouteFlightSafetyTests: XCTestCase {
+    private var plan: FlightPlan!
+    private var drone: FakeDrone!
+    private var flight: RouteFlight!
+
+    override func setUpWithError() throws {
+        plan = FlightPlan(try RoutePlanFile.read(TestFiles.data("voorbeeld.routeplan.json")))
+        make()
+    }
+
+    private func make(settings: RouteFlight.Settings = .init(), startAtPhoto: Int = 0) {
+        drone = FakeDrone(projection: plan.projection)
+        let fake = drone!
+        flight = RouteFlight(plan: plan, drone: fake, flightId: "t", fieldId: "veld-noord",
+                             settings: settings, startAtPhoto: startAtPhoto, clock: { fake.now })
+        drone.flight = flight
+        flight.update(drone.telemetry())
+    }
+
+    private func run(seconds: Double, until done: (() -> Bool)? = nil) {
+        var t = 0.0
+        while t < seconds {
+            drone.step(0.1)
+            flight.update(drone.telemetry())
+            flight.tick()
+            t += 0.1
+            if done?() == true { return }
+        }
+    }
+
+    private func finished() -> Bool {
+        if case .finished = flight.phase { return true }
+        if case .failed = flight.phase { return true }
+        return false
+    }
+
+    func testFollowsTheDronesOwnReturnAndStopsSteering() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 40 }
+        drone.startOwnReturn()
+        run(seconds: 1)
+        XCTAssertEqual(flight.phase, .returningHome)
+        let sent = drone.sendCount
+        run(seconds: 600, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+        XCTAssertEqual(drone.sendCount, sent, "geen stuurcommando's tijdens de eigen terugkeer van de drone")
+        XCTAssertEqual(flight.continueAtPhoto.map { $0 >= 40 }, true)
+    }
+
+    func testFailsafeReturnAfterConnectionLossIsShown() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 10 }
+        drone.connected = false
+        run(seconds: 1)
+        drone.startOwnReturn() // DJI failsafe after 3 s without connection
+        run(seconds: 3)
+        drone.connected = true
+        run(seconds: 1)
+        XCTAssertEqual(flight.phase, .returningHome)
+        run(seconds: 600, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+    }
+
+    func testSeriousLowBatteryAndStrongWindGoHome() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        drone.seriousLowBattery = true
+        run(seconds: 1)
+        XCTAssertEqual(flight.phase, .returningHome)
+
+        make()
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        drone.windWarning = 2
+        run(seconds: 1)
+        XCTAssertEqual(flight.phase, .returningHome)
+    }
+
+    func testContinuesFromAPhotoOfAnEarlierFlight() {
+        make(startAtPhoto: 90)
+        flight.start()
+        run(seconds: 2500, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+        XCTAssertEqual(flight.photoLog.photos.compactMap(\.plannedPhotoIndex), Array(90..<180))
+        XCTAssertEqual(flight.missedPhotos, [])
+        XCTAssertNil(flight.continueAtPhoto)
+        for (shot, photo) in zip(drone.shots, plan.photos[90...]) {
+            XCTAssertLessThan(hypot(shot.position.x - photo.position.x, shot.position.y - photo.position.y), 2.0)
+        }
+    }
+
+    func testRealFlightNeedsStricterChecks() {
+        var settings = RouteFlight.Settings()
+        settings.requireSimulator = false
+        settings.maxRouteLengthM = 800
+        make(settings: settings)
+        drone.simulatorActive = false
+        drone.gpsLevel = 3
+        drone.homePointSet = false
+        drone.windWarning = 1
+        drone.batteryPercent = 45
+        drone.satellites = 9
+        flight.update(drone.telemetry())
+        let problems = flight.preflightProblems().joined(separator: "\n")
+        for expected in ["korte route", "harde wind", "thuispunt", "GPS-signaal te zwak", "Accu te leeg", "satellieten"] {
+            XCTAssertTrue(problems.contains(expected), "verwacht: \(expected)\n\(problems)")
+        }
+        XCTAssertFalse(problems.contains("simulator"))
+        flight.start()
+        run(seconds: 5)
+        XCTAssertEqual(flight.phase, .ready)
+        XCTAssertFalse(drone.motorsOn)
+    }
+
+    func testRealFlightRefusesWhileTheSimulatorRuns() {
+        var settings = RouteFlight.Settings()
+        settings.requireSimulator = false
+        make(settings: settings)
+        XCTAssertTrue(flight.preflightProblems().contains { $0.contains("simulator staat nog aan") })
+    }
+
+    func testLandingByThePilotAfterATakeOverEndsTheFlight() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 25 }
+        flight.takeOver()
+        drone.landByPilot()
+        run(seconds: 1)
+        XCTAssertEqual(flight.phase, .finished)
+        XCTAssertFalse(flight.phase.isAirborne)
+        XCTAssertNotNil(flight.continueAtPhoto)
+    }
+
+    func testRecordsThatAStickTookOver() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        XCTAssertFalse(flight.stickTakeOverHappened)
+        flight.sticksMoved()
+        XCTAssertTrue(flight.stickTakeOverHappened)
+    }
+}
+
+/// One test per finding of the independent review (26 October 2026).
+final class ReviewFindingsTests: XCTestCase {
+    private var plan: FlightPlan!
+    private var drone: FakeDrone!
+    private var flight: RouteFlight!
+
+    override func setUpWithError() throws {
+        plan = FlightPlan(try RoutePlanFile.read(TestFiles.data("voorbeeld.routeplan.json")))
+        drone = FakeDrone(projection: plan.projection)
+        let fake = drone!
+        flight = RouteFlight(plan: plan, drone: fake, flightId: "t", fieldId: "veld-noord", clock: { fake.now })
+        drone.flight = flight
+        flight.update(drone.telemetry())
+    }
+
+    private func run(seconds: Double, until done: (() -> Bool)? = nil) {
+        var t = 0.0
+        while t < seconds {
+            drone.step(0.1)
+            flight.update(drone.telemetry())
+            flight.tick()
+            t += 0.1
+            if done?() == true { return }
+        }
+    }
+
+    private func finished() -> Bool {
+        if case .finished = flight.phase { return true }
+        if case .failed = flight.phase { return true }
+        return false
+    }
+
+    private var isTakenOver: Bool {
+        if case .takenOver = flight.phase { return true }
+        return false
+    }
+
+    /// 1. Before the direction test the app must not steer with an unchecked mapping.
+    func testNoPositionHoldWithUncheckedAxes() {
+        drone.mapping = AxisMapping(pitch: XY(x: 0, y: 1), roll: XY(x: 1, y: 0))
+        flight.start()
+        run(seconds: 60) { [unowned self] in flight.phase == .climbing }
+        drone.nudge(XY(x: 0.6, y: 0))
+        var farthest = 0.0
+        run(seconds: 120) { [unowned self] in
+            farthest = max(farthest, hypot(drone.position.x, drone.position.y))
+            return flight.phase == .toStart
+        }
+        XCTAssertEqual(flight.phase, .toStart)
+        XCTAssertLessThan(farthest, 6, "de drone dreef \(farthest) m weg vóór de richtingtest klaar was")
+    }
+
+    /// 1b. After a failed direction test the pause must not run away either.
+    func testFailedDirectionTestDoesNotRunAway() {
+        drone.mapping = AxisMapping(pitch: XY(x: 1, y: 0), roll: XY(x: 1, y: 0))
+        flight.start()
+        run(seconds: 120) { [unowned self] in if case .paused = flight.phase { return true }; return false }
+        let start = drone.position
+        drone.nudge(XY(x: 0.5, y: 0.5))
+        run(seconds: 60)
+        XCTAssertLessThan(hypot(drone.position.x - start.x, drone.position.y - start.y), 2)
+    }
+
+    /// 2. A take-over while Virtual Stick is being switched on must win.
+    func testLateEnableDoesNotOverrideATakeOver() {
+        drone.enableDelay = 1.0
+        flight.start()
+        // The moment the app asks for Virtual Stick; the answer takes 1 s.
+        run(seconds: 30) { [unowned self] in flight.log.contains { $0.text.contains("Virtual Stick aan") } }
+        flight.takeOver()
+        run(seconds: 5)
+        XCTAssertTrue(isTakenOver, "\(flight.phase)")
+        XCTAssertFalse(drone.virtualStick)
+        XCTAssertEqual(drone.sendCount, 0)
+    }
+
+    /// 2b. Moving a stick while a resume is being set up keeps control with the pilot.
+    func testStickDuringResumeKeepsControlWithThePilot() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        flight.takeOver()
+        drone.enableDelay = 1.0
+        flight.resume()
+        flight.updateSticks(deflected: true)
+        run(seconds: 5)
+        XCTAssertTrue(isTakenOver, "\(flight.phase)")
+        XCTAssertFalse(drone.virtualStick)
+        XCTAssertTrue(flight.stickTakeOverHappened)
+        // And no resume while the stick is still out of the centre.
+        flight.resume()
+        run(seconds: 3)
+        XCTAssertTrue(isTakenOver)
+    }
+
+    /// 2c. A stick held during take-off.
+    func testStickDuringTakeOffHandsOver() {
+        flight.start()
+        run(seconds: 30) { [unowned self] in flight.phase == .takingOff }
+        flight.updateSticks(deflected: true)
+        run(seconds: 10)
+        XCTAssertTrue(isTakenOver, "\(flight.phase)")
+        XCTAssertEqual(drone.sendCount, 0)
+    }
+
+    /// 3. Go-home must not be sent after the pilot took over.
+    func testGoHomeIsNotSentAfterATakeOver() {
+        drone.disableDelay = 1.0
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        flight.goHome()
+        flight.takeOver()
+        run(seconds: 10)
+        XCTAssertTrue(isTakenOver, "\(flight.phase)")
+        XCTAssertFalse(drone.goingHome)
+    }
+
+    /// 4. A failed switch-off of Virtual Stick is retried.
+    func testRetriesSwitchingVirtualStickOff() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        drone.failDisableCount = 2
+        flight.takeOver()
+        XCTAssertTrue(drone.virtualStick)
+        run(seconds: 3)
+        XCTAssertFalse(drone.virtualStick)
+        XCTAssertTrue(flight.log.contains { $0.text.contains("Virtual Stick staat nu uit") })
+    }
+
+    /// 5. One unreported file does not shift the photo log.
+    func testUnreportedFileDoesNotShiftThePhotoLog() {
+        drone.unreportedFiles = [5]
+        flight.start()
+        run(seconds: 2500, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+        XCTAssertEqual(flight.missedPhotos, [4])
+        for photo in flight.photoLog.photos {
+            // The fake numbers files 1, 2, 3... for planned photos 0, 1, 2...
+            XCTAssertEqual(RouteFlight.fileNumber(photo.file), photo.plannedPhotoIndex! + 1, photo.file)
+        }
+        XCTAssertEqual(flight.photoLog.photos.count, 179)
+    }
+
+    /// 5b. A camera error although the photo was taken.
+    func testCameraErrorButPhotoTaken() {
+        drone.falseErrors = [3]
+        flight.start()
+        run(seconds: 2500, until: finished)
+        XCTAssertEqual(flight.missedPhotos, [])
+        XCTAssertEqual(flight.photoLog.photos.count, 180)
+        for photo in flight.photoLog.photos {
+            XCTAssertEqual(RouteFlight.fileNumber(photo.file), photo.plannedPhotoIndex! + 1, photo.file)
+        }
+    }
+
+    /// 6. Losing GPS mid-route resumes where the drone was, not at the start.
+    func testGPSLossResumesWhereTheRouteStopped() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.legIndex >= 4 && flight.phase == .flying }
+        run(seconds: 10) // well into the line
+        let leg = flight.legIndex
+        drone.gpsLost = true
+        run(seconds: 2)
+        guard case .paused = flight.phase else { return XCTFail("\(flight.phase)") }
+        drone.gpsLost = false
+        flight.resume()
+        run(seconds: 120) { [unowned self] in flight.phase == .flying }
+        XCTAssertEqual(flight.legIndex, leg)
+        run(seconds: 2500, until: finished)
+        XCTAssertEqual(flight.photoLog.photos.count, 180)
+        XCTAssertEqual(flight.missedPhotos, [])
+    }
+
+    func testRefusesToStartWithAStickOutOfTheCentre() {
+        flight.updateSticks(deflected: true)
+        XCTAssertTrue(flight.preflightProblems().contains("Laat de sticks los."))
+    }
+
+    func testFileNumbers() {
+        XCTAssertEqual(RouteFlight.fileNumber("DJI_0096.jpg"), 96)
+        XCTAssertEqual(RouteFlight.fileNumber("DJI_0001.JPG"), 1)
+        XCTAssertNil(RouteFlight.fileNumber("foto.jpg"))
+    }
+}

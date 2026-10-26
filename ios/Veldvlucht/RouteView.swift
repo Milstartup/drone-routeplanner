@@ -119,7 +119,7 @@ struct RouteView: View {
                 }
             }
             .fullScreenCover(item: $session) { session in
-                FlightView(session: session, flight: session.flight, drone: drone)
+                FlightView(session: session, drone: drone)
             }
         }
     }

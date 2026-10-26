@@ -46,6 +46,16 @@ struct DroneTelemetry: Equatable {
     var batteryPercent: Int?
     /// From DJI's own estimate (goHomeAssessment).
     var batteryNeededToGoHome: Int?
+    /// 0 (worst) to 5 (best); nil without GPS.
+    var gpsLevel: Int? = nil
+    /// The drone has recorded its take-off point (needed for going home).
+    var homePointSet = true
+    /// DJI's wind warning: 0 none, 1 strong wind, 2 very strong wind.
+    var windWarning = 0
+    /// Below DJI's "serious low battery" threshold.
+    var seriousLowBattery = false
+    /// The drone is going home or landing on its own (low battery, failsafe or the RC button).
+    var droneReturningHome = false
 }
 
 /// What the flight needs from the drone. DJIConnection implements it in the app.
@@ -160,6 +170,12 @@ final class RouteFlight: ObservableObject {
         /// Wind compensation: how fast a steady offset from the line or target is corrected.
         var windGain = 0.1
         var maxWindCorrectionMps = 3.0
+        // Stricter checks for a real flight (requireSimulator off).
+        var minSatellitesReal = 10
+        var minGPSLevelReal = 4
+        var minBatteryPercentReal = 50
+        /// For the first real flights: a short route (step 5 of the plan). nil = no limit.
+        var maxRouteLengthM: Double?
     }
 
     private struct PendingShot {
@@ -168,6 +184,8 @@ final class RouteFlight: ObservableObject {
         let position: LatLng
         let altitudeM: Double
         let headingDeg: Double
+        /// The camera reported an error; the photo may still have been taken.
+        var cameraError: String?
     }
 
     private enum AxisStep {
@@ -195,7 +213,20 @@ final class RouteFlight: ObservableObject {
     private let clock: () -> Date
 
     private var phaseStart: Date
+    /// Changes with every phase change, so a late completion can tell it is outdated.
+    private var phaseVersion = 0
     private var waitingForDrone = false
+    /// Virtual Stick still has to be switched off (a take-over whose first attempt failed).
+    private var needsStickRelease = false
+    private var lastReleaseAttempt: Date?
+    private var releaseFailed = false
+    /// The take-over came from a stick; counts once Virtual Stick is really off.
+    private var stickReleasePending = false
+    /// Distance along the route at the last tick with a position, for resuming without GPS.
+    private var lastAlongM: Double?
+    private var lastFileNumber: Int?
+    /// A stick is out of the centre right now.
+    @Published private(set) var sticksDeflected = false
     private var routeStarted = false
     private var resumeAlongM: Double?
     private var pendingShots: [PendingShot] = []
@@ -209,9 +240,15 @@ final class RouteFlight: ObservableObject {
     private var lastSteerTime: Date?
     /// Where the drone holds still while climbing or paused.
     private var holdPoint: XY?
+    /// The pilot took over by moving a stick (the simulator test of that safety rule).
+    @Published private(set) var stickTakeOverHappened = false
+    /// First planned photo of this flight; earlier ones were done in a previous flight.
+    let firstPhotoIndex: Int
 
+    /// `startAtPhoto`: continue a route from an earlier flight (for example with a new
+    /// battery) at this planned photo (docs/DJI-MOBILE-SDK-V4.md, 6.8).
     init(plan: FlightPlan, drone: DroneControl, flightId: String, fieldId: String,
-         settings: Settings = Settings(), clock: @escaping () -> Date = Date.init) {
+         settings: Settings = Settings(), startAtPhoto: Int = 0, clock: @escaping () -> Date = Date.init) {
         self.plan = plan
         self.drone = drone
         self.settings = settings
@@ -220,6 +257,18 @@ final class RouteFlight: ObservableObject {
                             fieldId: fieldId, routePlanName: plan.name, photos: [])
         phaseStart = clock()
         axisStepStart = phaseStart
+        firstPhotoIndex = min(max(0, startAtPhoto), plan.photos.count)
+        if firstPhotoIndex > 0 {
+            nextPhotoIndex = firstPhotoIndex
+            routeStarted = true
+            // A few metres before the photo, so the drone is up to speed there.
+            resumeAlongM = plan.photos.indices.contains(firstPhotoIndex) ? max(0, plan.photos[firstPhotoIndex].alongM - 3) : plan.lengthM
+        }
+    }
+
+    /// The first planned photo the next flight should start at, or nil when the route is done.
+    var continueAtPhoto: Int? {
+        nextPhotoIndex < plan.photos.count ? nextPhotoIndex : nil
     }
 
     // MARK: - Pilot actions
@@ -228,25 +277,51 @@ final class RouteFlight: ObservableObject {
     func preflightProblems() -> [String] {
         guard let t = telemetry, t.connected else { return ["Geen verbinding met de drone."] }
         var problems: [String] = []
-        if settings.requireSimulator && !t.simulatorActive {
-            problems.append("De simulator staat uit. Deze versie vliegt alleen in de simulator van DJI.")
+        let real = !settings.requireSimulator
+        if !real && !t.simulatorActive {
+            problems.append("De simulator staat uit. Start eerst de simulator.")
+        }
+        if real && t.simulatorActive {
+            problems.append("De simulator staat nog aan. Stop hem en zet de drone uit en weer aan.")
         }
         if t.isFlying || t.motorsOn {
             problems.append("De motoren draaien al.")
         }
+        if sticksDeflected {
+            problems.append("Laat de sticks los.")
+        }
+        let minBattery = real ? settings.minBatteryPercentReal : settings.minBatteryPercent
         if let battery = t.batteryPercent {
-            if battery < settings.minBatteryPercent {
-                problems.append("Accu te leeg: \(battery) % (minimaal \(settings.minBatteryPercent) %).")
+            if battery < minBattery {
+                problems.append("Accu te leeg: \(battery) % (minimaal \(minBattery) %).")
             }
         } else {
             problems.append("De accu is nog onbekend.")
+        }
+        if firstPhotoIndex >= plan.photos.count, !plan.photos.isEmpty {
+            problems.append("Alle foto's van deze route zijn al gemaakt.")
+        }
+        if let maximum = settings.maxRouteLengthM, plan.lengthM > maximum {
+            problems.append("Voor de eerste echte vluchten: een korte route van maximaal \(Int(maximum)) m. Deze is \(Int(plan.lengthM.rounded())) m (stap 5: 2 à 3 banen).")
+        }
+        if real {
+            if t.windWarning >= 1 {
+                problems.append("De drone meldt harde wind. Vlieg niet.")
+            }
+            if !t.homePointSet {
+                problems.append("De drone heeft nog geen thuispunt. Wacht op GPS tot het thuispunt gezet is.")
+            }
+            if (t.gpsLevel ?? 0) < settings.minGPSLevelReal {
+                problems.append("GPS-signaal te zwak: \(t.gpsLevel.map { "\($0)" } ?? "geen") van 5 (minimaal \(settings.minGPSLevelReal)).")
+            }
         }
         guard let position = t.position else {
             problems.append("De drone heeft nog geen GPS-positie.")
             return problems
         }
-        if t.satelliteCount < settings.minSatellites {
-            problems.append("Te weinig GPS-satellieten: \(t.satelliteCount) (minimaal \(settings.minSatellites)).")
+        let minSatellites = real ? settings.minSatellitesReal : settings.minSatellites
+        if t.satelliteCount < minSatellites {
+            problems.append("Te weinig GPS-satellieten: \(t.satelliteCount) (minimaal \(minSatellites)).")
         }
         let distance = Geo.distanceM(position, plan.home)
         if distance > settings.maxStartDistanceM {
@@ -263,7 +338,10 @@ final class RouteFlight: ObservableObject {
             return
         }
         setPhase(.preparing)
-        addLog("Start: \(plan.name), \(plan.photos.count) foto's op \(Int(plan.altitudeM)) m.")
+        addLog("Start\(settings.requireSimulator ? " in de simulator" : " (echte vlucht)"): \(plan.name), \(plan.photos.count) foto's op \(Int(plan.altitudeM)) m.")
+        if firstPhotoIndex > 0 {
+            addLog("Verder vanaf foto \(firstPhotoIndex + 1); foto 1 t/m \(firstPhotoIndex) zijn in een eerdere vlucht gemaakt.")
+        }
         let goHomeHeight = max(20, plan.altitudeM)
         drone.prepareForRoute(goHomeHeightM: goHomeHeight) { [weak self] error in
             guard let self = self, self.phase == .preparing else { return }
@@ -294,6 +372,10 @@ final class RouteFlight: ObservableObject {
 
     /// From a pause or after a take-over. Always flies back to where the route stopped first.
     func resume() {
+        guard !sticksDeflected else {
+            addLog("Laat eerst de sticks los; daarna kun je hervatten.")
+            return
+        }
         switch phase {
         case .paused:
             addLog("Hervatten.")
@@ -306,7 +388,9 @@ final class RouteFlight: ObservableObject {
         }
     }
 
-    func takeOver(reason: String = "Overgenomen door de piloot.") {
+    /// Also works when already taken over: then it switches Virtual Stick off once more
+    /// (for example when the first attempt failed, or a resume was being set up).
+    func takeOver(reason: String = "Overgenomen door de piloot.", byStick: Bool = false) {
         switch phase {
         case .returningHome:
             setPhase(.takenOver(reason))
@@ -314,15 +398,43 @@ final class RouteFlight: ObservableObject {
             drone?.cancelGoHome { [weak self] error in
                 if let error = error { self?.addLog("Naar huis afbreken lukt niet: \(error.localizedDescription)") }
             }
+        case .takenOver:
+            setPhase(.takenOver(reason))
+            addLog("\(reason) Virtual Stick opnieuw uitzetten.")
+            releaseSticks(byStick: byStick)
         case _ where phase.isSteering || phase == .takingOff:
             rememberResumePoint()
             setPhase(.takenOver(reason))
             addLog("\(reason) Virtual Stick staat uit; jij vliegt met de sticks.")
-            drone?.setVirtualStick(enabled: false) { [weak self] error in
-                if let error = error { self?.addLog("Virtual Stick uitzetten lukt niet: \(error.localizedDescription)") }
-            }
+            releaseSticks(byStick: byStick)
         default:
             return
+        }
+    }
+
+    /// Switches Virtual Stick off; on failure the loop tries again every second.
+    private func releaseSticks(byStick: Bool) {
+        needsStickRelease = true
+        if byStick { stickReleasePending = true }
+        lastReleaseAttempt = clock()
+        drone?.setVirtualStick(enabled: false) { [weak self] error in
+            guard let self = self else { return }
+            if let error = error {
+                if !self.releaseFailed {
+                    self.addLog("Virtual Stick uitzetten lukt niet: \(error.localizedDescription). De app probeert het elke seconde opnieuw.")
+                }
+                self.releaseFailed = true
+                return
+            }
+            if self.releaseFailed {
+                self.addLog("Virtual Stick staat nu uit.")
+            }
+            self.releaseFailed = false
+            self.needsStickRelease = false
+            if self.stickReleasePending {
+                self.stickReleasePending = false
+                self.stickTakeOverHappened = true
+            }
         }
     }
 
@@ -331,9 +443,12 @@ final class RouteFlight: ObservableObject {
         rememberResumePoint()
         setPhase(.returningHome)
         addLog(reason)
+        let version = phaseVersion
         drone?.setVirtualStick(enabled: false) { [weak self] _ in
-            self?.drone?.goHome { [weak self] error in
-                guard let self = self, let error = error, self.phase == .returningHome else { return }
+            // Taken over in the meantime: then the pilot flies, no go-home.
+            guard let self = self, self.phaseVersion == version else { return }
+            self.drone?.goHome { [weak self] error in
+                guard let self = self, let error = error, self.phaseVersion == version else { return }
                 self.setPhase(.takenOver("Naar huis lukt niet: \(error.localizedDescription). Vlieg zelf terug."))
                 self.addLog("Naar huis lukt niet: \(error.localizedDescription). Vlieg zelf terug.")
             }
@@ -346,19 +461,43 @@ final class RouteFlight: ObservableObject {
         self.telemetry = telemetry
     }
 
-    /// The pilot moved a stick on the remote controller.
-    func sticksMoved() {
-        guard phase.isSteering else { return }
-        takeOver(reason: "Je bewoog een stick: de app stuurt niet meer.")
+    /// Where the sticks are: called on every change by the adapter.
+    func updateSticks(deflected: Bool) {
+        let wasDeflected = sticksDeflected
+        sticksDeflected = deflected
+        if deflected && !wasDeflected { sticksMoved() }
     }
 
-    /// The camera reports a new file on the SD card.
+    /// The pilot moved a stick on the remote controller.
+    func sticksMoved() {
+        let settingUpResume: Bool
+        if case .takenOver = phase { settingUpResume = waitingForDrone } else { settingUpResume = false }
+        guard phase.isSteering || phase == .takingOff || settingUpResume else { return }
+        takeOver(reason: "Je bewoog een stick: de app stuurt niet meer.", byStick: true)
+    }
+
+    /// The camera reports a new file on the SD card. Files come in the order of the shots;
+    /// a skipped file number means the camera did not report an earlier file, so the log
+    /// never shifts one photo along.
     func photoSaved(fileName: String) {
+        expireShots(clock())
+        let number = Self.fileNumber(fileName)
+        if let number = number, let last = lastFileNumber, number > last + 1 {
+            for missing in (last + 1)..<number where pendingShots.count > 1 {
+                let shot = pendingShots.removeFirst()
+                missedPhotos.append(shot.plannedIndex)
+                addLog("Foto \(shot.plannedIndex + 1): de camera meldde het bestand niet (waarschijnlijk nummer \(missing)). Kijk op de SD-kaart.")
+            }
+        }
+        if let number = number { lastFileNumber = number }
         guard !pendingShots.isEmpty else {
             addLog("Nieuw bestand \(fileName), maar de app had geen foto gevraagd.")
             return
         }
         let shot = pendingShots.removeFirst()
+        if let error = shot.cameraError {
+            addLog("Foto \(shot.plannedIndex + 1) is toch gemaakt (de camera meldde eerst: \(error)).")
+        }
         photoLog.photos.append(PhotoLog.Photo(
             index: photoLog.photos.count,
             plannedPhotoIndex: shot.plannedIndex,
@@ -376,13 +515,34 @@ final class RouteFlight: ObservableObject {
     /// Call about 10 times per second.
     func tick() {
         let now = clock()
+        expireShots(now)
+        if needsStickRelease, case .takenOver = phase, !waitingForDrone,
+           now.timeIntervalSince(lastReleaseAttempt ?? .distantPast) >= 1 {
+            releaseSticks(byStick: false)
+        }
         switch phase {
         case .takingOff:
             tickTakeOff(now)
         case .returningHome:
             if let t = telemetry, !t.isFlying, !t.motorsOn {
                 setPhase(.finished)
-                addLog("Geland. \(photoLog.photos.count) van \(plan.photos.count) foto's bevestigd, \(missedPhotos.count) gemist.")
+                let planned = plan.photos.count - firstPhotoIndex
+                addLog("Geland. \(photoLog.photos.count) van \(planned) foto's bevestigd, \(missedPhotos.count) gemist.")
+                if let next = continueAtPhoto {
+                    addLog("Route nog niet af: een volgende vlucht kan verder vanaf foto \(next + 1).")
+                }
+            }
+        case .takenOver:
+            if let t = telemetry, t.connected, !t.isFlying, !t.motorsOn {
+                setPhase(.finished)
+                addLog("Geland door de piloot. \(photoLog.photos.count) foto's bevestigd.")
+                if let next = continueAtPhoto {
+                    addLog("Een volgende vlucht kan verder vanaf foto \(next + 1).")
+                }
+            } else if let t = telemetry, t.connected, t.droneReturningHome {
+                // After a lost connection the drone may go home by itself (failsafe): show that.
+                setPhase(.returningHome)
+                addLog("De drone keert zelf terug (failsafe of de terugkeerknop). Overnemen kan met de knop of de afstandsbediening.")
             }
         case _ where phase.isSteering:
             tickSteering(now)
@@ -393,6 +553,10 @@ final class RouteFlight: ObservableObject {
 
     private func tickTakeOff(_ now: Date) {
         guard !waitingForDrone else { return }
+        if sticksDeflected {
+            takeOver(reason: "Je houdt een stick vast: de app stuurt niet.", byStick: true)
+            return
+        }
         if let t = telemetry, t.isFlying, t.altitudeM >= 0.9, now.timeIntervalSince(phaseStart) >= 2 {
             addLog("In de lucht op \(String(format: "%.1f", t.altitudeM)) m. Virtual Stick aan.")
             enableSteering(then: .climbing)
@@ -421,9 +585,21 @@ final class RouteFlight: ObservableObject {
             takeOver(reason: "De simulator staat niet meer aan.")
             return
         }
+        // The drone's own return (low battery, RC button) always wins: never fight it.
+        if t.droneReturningHome {
+            rememberResumePoint()
+            setPhase(.returningHome)
+            addLog("De drone keert zelf terug. De app stuurt niet meer; de voortgang is bewaard.")
+            drone.setVirtualStick(enabled: false) { _ in }
+            return
+        }
         if let battery = t.batteryPercent,
-           battery <= max(15, (t.batteryNeededToGoHome ?? 0) + settings.batteryMarginPercent) {
+           t.seriousLowBattery || battery <= max(15, (t.batteryNeededToGoHome ?? 0) + settings.batteryMarginPercent) {
             goHome(reason: "Accu bijna op (\(battery) %): naar huis. De voortgang is bewaard.")
+            return
+        }
+        if t.windWarning >= 2 {
+            goHome(reason: "De drone meldt zeer harde wind: naar huis. De voortgang is bewaard.")
             return
         }
 
@@ -479,6 +655,7 @@ final class RouteFlight: ObservableObject {
             }
             let leg = plan.legs[legIndex]
             let track = plan.track(p, onLeg: legIndex)
+            lastAlongM = leg.startAlongM + min(max(track.alongLegM, 0), leg.lengthM)
             if abs(track.crossM) > settings.maxCrossTrackM {
                 rememberResumePoint()
                 setPhase(.paused("Te ver van de route (\(Int(abs(track.crossM).rounded())) m)."))
@@ -535,6 +712,9 @@ final class RouteFlight: ObservableObject {
 
     /// Brake first, then hang still on the spot where the drone came to rest.
     private func hold(_ p: XY, _ t: DroneTelemetry, dt: Double) -> XY {
+        // Before the direction test the app does not know which way the sticks push. A
+        // correction could then push the drone away, so leave holding to its own GPS hold.
+        guard axisMapping != nil else { return XY(x: 0, y: 0) }
         if holdPoint == nil {
             guard hypot(t.velocityEast, t.velocityNorth) < 0.5 else { return windCorrection }
             holdPoint = p
@@ -595,9 +775,16 @@ final class RouteFlight: ObservableObject {
 
     private func enableSteering(then next: Phase) {
         waitingForDrone = true
+        needsStickRelease = false
+        let version = phaseVersion
         drone?.setVirtualStick(enabled: true) { [weak self] error in
             guard let self = self else { return }
             self.waitingForDrone = false
+            // The pilot took over or chose go-home while this was on its way: undo it.
+            guard self.phaseVersion == version else {
+                if !self.phase.isSteering { self.releaseSticks(byStick: false) }
+                return
+            }
             if let error = error {
                 self.setPhase(.takenOver("Virtual Stick aanzetten lukt niet: \(error.localizedDescription)"))
                 self.addLog("Virtual Stick aanzetten lukt niet: \(error.localizedDescription). Jij vliegt.")
@@ -608,9 +795,14 @@ final class RouteFlight: ObservableObject {
     }
 
     private func rememberResumePoint() {
-        guard phase == .flying, let position = telemetry?.position, plan.legs.indices.contains(legIndex) else { return }
-        let track = plan.track(plan.projection.toXY(position), onLeg: legIndex)
+        guard phase == .flying, plan.legs.indices.contains(legIndex) else { return }
         let leg = plan.legs[legIndex]
+        guard let position = telemetry?.position else {
+            // No GPS right now: the last known point on the route.
+            resumeAlongM = lastAlongM ?? leg.startAlongM
+            return
+        }
+        let track = plan.track(plan.projection.toXY(position), onLeg: legIndex)
         resumeAlongM = leg.startAlongM + min(max(track.alongLegM, 0), leg.lengthM)
     }
 
@@ -672,6 +864,7 @@ final class RouteFlight: ObservableObject {
         do {
             let mapping = try AxisMapping.measure(pitchMove: pitchMove, rollMove: rollMove)
             axisMapping = mapping
+            windCorrection = XY(x: 0, y: 0)
             let same = mapping == .documented ? "zoals DJI beschrijft" : "ANDERS dan DJI beschrijft; de app stuurt daarop bij"
             addLog("Richtingtest gelukt: \(mapping.description) (\(same)).")
             if routeStarted {
@@ -733,11 +926,30 @@ final class RouteFlight: ObservableObject {
         drone?.shootPhoto { [weak self] error in
             guard let self = self else { return }
             self.shootInProgress = false
-            if let error = error {
-                self.pendingShots.removeAll { $0.plannedIndex == photo.index }
-                self.markMissed(photo.index, "camera: \(error.localizedDescription)", advance: false)
+            if let error = error, let i = self.pendingShots.firstIndex(where: { $0.plannedIndex == photo.index }) {
+                // DJI sometimes reports an error although it worked; a file may still come.
+                self.pendingShots[i].cameraError = error.localizedDescription
             }
         }
+    }
+
+    /// Shots without a file: after a camera error 2 s (before the next shot's file can
+    /// arrive), otherwise 10 s.
+    private func expireShots(_ now: Date) {
+        while let shot = pendingShots.first {
+            let limit = shot.cameraError == nil ? 10.0 : 2.0
+            guard now.timeIntervalSince(shot.time) > limit else { return }
+            pendingShots.removeFirst()
+            missedPhotos.append(shot.plannedIndex)
+            addLog("Foto \(shot.plannedIndex + 1) gemist: \(shot.cameraError.map { "camera: \($0)" } ?? "de camera meldde geen bestand").")
+        }
+    }
+
+    /// 96 for "DJI_0096.jpg".
+    static func fileNumber(_ fileName: String) -> Int? {
+        let name = (fileName as NSString).deletingPathExtension
+        let digits = name.reversed().prefix { $0.isNumber }
+        return digits.isEmpty ? nil : Int(String(digits.reversed()))
     }
 
     private func markMissed(_ index: Int, _ reason: String, advance: Bool = true) {
@@ -750,6 +962,7 @@ final class RouteFlight: ObservableObject {
 
     private func setPhase(_ next: Phase) {
         phase = next
+        phaseVersion += 1
         phaseStart = clock()
         holdPoint = nil
     }

@@ -11,6 +11,10 @@ final class DJIConnection: NSObject, ObservableObject {
 
     private var started = false
     private var photoAttempt = 0
+    // Battery and GPS go into the log once per connection, so the log holds the whole test.
+    private var loggedBattery = false
+    private var loggedGPS = false
+    private var loggedGoodGPS = false
     private let connectionKey = DJIProductKey(param: DJIParamConnection)
 
     private var aircraft: DJIAircraft? { DJISDKManager.product() as? DJIAircraft }
@@ -118,9 +122,19 @@ final class DJIConnection: NSObject, ObservableObject {
         }
     }
 
+    /// The drone counts as connected when its flight controller is there. DJIParamConnection
+    /// is already true when only the remote controller is connected ("Only RemoteController").
+    private func updateAircraftConnection() {
+        let onlyRemote = DJISDKManager.product()?.model == DJIAircraftModeNameOnlyRemoteController
+        setAircraftConnected(!onlyRemote && aircraft?.flightController?.isConnected == true)
+    }
+
     private func setAircraftConnected(_ connected: Bool) {
         guard connected != status.aircraftConnected else { return }
         status.aircraftConnected = connected
+        loggedBattery = false
+        loggedGPS = false
+        loggedGoodGPS = false
         addLog(connected ? "Drone verbonden met de afstandsbediening." : "Drone niet (meer) verbonden met de afstandsbediening.")
         bindComponents()
         if connected {
@@ -221,8 +235,8 @@ extension DJIConnection: DJISDKManagerDelegate {
             addLog("Aangemeld bij DJI. Verbinding met de afstandsbediening zoeken…")
 
             if let key = connectionKey {
-                DJISDKManager.keyManager()?.startListeningForChanges(on: key, withListener: self) { [weak self] _, newValue in
-                    self?.onMain { self?.setAircraftConnected(newValue?.boolValue ?? false) }
+                DJISDKManager.keyManager()?.startListeningForChanges(on: key, withListener: self) { [weak self] _, _ in
+                    self?.onMain { self?.updateAircraftConnection() }
                 }
             }
             if !DJISDKManager.startConnectionToProduct() {
@@ -242,9 +256,7 @@ extension DJIConnection: DJISDKManagerDelegate {
             guard let product = product else { return }
             addLog("Afstandsbediening verbonden (\(product.model ?? "onbekend model")).")
             bindComponents()
-            if let key = connectionKey, let value = DJISDKManager.keyManager()?.getValueFor(key) {
-                setAircraftConnected(value.boolValue)
-            }
+            updateAircraftConnection()
         }
     }
 
@@ -262,15 +274,22 @@ extension DJIConnection: DJISDKManagerDelegate {
         onMain { [self] in
             addLog("Product gewijzigd: \(product?.model ?? "geen").")
             bindComponents()
+            updateAircraftConnection()
         }
     }
 
     func componentConnected(withKey key: String?, andIndex index: Int) {
-        onMain { [self] in bindComponents() }
+        onMain { [self] in
+            bindComponents()
+            updateAircraftConnection()
+        }
     }
 
     func componentDisconnected(withKey key: String?, andIndex index: Int) {
-        onMain { [self] in bindComponents() }
+        onMain { [self] in
+            bindComponents()
+            updateAircraftConnection()
+        }
     }
 }
 
@@ -287,6 +306,14 @@ extension DJIConnection: DJIFlightControllerDelegate {
             status.gpsLevel = level
             status.motorsOn = motorsOn
             status.isFlying = isFlying
+            if !loggedGPS {
+                loggedGPS = true
+                addLog("GPS: \(satellites) satellieten, \(level.map { "signaal \($0) van 5" } ?? "geen GPS-signaal").")
+            }
+            if satellites >= 10, !loggedGoodGPS {
+                loggedGoodGPS = true
+                addLog("GPS goed: \(satellites) satellieten.")
+            }
         }
     }
 
@@ -310,6 +337,10 @@ extension DJIConnection: DJIBatteryDelegate {
         onMain { [self] in
             status.batteryPercent = percent
             status.batteryVolts = volts
+            if !loggedBattery {
+                loggedBattery = true
+                addLog("Accu van de drone: \(percent) % (\(dutchNumber(volts, digits: 2)) V).")
+            }
         }
     }
 }
@@ -340,7 +371,7 @@ extension DJIConnection: DJICameraDelegate {
 
     func camera(_ camera: DJICamera, didGenerateNewMediaFile newMedia: DJIMediaFile) {
         let sizeMB = Double(newMedia.fileSizeInBytes) / 1_000_000
-        let text = "\(newMedia.fileName) (\(String(format: "%.1f", sizeMB)) MB)"
+        let text = "\(newMedia.fileName) (\(dutchNumber(sizeMB, digits: 1)) MB)"
         onMain { [self] in
             status.photo = .done(text)
             addLog("Foto opgeslagen op de SD-kaart: \(text).")

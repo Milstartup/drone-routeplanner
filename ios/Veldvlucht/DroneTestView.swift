@@ -122,7 +122,7 @@ struct DroneTestView: View {
     private var batteryText: String {
         guard let percent = status.batteryPercent else { return "–" }
         if let volts = status.batteryVolts {
-            return "\(percent) % (\(String(format: "%.2f", volts)) V)"
+            return "\(percent) % (\(dutchNumber(volts, digits: 2)) V)"
         }
         return "\(percent) %"
     }

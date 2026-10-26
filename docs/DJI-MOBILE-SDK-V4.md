@@ -5,8 +5,9 @@ Onderzocht op **25 oktober 2026**, op basis van officiële documentatie van DJI 
 - **[officieel]**: van DJI of Apple zelf.
 - **[community]**: meldingen van ontwikkelaars of gebruikers. Nuttig, maar niet bevestigd door DJI.
 - **[niet gevonden]**: niet in officiële bronnen terug te vinden. Moet getest worden.
+- **[getest]**: zelf getest met de eigen app, de Mavic Mini en de iPhone 13 (zie [STAPPENPLAN.md](STAPPENPLAN.md), stap 2).
 
-Niets hiervan is getest met een echte drone. API-namen staan precies zoals in de Objective-C-documentatie van DJI. Swift-namen staan er alleen bij als ze in DJI's eigen Swift-voorbeeldcode voorkomen.
+Alleen wat [getest] heet, is met een echte drone geprobeerd. API-namen staan precies zoals in de Objective-C-documentatie van DJI. Swift-namen staan er alleen bij als ze in DJI's eigen Swift-voorbeeldcode voorkomen.
 
 ## Samenvatting
 
@@ -134,6 +135,7 @@ Bron: [officieel] [DJIRemoteController](https://developer.dji.com/api-reference/
 |---|---|---|
 | Huidige versies | Xcode 27.1 (15 oktober 2026), iOS 27.0.1. Xcode 27 draait alleen op Macs met een Apple-chip en macOS Tahoe 26.6 of nieuwer, en debugt op iOS 17 en nieuwer. | [officieel] [Apple releases](https://developer.apple.com/news/releases/) en [Xcode 27 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27-release-notes) |
 | App Store-eis | Sinds 28 april 2026 bouwen met Xcode 26 of nieuwer en de iOS 26-SDK | [officieel] [Upcoming requirements](https://developer.apple.com/news/upcoming-requirements/) |
+| **Getest op 26 oktober 2026** | Gebouwd met Xcode 16.4 (iOS 18.5-SDK), op een iPhone 13 met **iOS 27.0.1**: de SDK start, de App Key wordt geaccepteerd, de verbinding via de Lightning-kabel werkt en de camera maakt een foto. Firmware, accu en GPS worden nog getest. | [getest] [STAPPENPLAN.md](STAPPENPLAN.md), stap 2 |
 | Bouwfout met de iOS 26-SDK | "'ALAssetsLibrary' is unavailable in iOS". De omweg is headers aanpassen en een eigen stub-framework toevoegen; de melder waarschuwt voor mogelijke crashes. | [community] [Issue #560](https://github.com/dji-sdk/Mobile-SDK-iOS/issues/560) |
 | Installatie | Alleen via CocoaPods (`pod 'DJI-SDK-iOS', '~> 4.16.2'`, plus `DJIWidget`). Geen Swift Package Manager. CocoaPods trunk neemt vanaf 2 december 2026 geen nieuwe podspecs meer aan; bestaande blijven werken. | [officieel] [Podfile-voorbeeld](https://github.com/dji-sdk/Mobile-SDK-iOS/blob/master/Sample%20Code/SwiftSampleCode/Podfile) en [CocoaPods](https://blog.cocoapods.org/CocoaPods-Specs-Repo/) |
 | Bitcode | Opgelost in 4.16.2 ("Remove bitcode on Xcode 14") | [officieel] Release notes |

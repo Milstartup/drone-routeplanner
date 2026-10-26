@@ -56,6 +56,11 @@ struct DroneStatus {
     }
 }
 
+/// "4,0" for 4.0: numbers on screen and in the log use the Dutch decimal comma.
+func dutchNumber(_ value: Double, digits: Int) -> String {
+    String(format: "%.\(digits)f", value).replacingOccurrences(of: ".", with: ",")
+}
+
 struct LogLine: Identifiable {
     let id = UUID()
     let time: Date

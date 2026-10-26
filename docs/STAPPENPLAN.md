@@ -151,7 +151,37 @@ Vlieg hierbij nog niet.
 - Met DJI Mobile SDK 4.16.2 via CocoaPods 1.17.0. CocoaPods is alleen in `ios/vendor/` geïnstalleerd, zonder beheerderswachtwoord.
 - Gebouwd zonder fouten met Xcode 16.4.
 - De App Key staat in `ios/Config/Lokaal.xcconfig`. Dat bestand staat in `.gitignore`.
-- **Nog te doen:** de App Key invullen en de test met de drone. De handleiding en de go/no-go-lijst staan in [ios/README.md](../ios/README.md).
+- De handleiding en de go/no-go-lijst staan in [ios/README.md](../ios/README.md).
+
+**Eerste test met de drone (26 oktober 2026): voorlopig go.**
+
+- Opstelling: de Mavic Mini (firmware niet bijgewerkt), iPhone 13 met iOS 27.0.1, app gebouwd met Xcode 16.4.
+- De uitslag per onderdeel (uit het logboek van de app):
+
+  | Onderdeel | Uitslag |
+  |---|---|
+  | Aanmelden bij DJI met de App Key | Gelukt, binnen 1 seconde |
+  | iPhone ↔ afstandsbediening (Lightning-kabel) | Gelukt |
+  | Afstandsbediening ↔ drone | Gelukt; de SDK herkent de drone als "Mavic Mini" |
+  | Eén foto op de grond | Gelukt: `DJI_0096.jpg`, 4,0 MB op de SD-kaart, 1 seconde na de knop |
+  | Accu en GPS | Nog vast te leggen (stonden niet in het logboek van deze versie) |
+  | Firmware | Nog niet uitgelezen, door een fout in de app (zie hieronder) |
+  | GPS in de foto (EXIF) | Nog te controleren op de Mac |
+
+- **Wat dit betekent:** de grootste risico's uit het onderzoek blijken geen probleem:
+  - de oude SDK 4.16.2 bouwt met Xcode 16.4;
+  - hij draait op iOS 27.0.1;
+  - DJI accepteert de App Key nog;
+  - de iPhone praat via de kabel met de afstandsbediening;
+  - de app kan de camera bedienen.
+- **Fout in de app, hersteld:**
+  - Het lampje *afstandsbediening ↔ drone* werd al groen toen alleen de afstandsbediening er was. Het signaal `DJIParamConnection` is dan al "verbonden".
+  - Daardoor las de app de firmware te vroeg en daarna niet meer.
+  - De app kijkt nu naar de vluchtcomputer van de drone. Hij zet ook accu en GPS in het logboek.
+- **Nog te doen:**
+  - de nieuwe versie op de iPhone zetten;
+  - de test kort herhalen voor firmware, accu en GPS (buiten);
+  - de foto op de Mac bekijken op GPS-gegevens.
 
 - **Lukt dit:** de rest is gewoon werk.
 - **Lukt het niet:** kijk naar de alternatieven in hoofdstuk 7 van het DJI-document. Mogelijke oorzaken:

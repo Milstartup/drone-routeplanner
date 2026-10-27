@@ -1,6 +1,12 @@
 # Architectuur: drone, sensoren, weer en centraal systeem
 
-Vastgelegd op 25 oktober 2026, bijgewerkt op 26 oktober 2026. De routeplanner, de iPhone-app, de software voor het sensorkastje en een eerste centraal systeem (versie 0, zonder AI) zijn gebouwd. Wat nog niet met echte apparaten getest is, staat in [TESTLIJST.md](TESTLIJST.md).
+Vastgelegd op 25 oktober 2026, bijgewerkt op 27 oktober 2026. Gebouwd zijn:
+
+- de routeplanner;
+- de iPhone-app;
+- de software voor het sensorkastje;
+- het centrale systeem in de cloud (Supabase), met accounts, delen en een eerste foto-analyse, nog zonder getrainde AI.
+ Wat nog niet met echte apparaten getest is, staat in [TESTLIJST.md](TESTLIJST.md).
 
 ## Doel
 
@@ -15,9 +21,9 @@ Een AI in het centrale systeem bepaalt daaruit **hoeveel water welke delen van h
 ## Overzicht
 
 ```
- VELD                                  CENTRAAL SYSTEEM (nog te bouwen)           IPHONE-APP
- ────                                  ────────────────────────────────           ──────────
- Sensorkastjes ──LoRaWAN/mobiel──►  ┐
+ VELD                                  CENTRAAL SYSTEEM (Supabase)                IPHONE-APP
+ ────                                  ───────────────────────────                ──────────
+ Sensorkastjes ──hotspot iPhone──►  ┐
    (sensor + microcontroller +       │   1. Ontvangen en opslaan per veld          Vlucht-scherm
     accu + zonnepaneel)              │      (metingen, foto's, fotolog, weer)        (drone, los van de rest)
                                      ├─► 2. Wateradvies per zone (regels → AI)
@@ -33,7 +39,7 @@ Een AI in het centrale systeem bepaalt daaruit **hoeveel water welke delen van h
 | Drone-app (vliegen + foto's) | Haalbaarheidstest **geslaagd** met de drone (26 oktober 2026). Route inlezen en **vliegen in de DJI-simulator** gebouwd, getest met een nep-drone. Echt vliegen nog niet. | [`ios/`](../ios/README.md), [DJI-MOBILE-SDK-V4.md](DJI-MOBILE-SDK-V4.md), [STAPPENPLAN.md](STAPPENPLAN.md) |
 | Veld tekenen in de app | **Gebouwd** (26 oktober 2026): hoeken aantikken, de app maakt de route op dezelfde manier als de planner | [`ios/`](../ios/README.md) |
 | Sensorkastje | Software **gebouwd**, nog niet getest met een echt bordje | [`sensor/`](../sensor/README.md), dit document, hoofdstuk 2 |
-| Centraal systeem | **Versie 0 gebouwd**: ontvangen, opslaan, weer en wateradvies met eenvoudige regels, in de app. Geen AI, geen accounts. | Dit document, hoofdstuk 4 |
+| Centraal systeem | **Gebouwd in de cloud** (27 oktober 2026): ontvangen, opslaan, weer en wateradvies elk uur, accounts en delen. De foto-analyse draait op de Mac (eenvoudige regels, geen getrainde AI). Nog te installeren in je eigen Supabase-project. | [`centraal/`](../centraal/README.md), dit document, hoofdstuk 4 |
 | Veldkaart in de iPhone-app | **Gebouwd**: je eigen veld met sensoren, weer en advies, of de voorbeeldgegevens | [`ios/`](../ios/README.md), dit document, hoofdstuk 5 |
 
 ## Scheidingsregels
@@ -44,7 +50,9 @@ Elk onderdeel heeft één taak en praat met de andere alleen via vastgelegde dat
 - **Het vluchtdeel van de iPhone-app** doet alleen vliegen en foto's maken. Tijdens een vlucht staan er geen sensor- of AI-schermen in de weg.
 - **De sensorkastjes** meten en versturen alleen. Ze nemen geen beslissingen.
 - **Het centrale systeem** is de enige plek waar gegevens worden gecombineerd en waar de AI draait.
-  - **Versie 0 draait voorlopig in de iPhone-app**, als apart onderdeel: `WaterAdvisor` in `ios/VeldvluchtKern`. Daarvoor is geen server en geen account nodig. Het praat alleen via de dataformaten van hoofdstuk 6, zodat het later naar een server kan verhuizen.
+  - **Het draait in de cloud**, in Supabase: [`centraal/`](../centraal/README.md).
+  - **De foto-analyse draait op de Mac**, omdat de foto's te groot zijn voor de gratis cloud. Alleen de gevonden plekken gaan naar de cloud.
+  - **De app heeft een reserve:** dezelfde regels voor het wateradvies (`WaterAdvisor` in `ios/VeldvluchtKern`). Die gebruikt de app als je niet bent ingelogd, of als de app nieuwere metingen heeft dan de cloud. Zo werkt hij ook zonder internet in het veld.
 - **De veldkaart** toont alleen wat het centrale systeem klaarzet. Het scherm zelf rekent geen advies uit.
 
 ## 1. Drone en foto's
@@ -73,10 +81,12 @@ Elk onderdeel heeft één taak en praat met de andere alleen via vastgelegde dat
 - een waterdicht kastje;
 - een vaste, bekende GPS-positie per sensor.
 
-**Versturen (gebouwd, 26 oktober 2026).** Het kastje stuurt zijn metingen via de **hotspot van de iPhone** naar de app Veldvlucht:
+**Versturen (gebouwd, 26 en 27 oktober 2026).** Het kastje stuurt zijn metingen via de **hotspot van de iPhone**:
 - Het kastje meet elk uur en bewaart de metingen.
-- Ziet het de hotspot, dan stuurt het alles naar de iPhone, in het formaat `veld/sensorupload` (hoofdstuk 6).
-- De app moet daarvoor open zijn. Hij zet de metingen bij het veld waarin de sensor geplaatst is.
+- Ziet het de hotspot, dan stuurt het alles in het formaat `veld/sensorupload` (hoofdstuk 6):
+  - **eerst naar de cloud**, via het internet van de hotspot, met de geheime sleutel van zijn sensor. De app hoeft dan niet open te zijn;
+  - lukt dat niet, **naar de app** op de iPhone. De app moet dan open zijn, en stuurt de metingen later zelf door naar de cloud.
+- Een meting die twee keer aankomt, telt maar één keer.
 - Hoe je het kastje bouwt, staat in [`sensor/README.md`](../sensor/README.md).
 
 **Andere manieren voor later.** Op een akker is meestal geen wifi. De opties:
@@ -116,11 +126,19 @@ Een app of server mag de weersverwachting uit de Google-zoekresultaten niet zoma
 3. **Planten of plekken markeren:** een AI-model op de drone-foto's herkent zichtbare problemen. Zo'n model moet getraind worden met voorbeeldfoto's waarvan bekend is wat er aan de hand is (gelabelde foto's). Die verzamel je bij de eerste vluchten.
 4. **Resultaten klaarzetten** als kaartlagen voor de app (zie hoofdstuk 6).
 
-**Versie 0 (gebouwd, 26 oktober 2026)** draait in de iPhone-app (`ios/VeldvluchtKern`):
+**Gebouwd (26 en 27 oktober 2026).** Het draait in **Supabase**, een gratis clouddienst met een database (Postgres), inloggen en kleine programma's in de cloud. Alles staat in [`centraal/`](../centraal/README.md).
 
-1. **Ontvangen en opslaan:** de metingen van de sensorkastjes (`SensorReceiver`), de fotologs van de vluchten en de veldgrens.
-2. **Weer:** de verwachting voor vijf dagen van Open-Meteo, met de vliegmomenten (`OpenMeteo`, `FlightWeather`).
-3. **Wateradvies per strook** met eenvoudige regels (`WaterAdvisor`):
+1. **Ontvangen en opslaan**, in tabellen per veld:
+   - `velden`: de veldgrens, de vliegbanen en de sensoren, met de eigenaar;
+   - `sensoren`: elke sensor met zijn geheime sleutel voor het kastje;
+   - `sensormetingen`: alle ruwe metingen, ook van vroeger;
+   - `weer`, `vluchten` (de fotologs), `aandacht` (de plekken uit de foto-analyse) en `resultaten` (het advies voor de veldkaart).
+2. **Wie wat mag zien** (*row level security* in de database):
+   - je ziet alleen je eigen velden, en de velden die iemand met je deelt (`veld_leden`);
+   - alleen de eigenaar verandert iets, en alleen de eigenaar ziet de sleutels van de kastjes;
+   - een kastje kan alleen metingen toevoegen, voor zijn eigen sensor (`sensor_upload`).
+3. **Weer:** de verwachting voor vijf dagen van Open-Meteo, met de vliegmomenten. Elk uur opnieuw.
+4. **Wateradvies per strook** met eenvoudige regels. Het programma `centraal` (een *edge function*) rekent elk uur, en meteen na nieuwe metingen of een veranderd veld. De regels:
    - De stroken lopen langs de vliegbanen. Dat is ook de rijrichting van de tractor. Ze zijn standaard 24 m breed.
    - Per strook telt de sensor in die strook, of anders een sensor die ernaast ligt.
    - De sensor moet geijkt zijn, en de meting mag niet ouder zijn dan 2 dagen. Anders komt er geen advies, met de reden erbij.
@@ -133,13 +151,16 @@ Een app of server mag de weersverwachting uit de Google-zoekresultaten niet zoma
    - **50 % of natter:** **genoeg**.
    - De hoeveelheid is ruwweg 0,4 mm per procent tot 55 %.
    - De zekerheid is laag (20 tot 80 %): dit zijn eerste regels, die nog met het veld vergeleken moeten worden.
-4. **Nog niet:** foto-analyse en AI, accounts om anderen te laten meekijken, en terugkijken naar eerdere dagen.
+   - Dezelfde regels staan in de app (`WaterAdvisor`). De tests controleren dat de cloud en de app hetzelfde advies geven, met dezelfde uitleg.
+5. **Foto-analyse op de Mac** (`foto-analyse`, niveau 1 van hoofdstuk 7): planten zoeken, de afwijkende markeren, hun plek op de grond uitrekenen. De plekken gaan naar de tabel `aandacht` en staan dan op de veldkaart.
+6. **Accounts en delen:** inloggen met e-mail en wachtwoord. De eigenaar nodigt anderen uit om mee te kijken.
+7. **Nog niet:** een getrainde AI, en terugkijken naar eerdere dagen in de app. De ruwe metingen worden wel allemaal bewaard.
 
 **Uitgangspunten:**
 
 - **Advies, geen opdracht.** De AI geeft advies. De teler beslist en controleert; de app laat bij elk advies zien waarop het gebaseerd is.
 - **Bewaar ruwe gegevens altijd**, zodat je later met betere regels of modellen opnieuw kunt rekenen.
-- **Waar en hoe het draait**, bijvoorbeeld een clouddienst, een database met kaartfuncties en een eigen API voor de app: dat is nog een open keuze.
+- **Waar het draait:** in Supabase (gekozen op 27 oktober 2026). Gratis, met een database, inloggen en kleine programma's in één dienst. Een project zonder activiteit wordt na 7 dagen gepauzeerd; zie [`centraal/README.md`](../centraal/README.md).
 
 ## 5. Veldkaart in de iPhone-app
 
@@ -187,7 +208,12 @@ Alle coördinaten in WGS84 (decimale graden) en alle tijden in ISO 8601 met tijd
 
 ### Upload van een sensorkastje
 
-Nieuw op 26 oktober 2026. Zo stuurt een kastje zijn metingen naar de app (`POST /sensormetingen` op poort 8787 van de iPhone, via zijn hotspot):
+Nieuw op 26 oktober 2026. Zo stuurt een kastje zijn metingen:
+
+- **naar de cloud:** `POST https://<project>.supabase.co/rest/v1/rpc/sensor_upload`, met de publishable key in de kop `apikey` en als inhoud `{"p_sleutel": "<sleutel van de sensor>", "p_upload": <de upload hieronder>}`;
+- **of naar de app:** `POST /sensormetingen` op poort 8787 van de iPhone, via zijn hotspot.
+
+De upload zelf:
 
 ```json
 {
@@ -204,9 +230,11 @@ Nieuw op 26 oktober 2026. Zo stuurt een kastje zijn metingen naar de app (`POST 
 ```
 
 - Het kastje heeft geen klok. `ageS` zegt hoeveel seconden geleden de meting was. De app maakt daar een tijd van.
-- `boot` is een willekeurig nummer van de laatste keer dat het kastje aanging, en `nr` telt de metingen sinds dan. Stuurt het kastje metingen nog eens (omdat het het antwoord miste), dan slaat de app die over. Beide zijn optioneel.
+- `boot` is een willekeurig nummer van de laatste keer dat het kastje aanging, en `nr` telt de metingen sinds dan. Stuurt het kastje metingen nog eens (omdat het het antwoord miste), dan slaan de app en de cloud die over. Beide zijn optioneel.
 - De plek (`location`) en het veld (`fieldId`) komen uit de app: daar plaats je de sensor met dezelfde `sensorId`.
-- De app antwoordt `200` met `{"ontvangen": 2}`. Pas dan gooit het kastje de metingen weg. Kent de app de sensor niet (`404`), dan houdt het kastje ze.
+- De app antwoordt `200` met `{"ontvangen": 2}`, de cloud met `{"ontvangen": 2, "nieuw": 2}`. Pas dan gooit het kastje de metingen weg.
+  - Kent de app de sensor niet (`404`), dan houdt het kastje ze.
+  - Klopt de sleutel niet, dan weigert de cloud (`401` of `403`) en probeert het kastje de app.
 - De app slaat de metingen op als `veld/sensormeting` (hierboven).
 
 ### Fotolog (per vlucht)
@@ -335,7 +363,7 @@ Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weer
 
 | Eis | Gevolg voor het ontwerp |
 |---|---|
-| Plek maakt niet uit, moet goed bereikbaar zijn vanuit de app | Een gratis clouddienst met database, opslag en inloggen (keuze volgt bij de bouw). |
+| Plek maakt niet uit, moet goed bereikbaar zijn vanuit de app | Een gratis clouddienst met database, opslag en inloggen: **Supabase** (gekozen op 27 oktober 2026). |
 | Alleen jij, maar je kunt mensen toevoegen | Inloggen met accounts. Per veld is er een eigenaar die anderen kan uitnodigen om mee te kijken. |
 | Foto's horen bij de analyse | Eén vlucht over een heel veld kan honderden foto's van een paar MB opleveren, samen gigabytes. Gratis cloudopslag is klein. Daarom **draait de foto-analyse op de laptop**, en gaan alleen de resultaten en kleine voorbeeldfoto's naar de cloud. |
 | De AI herkent planten die een inspectie nodig hebben, en planten die meer of minder water nodig hebben | Zie de aanpak hieronder. |
@@ -348,6 +376,7 @@ Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weer
    - Per plant meet hij hoe groen en hoe groot die is.
    - Planten die duidelijk afwijken van hun buren krijgen de markering **"inspectie nodig"**.
    - Dit is uitlegbaar, gratis en werkt zonder voorbeeldfoto's.
+   - *Gebouwd op 27 oktober 2026: `foto-analyse` in `ios/VeldvluchtKern`. Getest met nagemaakte foto's, nog niet met echte.*
 2. **Wateradvies met een waterbalans per strook:**
    - In: de laatste sensormetingen, de verwachte regen en de verdamping uit de weersverwachting.
    - Uit: per strook "genoeg", "binnenkort" of "nu water geven".
@@ -373,12 +402,12 @@ Deze volgorde staat ook in [STAPPENPLAN.md](STAPPENPLAN.md).
 3. **Drone-app:** de haalbaarheidstest, daarna vliegen en foto's. *Haalbaarheidstest geslaagd op 26 oktober 2026. Vliegen gebouwd, nog te testen.*
 4. **Eén sensorkastje** met de huidige sensor: eerst op tafel, dan in het veld. *Software gebouwd in [`sensor/`](../sensor/README.md), nog te testen met een bordje.*
 5. **Centraal systeem, stap voor stap:**
-   1. ontvangen en opslaan; *versie 0 gebouwd, in de app*
+   1. ontvangen en opslaan; *gebouwd, in de cloud*
    2. tonen op de veldkaart; *gebouwd*
    3. weer koppelen; *gebouwd (Open-Meteo)*
    4. regels voor wateradvies; *gebouwd (eenvoudige regels, versie 0)*
-   5. foto-analyse op de laptop en AI voor wateradvies en markeringen; *nog te doen, na de eerste echte vluchten*
-   6. een server met accounts, zodat anderen kunnen meekijken; *nog te doen*
+   5. foto-analyse op de laptop; *niveau 1 gebouwd (zonder getrainde AI). AI voor wateradvies en markeringen: na de eerste echte vluchten*
+   6. een server met accounts, zodat anderen kunnen meekijken; *gebouwd (Supabase)*
 6. **Betere sensoren** (capacitief of landbouwsensoren), verspreid over de zones.
 
 Bronnen:

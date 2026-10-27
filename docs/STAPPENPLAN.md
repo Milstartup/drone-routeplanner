@@ -1,6 +1,6 @@
 # Stappenplan: van routeplanner naar drone, sensoren en veldkaart
 
-Stand op 26 oktober 2026:
+Stand op 27 oktober 2026:
 
 - **Klaar:** de routeplanner (browser-app in deze repository).
 - **Haalbaarheidstest (stap 2) geslaagd op 26 oktober 2026:** de eigen app praat met de Mavic Mini.
@@ -9,9 +9,14 @@ Stand op 26 oktober 2026:
   - **Route:** **een veld tekenen in de app** (hoeken aantikken, de app maakt de vliegbanen), of een routebestand van de planner inlezen; daarna vliegen (stap 3 t/m 5);
   - **Veldkaart:** je eigen veld met sensoren, weer en wateradvies, of de voorbeeldgegevens (stap 7 t/m 9);
   - **Vluchten:** fotologs en logboeken (stap 6).
-- **Het sensorkastje** (stap 8): de software staat in [`sensor/`](../sensor/README.md).
-- **Het centrale systeem, versie 0** (stap 9): ontvangen, opslaan, weer en wateradvies met eenvoudige regels. Het draait in de app.
-- **Nog te bouwen:** foto-analyse en AI (na de eerste echte vluchten), en een server met accounts om anderen te laten meekijken.
+- **Het sensorkastje** (stap 8): de software staat in [`sensor/`](../sensor/README.md). Het stuurt rechtstreeks naar de cloud, of anders naar de app.
+- **Het centrale systeem** (stap 9) in de cloud, in [`centraal/`](../centraal/README.md):
+  - ontvangen en opslaan, weer en wateradvies elk uur;
+  - accounts, en anderen laten meekijken;
+  - een eerste foto-analyse op de Mac, zonder getrainde AI.
+
+  Je installeert het zelf in een gratis Supabase-project, met één script.
+- **Nog te bouwen:** een getrainde AI (na de eerste echte vluchten).
 - **Wat jij nog moet testen, staat in [TESTLIJST.md](TESTLIJST.md).**
 
 Achtergrond:
@@ -265,12 +270,16 @@ Werk dit uit volgens hoofdstuk 6 van het DJI-document:
 
 - Foto's van de microSD-kaart kopiëren, samen met het fotolog van de app.
 - Het fotolog volgt het formaat `veld/fotolog` uit hoofdstuk 6 van [ARCHITECTUUR.md](ARCHITECTUUR.md).
-- Zolang het centrale systeem er nog niet is: bewaar foto's en fotolog per vlucht in een eigen map.
+- Bewaar foto's en fotolog per vlucht in een eigen map.
 
 **Gebouwd (26 oktober 2026):**
 - De app bewaart per vlucht het fotolog (`….fotolog.json`) en het logboek (`….logboek.txt`).
 - Het tabblad *Vluchten* toont ze en kan ze delen, bijvoorbeeld met AirDrop naar de Mac.
 - Ze staan ook in de Bestanden-app: *Op mijn iPhone → Veldvlucht → Vluchten*.
+
+**Erbij gekomen (27 oktober 2026):**
+- Ben je ingelogd, dan gaat het fotolog vanzelf naar het centrale systeem.
+- De foto's zelf blijven op de Mac. Het programma `foto-analyse` zoekt daarin de planten die aandacht nodig hebben, en zet hun plek in de cloud. Hoe: [`centraal/README.md`](../centraal/README.md), "De foto-analyse op je Mac".
 
 ## Stap 7: veldkaart in de iPhone-app (met voorbeeldgegevens)
 
@@ -296,7 +305,7 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
 - Nieuw dataformaat `veld/weer` voor de weerbalk (hoofdstuk 6 van [ARCHITECTUUR.md](ARCHITECTUUR.md)).
 - **Nog te doen:**
   - stap 3: testen in het veld;
-  - later: echte gegevens van het centrale systeem in plaats van de voorbeeldbestanden;
+  - ~~echte gegevens van het centrale systeem~~: gebouwd (27 oktober 2026), als je bent ingelogd;
   - terugkijken naar eerdere datums.
 - **Erbij gekomen:** eigen bestanden laden in de veldkaart (*Gegevens → Eigen bestand laden…*), bijvoorbeeld zelf gemaakte resultaten of sensormetingen.
 
@@ -306,6 +315,7 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
 - De software voor een ESP32-bordje staat in [`sensor/`](../sensor/README.md), met een handleiding voor het aansluiten en uploaden.
 - Het kastje meet elk uur, zet de sensor alleen aan tijdens het meten, en bewaart de metingen.
 - Het stuurt ze via de **hotspot van de iPhone** naar de app (het formaat `veld/sensorupload` uit [ARCHITECTUUR.md](ARCHITECTUUR.md)).
+- *27 oktober 2026:* het stuurt ze eerst **rechtstreeks naar de cloud**, met een geheime sleutel per sensor. Lukt dat niet, dan naar de app.
 - In de app plaats je de sensoren op je veld en ijk je ze met droge en natte grond.
 - Getest: het ontvangen in de app, met nep-metingen vanaf de Mac (`sensor/nep-sensorkastje.py`).
 
@@ -327,7 +337,20 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
 - **weer koppelen** via Open-Meteo, met het beste vliegmoment en een melding;
 - **wateradvies met eenvoudige regels** per strook van 24 m langs de vliegbanen. Bij elk advies staat waarop het gebaseerd is.
 
-De regels staan in [ARCHITECTUUR.md](ARCHITECTUUR.md), hoofdstuk 4. **Nog niet:** foto-analyse en AI (punt 5 hieronder), en accounts.
+**In de cloud gebouwd (27 oktober 2026)**, in [`centraal/`](../centraal/README.md), met Supabase:
+- een database met je velden, sensoren, metingen, weer, vluchten en advies;
+- **accounts**: inloggen in de app, en anderen laten meekijken met een veld;
+- de sensorkastjes sturen er **rechtstreeks** naartoe;
+- **elk uur** weer en wateradvies, en meteen na nieuwe metingen;
+- **foto-analyse op de Mac**, zonder getrainde AI (niveau 1 uit hoofdstuk 7 van [ARCHITECTUUR.md](ARCHITECTUUR.md));
+- de app synchroniseert vanzelf, en rekent zelf met dezelfde regels als hij niet is ingelogd of geen internet heeft.
+
+De regels staan in [ARCHITECTUUR.md](ARCHITECTUUR.md), hoofdstuk 4.
+
+- **Nog te doen:**
+  - het installeren in je eigen Supabase-project (`bash centraal/installeer.sh`);
+  - testen (blok F van [TESTLIJST.md](TESTLIJST.md));
+  - een getrainde AI (punt 5 hieronder).
 
 Stap voor stap, zodat elke stap zelf al nut heeft:
 

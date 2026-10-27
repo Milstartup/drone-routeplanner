@@ -63,6 +63,7 @@ struct ScreenTourView: View {
     @StateObject private var fields = FieldStore()
     @StateObject private var weather = WeatherService()
     @StateObject private var receiver = SensorReceiver(fields: FieldStore())
+    @StateObject private var cloud = CloudStore(fields: FieldStore())
     @State private var page = Page.start
     @State private var screen = Screen.drone
     @State private var session: FlightSession?
@@ -86,7 +87,7 @@ struct ScreenTourView: View {
         case .start:
             Color.groupedBackground.ignoresSafeArea()
         case .tabs:
-            MainTabs(drone: drone, route: route, fields: fields, receiver: receiver, weather: weather, screen: $screen)
+            MainTabs(drone: drone, route: route, fields: fields, receiver: receiver, cloud: cloud, weather: weather, screen: $screen)
         case .fieldEditor(let field):
             FieldEditorView(field: field, fields: fields) { _ in }
         case .fieldSettings(let field):
@@ -106,9 +107,9 @@ struct ScreenTourView: View {
         case .checklist(let simulator):
             StartChecklist(isSimulator: simulator, altitudeM: 30) {}
         case .sensors(let field):
-            SensorEditorView(field: field, fields: fields, receiver: testReceiver ?? receiver)
+            SensorEditorView(field: field, fields: fields, receiver: testReceiver ?? receiver, cloud: cloud)
         case .field(let preselected):
-            FieldMapScreen(fields: fields, receiver: receiver, weather: weather, preselected: preselected)
+            FieldMapScreen(fields: fields, receiver: receiver, cloud: cloud, weather: weather, preselected: preselected)
         case .savedFlight:
             if let savedFlight {
                 NavigationStack { SavedFlightView(flight: savedFlight) }

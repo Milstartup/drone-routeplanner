@@ -7,6 +7,7 @@ struct SensorEditorView: View {
     let original: FieldRecord
     @ObservedObject var fields: FieldStore
     @ObservedObject var receiver: SensorReceiver
+    @ObservedObject var cloud: CloudStore
     @Environment(\.dismiss) private var dismiss
 
     /// One sensor while editing: the calibration can be half filled in.
@@ -22,11 +23,15 @@ struct SensorEditorView: View {
     @State private var latest: [String: SensorMeasurement] = [:]
     @State private var baseLayer = BaseLayer.pdok
     @State private var saveError: String?
+    @State private var saving = false
+    /// The key of each sensor box, from the central system.
+    @State private var keys: [String: String] = [:]
 
-    init(field: FieldRecord, fields: FieldStore, receiver: SensorReceiver) {
+    init(field: FieldRecord, fields: FieldStore, receiver: SensorReceiver, cloud: CloudStore) {
         original = field
         self.fields = fields
         self.receiver = receiver
+        self.cloud = cloud
         _drafts = State(initialValue: field.sensors.map {
             Draft(id: $0.id, location: $0.location, depthCm: $0.depthCm, dryRaw: $0.calibration?.dryRaw, wetRaw: $0.calibration?.wetRaw)
         })
@@ -79,10 +84,17 @@ struct SensorEditorView: View {
                     Button("Annuleren") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Bewaren", action: save).bold()
+                    if saving {
+                        ProgressView()
+                    } else {
+                        Button("Bewaren", action: save).bold()
+                    }
                 }
             }
-            .onAppear(perform: readLatest)
+            .onAppear {
+                readLatest()
+                keys = cloud.link(original.id).keys
+            }
             .onChange(of: receiver.uploads) { _, _ in readLatest() }
             .alert("Niet bewaard", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
                 Button("OK") { saveError = nil }
@@ -131,9 +143,16 @@ struct SensorEditorView: View {
         }
         do {
             try fields.save(field)
-            dismiss()
         } catch {
             saveError = error.localizedDescription
+            return
+        }
+        // In the cloud too, so every sensor gets its key for the box.
+        saving = true
+        Task {
+            await cloud.save(field)
+            saving = false
+            dismiss()
         }
     }
 
@@ -202,6 +221,25 @@ struct SensorEditorView: View {
                     Image(systemName: "doc.on.doc")
                 }
                 .accessibilityLabel("Kopieer de naam")
+            }
+            if let key = keys[d.id] {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sleutel voor het kastje (SENSOR_SLEUTEL)").font(.footnote).foregroundStyle(.secondary)
+                        Text(key).font(.footnote.monospaced()).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                    }
+                    Spacer()
+                    Button {
+                        UIPasteboard.general.string = key
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .accessibilityLabel("Kopieer de sleutel")
+                }
+            } else if cloud.isLoggedIn {
+                Text("De sleutel voor het kastje verschijnt hier na Bewaren.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             Stepper(value: draft.depthCm, in: 5...60, step: 5) {
                 Row(label: "Diepte", value: "\(RouteCheck.number(d.depthCm)) cm")

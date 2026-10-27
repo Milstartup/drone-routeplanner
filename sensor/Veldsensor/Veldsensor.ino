@@ -2,9 +2,13 @@
 //
 // Every MEET_INTERVAL_MINUTEN the box wakes from deep sleep, powers the sensor from a GPIO,
 // reads its analog output and stores the value in RTC memory. Then it tries to join the
-// iPhone's Personal Hotspot and POSTs every unsent measurement to the Veldvlucht app at
-// http://<gateway>:8787/sensormetingen (format "veld/sensorupload", see sensor/README.md).
-// Measurements are only removed after the app answers 200. Then WiFi off and back to sleep.
+// iPhone's Personal Hotspot and sends every unsent measurement (format "veld/sensorupload",
+// see sensor/README.md):
+// - to the central system in the cloud (HTTPS, Supabase RPC sensor_upload with the sensor's
+//   key), when CLOUD_PROJECT is set; the app need not be open;
+// - otherwise, or when the cloud does not answer, to the Veldvlucht app at
+//   http://<gateway>:8787/sensormetingen.
+// Measurements are only removed after an answer 200. Then WiFi off and back to sleep.
 //
 // The box has no real clock. It stores the ESP32 system time (which keeps running in deep
 // sleep) and sends each measurement's age in seconds; the app turns that into a time.
@@ -25,9 +29,20 @@
   || !defined(SENSOR_PIN) || !defined(BATTERIJ_PIN) || !defined(BATTERIJ_DELER)
 #error "Instellingen.h is niet compleet. Vergelijk hem met Instellingen.voorbeeld.h."
 #endif
+// Older settings files have no cloud: then the box only sends to the app.
+#ifndef CLOUD_PROJECT
+#define CLOUD_PROJECT ""
+#endif
+#ifndef CLOUD_SLEUTEL
+#define CLOUD_SLEUTEL ""
+#endif
+#ifndef SENSOR_SLEUTEL
+#define SENSOR_SLEUTEL ""
+#endif
 #endif
 
 #include <WiFi.h>
+#include <NetworkClientSecure.h>
 #include <HTTPClient.h>
 #include <esp_sleep.h>
 #include <time.h>
@@ -43,6 +58,9 @@ static_assert(sizeof(HOTSPOT_WACHTWOORD) <= 64, "HOTSPOT_WACHTWOORD is te lang (
 static_assert(sizeof(SENSOR_ID) > 1, "SENSOR_ID mag niet leeg zijn.");
 static_assert(DIEPTE_CM >= 0, "DIEPTE_CM kan niet negatief zijn.");
 static_assert(MEET_INTERVAL_MINUTEN >= 1, "MEET_INTERVAL_MINUTEN moet minstens 1 zijn.");
+static_assert(sizeof(CLOUD_PROJECT) <= 41, "CLOUD_PROJECT is te lang: alleen de letters voor .supabase.co.");
+static_assert(sizeof(CLOUD_PROJECT) == 1 || (sizeof(CLOUD_SLEUTEL) > 1 && sizeof(SENSOR_SLEUTEL) > 1),
+              "Met CLOUD_PROJECT zijn ook CLOUD_SLEUTEL en SENSOR_SLEUTEL nodig (zie de app).");
 static_assert(SENSOR_PIN >= 32 && SENSOR_PIN <= 39,
               "SENSOR_PIN moet GPIO 32 t/m 39 zijn: de andere analoge pinnen werken niet als de wifi aan staat.");
 static_assert(BATTERIJ_PIN == -1 || (BATTERIJ_PIN >= 32 && BATTERIJ_PIN <= 39 && BATTERIJ_PIN != SENSOR_PIN),
@@ -196,9 +214,60 @@ static String maakUpload(uint16_t aantal, uint32_t nu) {
   return body;
 }
 
-// Sends all stored measurements to the app. Removes them only when the app answers 200.
+// Sends all stored measurements to the central system in the cloud. True when it answered 200.
+static bool verstuurNaarCloud(uint16_t aantal) {
+  const String url = String("https://") + CLOUD_PROJECT + ".supabase.co/rest/v1/rpc/sensor_upload";
+  Serial.printf("Versturen van %u meting(en) naar de cloud ...\n", (unsigned)aantal);
+
+  NetworkClientSecure verbinding;
+  verbinding.useBuiltinCACertBundle();  // checks the server's certificate, like a browser
+  HTTPClient http;
+  http.setConnectTimeout(8000);
+  http.setTimeout(15000);
+  http.setReuse(false);
+  if (!http.begin(verbinding, url)) {
+    Serial.println("  Ongeldig cloudadres. Klopt CLOUD_PROJECT?");
+    return false;
+  }
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", CLOUD_SLEUTEL);
+  if (strncmp(CLOUD_SLEUTEL, "eyJ", 3) == 0) {
+    http.addHeader("Authorization", String("Bearer ") + CLOUD_SLEUTEL);  // the older "anon" keys
+  }
+  String body = "{\"p_sleutel\":";
+  voegJsonTekstToe(body, SENSOR_SLEUTEL);
+  body += ",\"p_upload\":";
+  body += maakUpload(aantal, nuS());
+  body += "}";
+
+  const int code = http.POST(body);
+  bool gelukt = false;
+  if (code == 200) {
+    Serial.printf("  Gelukt. De cloud zegt: %s\n", http.getString().c_str());
+    gelukt = true;
+  } else if (code > 0) {
+    Serial.printf("  De cloud antwoordde met code %d: %s\n", code, http.getString().c_str());
+    if (code == 401 || code == 403) {
+      Serial.println("  Klopt SENSOR_SLEUTEL en CLOUD_SLEUTEL? Kijk in de app.");
+    }
+  } else {
+    Serial.printf("  Cloud niet bereikbaar (%s). Heeft de hotspot internet?\n", HTTPClient::errorToString(code).c_str());
+  }
+  http.end();
+  return gelukt;
+}
+
+// Sends all stored measurements: to the cloud when it is set up, else (or when the cloud
+// does not answer) to the app. Removes them only after an answer 200.
 static void verstuur() {
   const uint16_t aantal = bewaardAantal;
+  if (CLOUD_PROJECT[0] != '\0') {
+    if (verstuurNaarCloud(aantal)) {
+      verwijderOudste(aantal);
+      return;
+    }
+    Serial.println("  Dan naar de app.");
+  }
   // On a Personal Hotspot the iPhone is the gateway, normally 172.20.10.1.
   char url[64];
   snprintf(url, sizeof url, "http://%s:%u/sensormetingen", WiFi.gatewayIP().toString().c_str(), (unsigned)APP_POORT);

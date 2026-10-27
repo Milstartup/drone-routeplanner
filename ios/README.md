@@ -302,9 +302,25 @@ De veldkaart toont **je eigen veld** (getekend in de app), of de **voorbeeldgege
 
 De metingen staan in de Bestanden-app onder *Op mijn iPhone → Veldvlucht → Velden → (je veld) → sensormetingen.json*, in het formaat `veld/sensormeting`.
 
-## Het wateradvies (centraal systeem, versie 0)
+## Account, cloud en delen
 
-Het centrale systeem uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md) heeft nu een eerste versie. Die draait **in de app**, als apart onderdeel (`WaterAdvisor`). Er is dus geen server en geen account nodig.
+Het centrale systeem draait in de cloud, in Supabase. Hoe je het installeert, staat in [centraal/README.md](../centraal/README.md). Zonder cloud werkt de app ook: alles blijft dan op deze iPhone.
+
+- **Inloggen:** tabblad *Route* → het poppetje linksboven → **Account maken** of **Inloggen**.
+- **Synchroniseren** gaat vanzelf als je de app opent, en met **Nu synchroniseren**:
+  - je velden en de fotologs van je vluchten gaan naar de cloud;
+  - de sensormetingen, het weer en het advies van de cloud komen terug;
+  - de velden die anderen met je delen, komen ook binnen.
+- **Sleutels voor de kastjes:** na *Bewaren* bij *Sensoren plaatsen en ijken* staat bij elke sensor zijn sleutel (`SENSOR_SLEUTEL`). Onder het poppetje staan `CLOUD_PROJECT` en `CLOUD_SLEUTEL`.
+- **Delen:** *Veldkaart* → tik op de regel onder de naam → **Delen met anderen…** → het e-mailadres van iemand met een Veldvlucht-account.
+  - Die ziet het veld bij *Gedeeld met mij*, met de sensoren, het weer en het advies.
+  - Kijken mag, veranderen niet. Vliegen ook niet.
+- **Advies nu laten berekenen:** in hetzelfde menu. Anders gebeurt het elk uur, en meteen na nieuwe metingen.
+- **Je login** staat in de sleutelhanger van de iPhone, niet in een bestand.
+
+## Het wateradvies
+
+Het advies komt van het centrale systeem in de cloud. Ben je niet ingelogd, of heeft de app nieuwere metingen dan de cloud, dan rekent de app het zelf uit **met dezelfde regels** (`WaterAdvisor`). Bij een strook staat waar het advies vandaan komt.
 
 - **Stroken:** het veld wordt verdeeld in stroken van 24 m breed langs de vliegbanen. Dat is ook de rijrichting van de tractor; met de echte gegevens van de tractor kan dit later beter.
 - **Per strook** kijkt het naar de sensor in die strook (of anders een sensor ernaast), en naar de regen en verdamping van vandaag en morgen.
@@ -362,7 +378,7 @@ Het rekenwerk (routebestand, controles, dataformaten) staat apart in `Veldvlucht
    swift test
    ```
 
-Onderaan moet staan: *Executed 101 tests, with 0 failures*.
+Onderaan moet staan: *Executed 116 tests, with 0 failures*.
 
 - De tests lezen ook alle voorbeeldbestanden uit `docs/voorbeelden`, dus een fout in zo'n bestand valt meteen op.
 - **De stuurlus wordt getest met een nep-drone** (`FakeDrone.swift`): een eenvoudig model dat reageert op stuurcommando's, met een vertraging, en eventueel met wind. Daarmee vliegt de test de hele voorbeeldroute en controleert hij:
@@ -375,6 +391,8 @@ Onderaan moet staan: *Executed 101 tests, with 0 failures*.
   - de zes fouten uit de onafhankelijke review van 26 oktober 2026, elk met een eigen test (zie [TESTLIJST.md](../docs/TESTLIJST.md)).
 - **Veld tekenen** (`FieldPlannerTests`): voor drie velden die de routeplanner zelf maakte, geeft de app precies hetzelfde routebestand. Ook: rechthoeken, een U-vorm, te kleine velden en een veldgrens die zichzelf kruist.
 - **Weer, sensoren en advies** (`CentralTests`): een echt antwoord van Open-Meteo met de vliegmomenten, uploads van een kastje (ook dubbel verstuurd), en alle regels van het wateradvies.
+- **De cloud** (`CloudTests`): inloggen, een verlopen login vernieuwen, velden bewaren met de sleutels van de kastjes, metingen lezen, en wat er gebeurt zonder internet. Tegen een nep-server.
+- **De foto-analyse** (`PlantAnalysisTests`): een nagemaakte foto met een gelige en een kleine plant, en de plek op de grond bij elke vliegrichting.
 
 **De planner op de Mac.** Node.js staat alleen in de projectmap (`.tools/node`, niet in git). Zo draai je de 71 tests van de planner:
 ```bash
@@ -456,6 +474,8 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `SensorEditor.swift` | Sensoren plaatsen, hun naam voor het kastje, en ijken. |
 | `SensorReceiver.swift` | **De ontvanger:** neemt via de hotspot de metingen van de sensorkastjes aan (poort 8787) en zet ze bij het juiste veld. |
 | `WeatherService.swift` | Haalt het weer op bij Open-Meteo en plant de melding voor goed vliegweer. |
+| `CloudStore.swift` | **De koppeling met de cloud:** je login (in de sleutelhanger), synchroniseren, sleutels van de kastjes, delen. |
+| `AccountView.swift` | De schermen *Account en cloud* en *Delen*. |
 | `FlightView.swift` | Het vluchtscherm (volledig scherm): kaart met de drone, de fase, voortgang, de knoppen Pauze, Overnemen en Naar huis, en de controlelijst voor de start. Laat de stuurlus 10 keer per seconde lopen. Bewaart fotolog, logboek en voortgang. Regelt het vrijgeven van echt vliegen. |
 | `FlightsView.swift` | Tabblad *Vluchten*: opgeslagen vluchten met kaart en delen. |
 | `FieldMapScreen.swift` | Tabblad *Veldkaart*: kaart over het hele scherm, het paneel met weer en gegevens, en de details na een tik. |
@@ -465,7 +485,10 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `VeldvluchtKern/…/FieldRecord.swift` | Een getekend veld, zijn sensoren, de stroken voor het advies en het beeld van de camera op de grond. |
 | `VeldvluchtKern/…/OpenMeteo.swift` | Het weer van Open-Meteo in het formaat `veld/weer`, met de vliegmomenten. |
 | `VeldvluchtKern/…/SensorUpload.swift` | Wat een kastje stuurt (`veld/sensorupload`) omzetten naar metingen, zonder dubbele. |
-| `VeldvluchtKern/…/WaterAdvisor.swift` | **Het centrale systeem, versie 0:** wateradvies per strook met eenvoudige regels. |
+| `VeldvluchtKern/…/WaterAdvisor.swift` | Wateradvies per strook met eenvoudige regels (dezelfde als in de cloud: `centraal/supabase/functions/_shared/rekenkern.ts`). |
+| `VeldvluchtKern/…/Cloud.swift` | Praat met Supabase: inloggen, velden, metingen, weer, advies, vluchten, delen. |
+| `VeldvluchtKern/…/PlantAnalysis.swift` | **De foto-analyse:** planten vinden, afwijkende markeren, hun plek op de grond uitrekenen. |
+| `VeldvluchtKern/Sources/FotoAnalyse/main.swift` | Het programma `foto-analyse` voor op de Mac (zie [centraal/README.md](../centraal/README.md)). |
 | `VeldvluchtKern/…/RoutePlanFile.swift` | Het routebestand inlezen. Andere formaten en ongeldige coördinaten worden geweigerd. |
 | `VeldvluchtKern/…/RouteCheck.swift` | De controles op de route, en de eigen berekening van afstand en vliegtijd. |
 | `VeldvluchtKern/…/FieldFormats.swift` | De dataformaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md). |

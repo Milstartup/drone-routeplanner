@@ -30,7 +30,10 @@ enum JSONReading {
         if let date = plain.date(from: text) { return date }
         let fractional = ISO8601DateFormatter()
         fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return fractional.date(from: text)
+        if let date = fractional.date(from: text) { return date }
+        // The database gives microseconds ("…:20.123456+00:00"); keep milliseconds.
+        guard let range = text.range(of: #"\.\d{4,}"#, options: .regularExpression) else { return nil }
+        return fractional.date(from: text.replacingCharacters(in: range, with: String(text[range].prefix(4))))
     }
 
     /// Checks that `data` is a JSON object with the expected `format` and `version`.

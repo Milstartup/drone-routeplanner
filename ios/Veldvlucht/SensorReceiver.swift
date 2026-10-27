@@ -24,6 +24,8 @@ final class SensorReceiver: ObservableObject {
 
     private var listener: NWListener?
     private let fields: FieldStore
+    /// After storing: the upload as it came in, the sensor and the field (for the cloud).
+    var onStored: ((Data, String, String) -> Void)?
 
     init(fields: FieldStore) {
         self.fields = fields
@@ -162,6 +164,7 @@ final class SensorReceiver: ObservableObject {
         let name = sensor.shortName(fieldId: field.id)
         note("Sensor \(name) (\(field.name)): \(upload.measurements.count) meting(en) ontvangen, \(added) nieuw.", ok: true)
         uploads += 1
+        onStored?(request.body, upload.sensorId, field.id)
         return (200, #"{"ontvangen":\#(upload.measurements.count)}"#)
     }
 

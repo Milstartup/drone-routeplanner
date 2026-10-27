@@ -1,6 +1,6 @@
 # Testlijst iPhone-app Veldvlucht
 
-Stand: 26 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
+Stand: 27 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
 
 ## Wat al getest is
 
@@ -22,7 +22,12 @@ Stand: 26 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - het weer van Open-Meteo, met de vliegmomenten;
   - alle regels van het wateradvies;
   - ontvangen van metingen: getest op je iPhone met nep-metingen die de Mac via wifi stuurde.
-- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; een echt sensorkastje; jouw eigen indruk van de schermen.
+- **Het centrale systeem in de cloud (27 oktober 2026), alleen op de Mac:**
+  - de database in een echte Postgres op de Mac (PGlite): wie wat mag zien, delen, sleutels van de kastjes, metingen zonder dubbele;
+  - het programma van elk uur tegen een nep-database, en dat de cloud precies hetzelfde advies geeft als de app;
+  - de koppeling in de app tegen een nep-server: inloggen, synchroniseren, geen internet;
+  - de foto-analyse met nagemaakte foto's: hij vond precies de ene gelige plant, op de goede plek.
+- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; een echt sensorkastje; het centrale systeem in een echt Supabase-project; jouw eigen indruk van de schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
 
@@ -153,10 +158,58 @@ Wat al getest is: de berekening van de route (gelijk aan de planner), het weer, 
 - [ ] **E10** IJk de sensor met droge en natte grond (*Laatste = droog*, *Laatste = nat*). Staat er daarna een % vocht?
 - [ ] **E11** Steek de sensor in de grond van een strook. Na de volgende meting krijgt die strook een kleur. Tik erop: klopt de uitleg (sensor, vocht, regen, regel)?
 
+## F. Het centrale systeem in de cloud (nieuw, 27 oktober 2026)
+
+Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het installeert en gebruikt, staat in [centraal/README.md](../centraal/README.md).
+
+- [ ] **F1** Maak een gratis project op <https://supabase.com> (naam `veldvlucht`, regio in Europa). Het databasewachtwoord bewaar je zelf; niemand heeft het nodig.
+- [ ] **F2** Draai in de Terminal, in de projectmap:
+  ```bash
+  bash centraal/installeer.sh
+  ```
+  Je hoort aan het eind *Klaar* te zien, met:
+  - *Rekenkern:* `{"berekend":0,"problemen":[]}`;
+  - *Sensorontvangst:* een melding met *Onbekende sleutel*.
+
+  Laat het Claude weten: die zet de nieuwe app op je iPhone.
+- [ ] **F3** *Route* → het poppetje linksboven → vul je e-mailadres en een wachtwoord in → **Account maken**.
+  - Je krijgt een e-mail van Supabase. Klik op de link. (De pagina die opent, mag een foutmelding geven.)
+  - Log in. Je hoort een groene kaart *Ingelogd* te zien, met je e-mailadres.
+- [ ] **F4** **Nu synchroniseren**. Bij *Laatst gesynchroniseerd* staat de tijd van nu. Kijk in het dashboard van Supabase bij *Table Editor* → `velden`: staan je velden erin?
+- [ ] **F5** *Veldkaart* → je veld → **Sensoren plaatsen en ijken…** → **Bewaren**. Bij elke sensor staat nu een **sleutel**, met een kopieerknopje.
+- [ ] **F6** **Een nep-kastje naar de cloud**, vanaf de Mac. Vul de drie waarden in (*Route* → het poppetje, en de sleutel uit F5):
+  ```bash
+  python3 sensor/nep-sensorkastje.py --cloud JOUW_PROJECT --cloud-sleutel JOUW_CLOUD_SLEUTEL --sensor-sleutel JOUW_SENSOR_SLEUTEL --sensor mijn-veld-s1
+  ```
+  - Het programma hoort te melden dat de metingen zijn ontvangen.
+  - Synchroniseer de app: staat de turquoise druppel er, met de metingen?
+  - Draai het nog eens. Komen er geen dubbele metingen bij?
+- [ ] **F7** Hetzelfde met het **echte kastje** (zie [sensor/README.md](../sensor/README.md)): zet `CLOUD_PROJECT`, `CLOUD_SLEUTEL` en `SENSOR_SLEUTEL` in `Instellingen.h` en zet het programma opnieuw op het bordje.
+  - Zet de hotspot aan, maar laat de app **dicht**.
+  - In de Serial Monitor hoort te staan: *Gelukt. De cloud zegt: …*
+  - Open daarna de app: zijn de metingen er?
+- [ ] **F8** IJk de sensor (E10) en kies in het menu van de veldkaart **Advies nu laten berekenen**. Tik op de strook met de sensor. Onderaan hoort te staan: *Berekend door het centrale systeem in de cloud*.
+- [ ] **F9** Zet de iPhone in **vliegtuigmodus** en open de veldkaart. Het advies hoort er nog te zijn. Haal vliegtuigmodus weer weg.
+- [ ] **F10** **Delen:**
+  1. *Veldkaart* → menu → **Delen met anderen…** → vul een tweede e-mailadres in. Dat moet al een account hebben: maak het eerst, net als bij F3.
+  2. Log uit, en log in met dat tweede account.
+  3. Je hoort het veld te zien bij *Gedeeld met mij*, met sensoren en advies. Er is geen knop om iets te veranderen.
+  4. Log weer in met je eigen account. Haal het tweede adres weg bij *Delen*.
+- [ ] **F11** **Elk uur:** kijk de volgende dag in het dashboard bij *Table Editor* → `resultaten`. De tijd bij `berekend` hoort van het laatste uur te zijn (7 over), ook als de app dicht was.
+- [ ] **F12** **Foto-analyse** na een vlucht in de simulator (C11) of een echte vlucht (D5):
+  1. Zet de foto's en het fotolog in een eigen map op de Mac.
+  2. Draai de analyse:
+     ```bash
+     swift run --package-path ios/VeldvluchtKern foto-analyse ~/Pictures/vlucht-1
+     ```
+  3. Je hoort per foto het aantal planten te zien. In de simulator fotografeert de drone geen veld, dus daar zijn het er 0 of een paar.
+  4. Bij een echte vlucht boven een veld: probeer ook `--upload`. Synchroniseer de app: staan er paarse markeringen? Kloppen ze met wat je in het veld ziet?
+
 ## Wat je naar Claude stuurt
 
 - De logboeken van C2 t/m C12, en van elke echte vlucht.
 - Het antwoord bij **C3** (richting).
 - Bij D: hoeveel foto's gepland en gemaakt zijn, en of ze scherp zijn en GPS hebben.
 - Bij E: de naam bij E8, wat het kastje in de Serial Monitor zegt, en een schermafbeelding van het sensorscherm.
+- Bij F: wat het installatiescript aan het eind zegt (geen sleutels of wachtwoorden), en bij F12 wat de analyse per foto zegt.
 - Alles wat er vreemd uitziet, met een schermafbeelding.

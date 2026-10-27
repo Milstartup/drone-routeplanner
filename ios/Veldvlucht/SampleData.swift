@@ -76,7 +76,7 @@ enum SampleData {
             let weather = try read(.weather, WeatherForecast.read)
             return .success(FieldData(fieldId: nil, name: results.boundary?.properties.name ?? "Voorbeeldveld",
                                       results: results, sensors: sensors, waitingSensors: [], weather: weather,
-                                      ownData: own, computedAdvice: false))
+                                      ownData: own, adviceSource: .file, shared: false))
         } catch let error as FileReadError {
             return .failure(error)
         } catch {
@@ -84,13 +84,19 @@ enum SampleData {
         }
     }
 
-    /// One field drawn in the app.
-    static func field(_ record: FieldRecord, now: Date = Date()) -> Result<FieldData, FileReadError> {
-        let folder = FieldStore.dataFolder(record.id)
+    /// Where the results of the central system in the cloud are kept for a field.
+    static func cloudResultsURL(key: String) -> URL {
+        FieldStore.dataFolder(key).appendingPathComponent("resultaten-cloud.geojson")
+    }
+
+    /// One field drawn in the app, or shared with you (`key` "gedeeld:<id>").
+    static func field(_ record: FieldRecord, key: String? = nil, now: Date = Date()) -> Result<FieldData, FileReadError> {
+        let key = key ?? record.id
+        let folder = FieldStore.dataFolder(key)
         var own: [String] = []
         // Where each sensor is now, and its calibration now: both may have changed after measuring.
         let placed = Dictionary(record.sensors.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        let measurements = SensorStore.read(fieldId: record.id).map { m -> SensorMeasurement in
+        let measurements = SensorStore.read(fieldId: key).map { m -> SensorMeasurement in
             guard let sensor = placed[m.sensorId] else { return m }
             var m = m
             m.location = sensor.location
@@ -99,23 +105,35 @@ enum SampleData {
             return m
         }
         let weather = try? WeatherForecast.read(Data(contentsOf: folder.appendingPathComponent(Kind.weather.ownName)))
-        let results: FieldResults
+        var results: FieldResults
+        let source: FieldData.AdviceSource
         let ownResults = folder.appendingPathComponent(Kind.results.ownName)
+        let cloud = try? FieldResults.read(Data(contentsOf: cloudResultsURL(key: key)))
+        let newest = measurements.map(\.time).max() ?? .distantPast
         if FileManager.default.fileExists(atPath: ownResults.path) {
             do {
                 results = try FieldResults.read(Data(contentsOf: ownResults))
                 own.append(Kind.results.label)
+                source = .file
             } catch {
                 return .failure(FileReadError(message: "\(Kind.results.ownName): \(error.localizedDescription)"))
             }
+        } else if let cloud, cloud.properties.createdAt >= newest {
+            // The central system in the cloud had every measurement the app has.
+            results = cloud
+            source = .cloud
         } else {
             results = WaterAdvisor.results(field: record, measurements: measurements, weather: weather, now: now)
+            // Newer measurements than the cloud's: the app works it out, with the cloud's markers.
+            results.features += cloud?.attention ?? []
+            source = .app
         }
         let measured = Set(measurements.map(\.sensorId))
-        return .success(FieldData(fieldId: record.id, name: record.name, results: results,
+        return .success(FieldData(fieldId: key, name: record.name, results: results,
                                   sensors: FieldSummary.sensors(measurements.filter { placed[$0.sensorId] != nil }),
                                   waitingSensors: record.sensors.filter { !measured.contains($0.id) },
-                                  weather: weather, ownData: own, computedAdvice: own.isEmpty))
+                                  weather: weather, ownData: own, adviceSource: source,
+                                  shared: key.hasPrefix(FieldStore.sharedPrefix)))
     }
 
     /// Checks a file in one of the field formats and keeps a copy for the field map: in the
@@ -185,8 +203,18 @@ struct FieldData {
     var weather: WeatherForecast?
     /// Which parts come from your own files.
     var ownData: [String]
-    /// The water advice was worked out by the central system, version 0 (WaterAdvisor).
-    var computedAdvice: Bool
+    enum AdviceSource {
+        /// The central system in the cloud.
+        case cloud
+        /// The same rules in the app (WaterAdvisor), when the cloud is not used or behind.
+        case app
+        /// A results file (the sample, or one you loaded).
+        case file
+    }
+
+    var adviceSource: AdviceSource
+    /// Someone shared this field with you: you can look but not change it.
+    var shared: Bool
 }
 
 /// The sensor measurements of a field drawn in the app: what the sensor boxes sent, in the

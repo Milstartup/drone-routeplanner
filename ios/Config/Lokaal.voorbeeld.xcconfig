@@ -10,3 +10,10 @@ DJI_APP_KEY =
 // Je Apple-team voor het ondertekenen van de app. Staat in Xcode bij
 // Settings -> Accounts, of laat Xcode het invullen bij Signing & Capabilities.
 DEVELOPMENT_TEAM =
+
+// Het centrale systeem in Supabase (centraal/README.md). Het installatiescript
+// vult deze twee zelf in; zonder deze waarden werkt de app zonder cloud.
+// SUPABASE_PROJECT: de project-ref, de letters voor .supabase.co.
+// SUPABASE_KEY: de publishable key (of de oudere "anon" key) van het project.
+SUPABASE_PROJECT =
+SUPABASE_KEY =

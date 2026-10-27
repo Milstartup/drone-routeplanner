@@ -1,7 +1,18 @@
 // The fields drawn in the app. Each field is one file in Documents/Velden, with a folder of
 // its own for the data that belongs to it (sensor measurements, weather, results). In the
 // Files app: Op mijn iPhone › Veldvlucht › Velden.
+// Fields someone shared with you through the cloud are kept in Documents/Gedeeld, under the
+// cloud's id ("gedeeld:<id>"); you can look at them but not change or fly them.
 import Foundation
+
+/// A field someone else shared with you.
+struct SharedField: Identifiable, Equatable {
+    var cloudId: String
+    var record: FieldRecord
+
+    /// The key in this store, for its data folder and the selection.
+    var id: String { FieldStore.sharedPrefix + cloudId }
+}
 
 final class FieldStore: ObservableObject {
     /// Figures for the list, worked out once per save instead of on every redraw.
@@ -13,6 +24,7 @@ final class FieldStore: ObservableObject {
     }
 
     @Published private(set) var fields: [FieldRecord] = []
+    @Published private(set) var shared: [SharedField] = []
     @Published private(set) var info: [String: Info] = [:]
     @Published private(set) var problems: [String] = []
     /// The field the field map shows; nil = the sample field from docs/voorbeelden.
@@ -27,9 +39,21 @@ final class FieldStore: ObservableObject {
         return folder
     }
 
+    static let sharedPrefix = "gedeeld:"
+
+    static var sharedFolder: URL {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let folder = documents.appendingPathComponent("Gedeeld", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder
+    }
+
     /// The data folder of one field: sensormetingen.json, weer.json, resultaten.geojson.
-    static func dataFolder(_ fieldId: String) -> URL {
-        let folder = Self.folder.appendingPathComponent(fieldId, isDirectory: true)
+    /// `key` is the field id, or "gedeeld:<cloud id>" for a shared field.
+    static func dataFolder(_ key: String) -> URL {
+        let folder = key.hasPrefix(sharedPrefix)
+            ? sharedFolder.appendingPathComponent(String(key.dropFirst(sharedPrefix.count)), isDirectory: true)
+            : Self.folder.appendingPathComponent(key, isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder
     }
@@ -45,6 +69,14 @@ final class FieldStore: ObservableObject {
 
     var selected: FieldRecord? { selectedId.flatMap { field($0) } }
 
+    /// What the field map shows: an own or a shared field, with its key; nil = the sample field.
+    var selection: (key: String, record: FieldRecord, shared: Bool)? {
+        guard let id = selectedId else { return nil }
+        if let own = field(id) { return (id, own, false) }
+        if let other = shared.first(where: { $0.id == id }) { return (id, other.record, true) }
+        return nil
+    }
+
     func field(_ id: String) -> FieldRecord? { fields.first { $0.id == id } }
 
     func reload() {
@@ -59,9 +91,27 @@ final class FieldStore: ObservableObject {
             }
         }
         fields = found.sorted { $0.updatedAt > $1.updatedAt }
+        let sharedURLs = (try? FileManager.default.contentsOfDirectory(at: Self.sharedFolder, includingPropertiesForKeys: nil)) ?? []
+        shared = sharedURLs.filter { $0.lastPathComponent.hasSuffix(".veld.json") }.compactMap { url in
+            guard let record = try? FieldRecord.read(Data(contentsOf: url)) else { return nil }
+            return SharedField(cloudId: String(url.lastPathComponent.dropLast(".veld.json".count)), record: record)
+        }.sorted { $0.record.name < $1.record.name }
         self.problems = problems
         info = Dictionary(uniqueKeysWithValues: fields.map { ($0.id, Self.info(for: $0)) })
-        if let id = selectedId, field(id) == nil { selectedId = nil }
+        if selectedId != nil, selection == nil { selectedId = nil }
+    }
+
+    /// The fields shared with you, as the cloud has them now; others are removed.
+    func replaceShared(_ list: [SharedField]) {
+        let keep = Set(list.map(\.cloudId))
+        for old in shared where !keep.contains(old.cloudId) {
+            try? FileManager.default.removeItem(at: Self.sharedFolder.appendingPathComponent("\(old.cloudId).veld.json"))
+            try? FileManager.default.removeItem(at: Self.sharedFolder.appendingPathComponent(old.cloudId, isDirectory: true))
+        }
+        for field in list {
+            try? field.record.encoded().write(to: Self.sharedFolder.appendingPathComponent("\(field.cloudId).veld.json"), options: .atomic)
+        }
+        reload()
     }
 
     private static func info(for field: FieldRecord) -> Info {

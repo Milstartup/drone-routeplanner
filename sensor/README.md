@@ -1,6 +1,6 @@
 # Sensorkastje: bodemvocht meten met een ESP32
 
-Het programma voor één sensorkastje uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md), hoofdstuk 2: een ESP32-bordje met de bodemvochtsensor van school. Het kastje meet en stuurt de metingen via de **hotspot van je iPhone** naar de Veldvlucht-app.
+Het programma voor één sensorkastje uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md), hoofdstuk 2: een ESP32-bordje met de bodemvochtsensor van school. Het kastje meet en stuurt de metingen via de **hotspot van je iPhone** naar het **centrale systeem in de cloud** ([centraal/README.md](../centraal/README.md)), of naar de Veldvlucht-app.
 
 **Zo werkt het:**
 
@@ -8,7 +8,11 @@ Het programma voor één sensorkastje uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR
 2. Het zet de sensor **heel even aan** (0,2 seconde), meet 10 keer en neemt de middelste waarde. Daarna zet het de sensor weer uit.
 3. Het **bewaart** de meting in zijn geheugen.
 4. Het probeert 10 seconden lang verbinding te maken met de hotspot van je iPhone.
-5. Lukt dat, dan stuurt het **alle bewaarde metingen** naar de Veldvlucht-app. Pas als de app zegt dat ze zijn opgeslagen, gooit het kastje ze weg.
+5. Lukt dat, dan stuurt het **alle bewaarde metingen**:
+   - naar het **centrale systeem in de cloud**, als je dat hebt ingesteld (beveiligd met https). De app hoeft dan niet open te zijn;
+   - anders, of als de cloud niet antwoordt, naar de **Veldvlucht-app** op de iPhone.
+
+   Pas als de cloud of de app zegt dat ze zijn opgeslagen, gooit het kastje ze weg.
 6. Wifi uit, en weer slapen tot de volgende meting.
 7. **Druk je op de knop BOOT**, dan wordt het kastje meteen wakker: het meet en verstuurt direct. Handig in het veld, zodat je niet tot een uur hoeft te wachten.
 
@@ -34,8 +38,12 @@ Het programma voor één sensorkastje uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR
   - grootte: 947.868 bytes (72% van de ruimte op het bordje), werkgeheugen 48.424 bytes (14%).
   - ook gecontroleerd: met TESTMODUS aan en met een batterijpin, en dat een verkeerde pin of een ontbrekende `Instellingen.h` een duidelijke foutmelding geeft.
 - Het bewaren en het maken van het bericht voor de app zijn **getest op de Mac**: de volgorde, de leeftijd in seconden, een vol geheugen (200 metingen) en metingen zonder batterij.
-- `nep-sensorkastje.py` is getest met een testserver op de Mac.
-- **Nog niet getest:** op een echt ESP32-bordje, met de sensor, en met de iPhone-app.
+- `nep-sensorkastje.py` is getest met een testserver op de Mac, en met de app op je iPhone (via wifi).
+- **Erbij gekomen op 27 oktober 2026:**
+  - een volgnummer per meting, zodat dubbel verstuurde metingen maar één keer tellen;
+  - de knop **BOOT** om meteen te meten en te versturen;
+  - **rechtstreeks naar de cloud** (https, met de sleutel van de sensor). Met de cloud ingesteld is het programma 1.110.576 bytes (84%); zonder cloud laat de compiler dat deel weg.
+- **Nog niet getest:** op een echt ESP32-bordje en met de sensor.
 
 **Hulpmiddelen voor de controle**, alleen in de map `.tools/` (niet in git). Er is niets in je thuismap gezet en er was geen beheerderswachtwoord nodig.
 
@@ -113,6 +121,9 @@ Je wachtwoord hoef je **aan niemand te geven, ook niet aan Claude**. Je zet het 
    - `HOTSPOT_WACHTWOORD`: het wachtwoord uit *Instellingen → Persoonlijke hotspot*.
    - `SENSOR_ID`: de naam van deze sensor. De Veldvlucht-app laat zien wat je hier invult.
    - `DIEPTE_CM`: hoe diep de meetvork in de grond zit.
+   - **Voor de cloud** (laat leeg als het kastje alleen naar de app stuurt):
+     - `CLOUD_PROJECT` en `CLOUD_SLEUTEL`: in de app onder *Route* → het poppetje linksboven (kopieerknopjes);
+     - `SENSOR_SLEUTEL`: de sleutel van deze sensor, in de app onder *Veldkaart* → *Sensoren plaatsen en ijken*. Die is **geheim**: wie hem heeft, kan metingen voor deze sensor sturen.
 5. Bewaar met **Cmd+S**.
 6. Controleer dat je wachtwoord niet in git komt:
    ```bash
@@ -247,6 +258,14 @@ Zonder batterijmeting (`BATTERIJ_PIN` is `-1`) stuurt het kastje `null` als batt
    python3 sensor/nep-sensorkastje.py 172.20.10.1 --aantal 5 --sensor mijn-veld-s1
    ```
 5. Gelukt als onderaan staat: `Antwoord 200: {"ontvangen": 5}`
+
+**Naar de cloud in plaats van de app**, zoals een kastje met de cloud ingesteld:
+
+```bash
+python3 sensor/nep-sensorkastje.py --cloud JOUW_PROJECT --cloud-sleutel JOUW_CLOUD_SLEUTEL --sensor-sleutel JOUW_SENSOR_SLEUTEL --sensor mijn-veld-s1
+```
+
+Gelukt als onderaan staat: `Antwoord 200: {"nieuw": 5, "ontvangen": 5}`. Daarvoor hoeft de app niet open te zijn.
 
 **Andere mogelijkheden:**
 

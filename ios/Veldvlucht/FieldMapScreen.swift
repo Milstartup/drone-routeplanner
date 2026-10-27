@@ -10,6 +10,7 @@ import UniformTypeIdentifiers
 struct FieldMapScreen: View {
     @ObservedObject var fields: FieldStore
     @ObservedObject var receiver: SensorReceiver
+    @ObservedObject var cloud: CloudStore
     @ObservedObject var weather: WeatherService
     /// Opens the details of this zone, marker or sensor right away (for the screen tour).
     var preselected: String?
@@ -18,6 +19,8 @@ struct FieldMapScreen: View {
     @State private var selected: Selected?
     @State private var importing = false
     @State private var editingSensors: FieldRecord?
+    @State private var sharing: FieldRecord?
+    @State private var showAccount = false
     @State private var message: String?
     @State private var notify = FlightNotifier.enabled
 
@@ -40,7 +43,7 @@ struct FieldMapScreen: View {
                             Button {
                                 useOwnAdviceOrSamples()
                             } label: {
-                                Label(fields.selected == nil ? "Terug naar de voorbeeldgegevens" : "Terug naar het berekende advies",
+                                Label(fields.selection == nil ? "Terug naar de voorbeeldgegevens" : "Terug naar het berekende advies",
                                       systemImage: "arrow.uturn.backward")
                             }
                             .buttonStyle(ActionButtonStyle(color: .veld, prominent: false))
@@ -58,13 +61,15 @@ struct FieldMapScreen: View {
             .onChange(of: fields.fields) { _, _ in reload() }
             .onChange(of: receiver.uploads) { _, _ in reload() }
             .onChange(of: weather.updates) { _, _ in reload() }
+            .onChange(of: cloud.updates) { _, _ in reload() }
             .task(id: fields.selectedId) {
+                // Shared fields get their weather from the cloud.
                 if let field = fields.selected { await weather.refresh(field) }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json, UTType(filenameExtension: "geojson") ?? .json]) { result in
                 guard case .success(let url) = result else { return }
                 do {
-                    let kind = try SampleData.importFile(url, fieldId: fields.selectedId)
+                    let kind = try SampleData.importFile(url, fieldId: fields.selected?.id)
                     reload()
                     message = "Geladen: \(kind). De rest blijft zoals het was."
                 } catch {
@@ -72,7 +77,13 @@ struct FieldMapScreen: View {
                 }
             }
             .fullScreenCover(item: $editingSensors) { field in
-                SensorEditorView(field: field, fields: fields, receiver: receiver)
+                SensorEditorView(field: field, fields: fields, receiver: receiver, cloud: cloud)
+            }
+            .sheet(item: $sharing) { field in
+                ShareView(field: field, cloud: cloud)
+            }
+            .sheet(isPresented: $showAccount) {
+                AccountView(cloud: cloud)
             }
             .alert("Veldkaart", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
                 Button("OK") { message = nil }
@@ -83,16 +94,16 @@ struct FieldMapScreen: View {
     }
 
     private func reload() {
-        if let field = fields.selected {
-            data = SampleData.field(field)
+        if let selection = fields.selection {
+            data = SampleData.field(selection.record, key: selection.key)
         } else {
             data = SampleData.field()
         }
     }
 
     private func useOwnAdviceOrSamples() {
-        if let id = fields.selectedId {
-            SampleData.removeOwnResults(fieldId: id)
+        if let selection = fields.selection {
+            SampleData.removeOwnResults(fieldId: selection.key)
         } else {
             SampleData.removeOwnData()
         }
@@ -173,6 +184,7 @@ struct FieldMapScreen: View {
         if field.fieldId == nil {
             return field.ownData.isEmpty ? "Voorbeeldgegevens" : "Eigen gegevens: \(field.ownData.joined(separator: ", "))"
         }
+        if field.shared { return "Gedeeld met je" }
         if !field.ownData.isEmpty { return "Eigen resultaten-bestand" }
         let count = field.sensors.count + field.waitingSensors.count
         return count == 0 ? "Nog geen sensoren" : (count == 1 ? "1 sensor" : "\(count) sensoren")
@@ -203,6 +215,21 @@ struct FieldMapScreen: View {
                     }
                 }
             }
+            if !fields.shared.isEmpty {
+                Section("Gedeeld met mij") {
+                    ForEach(fields.shared) { other in
+                        Button {
+                            fields.selectedId = other.id
+                        } label: {
+                            if other.id == fields.selectedId {
+                                Label(other.record.name, systemImage: "checkmark")
+                            } else {
+                                Text(other.record.name)
+                            }
+                        }
+                    }
+                }
+            }
             if let record = fields.selected {
                 Section {
                     Button {
@@ -211,9 +238,35 @@ struct FieldMapScreen: View {
                         Label("Sensoren plaatsen en ijken…", systemImage: "drop")
                     }
                     Button {
+                        sharing = record
+                    } label: {
+                        Label("Delen met anderen…", systemImage: "person.2")
+                    }
+                    if cloud.isLoggedIn {
+                        Button {
+                            Task { await cloud.recalculate(record.id) }
+                        } label: {
+                            Label("Advies nu laten berekenen", systemImage: "function")
+                        }
+                    }
+                    Button {
                         Task { await weather.refresh(record, force: true) }
                     } label: {
                         Label("Weer vernieuwen", systemImage: "arrow.clockwise")
+                    }
+                }
+            }
+            Section {
+                Button {
+                    showAccount = true
+                } label: {
+                    Label(cloud.isLoggedIn ? "Account en cloud…" : "Inloggen bij de cloud…", systemImage: "icloud")
+                }
+                if cloud.isLoggedIn {
+                    Button {
+                        Task { await cloud.sync() }
+                    } label: {
+                        Label("Nu synchroniseren", systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
             }
@@ -233,7 +286,8 @@ struct FieldMapScreen: View {
                     Label("Melding bij goed vliegweer", systemImage: "bell")
                 }
             }
-            Section(fields.selected == nil ? "Het centrale systeem bestaat nog niet" : "Eigen bestanden") {
+            if !field.shared {
+            Section("Eigen bestanden") {
                 Button {
                     importing = true
                 } label: {
@@ -246,6 +300,7 @@ struct FieldMapScreen: View {
                         Label(fields.selected == nil ? "Voorbeeldgegevens gebruiken" : "Berekend advies gebruiken", systemImage: "arrow.uturn.backward")
                     }
                 }
+            }
             }
         } label: {
             HStack(spacing: 4) {
@@ -263,7 +318,7 @@ struct FieldMapScreen: View {
     @ViewBuilder
     private func detail(_ id: String, _ field: FieldData) -> some View {
         if let zone = feature(id, prefix: "zone-", in: field.results.waterZones) {
-            ZoneDetail(zone: zone, computed: field.computedAdvice)
+            ZoneDetail(zone: zone, source: field.adviceSource)
         } else if let marker = feature(id, prefix: "aandacht-", in: field.results.attention) {
             AttentionDetail(marker: marker)
         } else if let sensor = field.sensors.first(where: { "sensor-\($0.sensorId)" == id }) {
@@ -521,8 +576,7 @@ private struct TextCard: View {
 
 private struct ZoneDetail: View {
     let zone: FieldResults.Feature
-    /// Worked out by the central system in the app (WaterAdvisor), not loaded from a file.
-    var computed = false
+    var source = FieldData.AdviceSource.file
 
     var body: some View {
         ScrollView {
@@ -544,9 +598,7 @@ private struct ZoneDetail: View {
                 if let reason = zone.properties.reason {
                     TextCard(title: "Waarop gebaseerd", text: reason)
                 }
-                Notice(text: computed
-                       ? "Berekend in de app met eenvoudige regels (centraal systeem, versie 0), zonder AI. Dit is een advies: jij beslist en controleert het in het veld."
-                       : "Dit is een advies. Jij beslist en controleert het in het veld.",
+                Notice(text: noteText,
                        symbol: "info.circle", color: .secondary)
                     .padding(.horizontal, 4)
             }
@@ -555,6 +607,16 @@ private struct ZoneDetail: View {
         .screenBackground()
         .navigationTitle(zone.properties.name ?? "Strook")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+extension ZoneDetail {
+    var noteText: String {
+        switch source {
+        case .cloud: return "Berekend door het centrale systeem in de cloud, met eenvoudige regels (versie 0), zonder AI. Dit is een advies: jij beslist en controleert het in het veld."
+        case .app: return "Berekend in de app met eenvoudige regels (centraal systeem, versie 0), zonder AI. Dit is een advies: jij beslist en controleert het in het veld."
+        case .file: return "Dit is een advies. Jij beslist en controleert het in het veld."
+        }
     }
 }
 

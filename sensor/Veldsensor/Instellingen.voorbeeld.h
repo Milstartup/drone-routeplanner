@@ -14,6 +14,22 @@
 // Het wachtwoord staat in Instellingen -> Persoonlijke hotspot.
 #define HOTSPOT_WACHTWOORD ""
 
+// ---- Het centrale systeem in de cloud (centraal/README.md) ----
+
+// Laat deze drie leeg als het kastje alleen naar de app moet sturen.
+// Met deze drie stuurt het kastje via de hotspot rechtstreeks naar de cloud;
+// de app hoeft dan niet open te zijn. Lukt de cloud niet, dan probeert het de app.
+
+// De letters voor .supabase.co. In de app: Route -> Account -> CLOUD_PROJECT.
+#define CLOUD_PROJECT ""
+
+// De publishable key van het project. In de app: Route -> Account -> CLOUD_SLEUTEL.
+#define CLOUD_SLEUTEL ""
+
+// De sleutel van deze ene sensor. In de app: Veldkaart -> Sensoren plaatsen en ijken.
+// Geheim: wie deze sleutel heeft, kan metingen voor deze sensor sturen.
+#define SENSOR_SLEUTEL ""
+
 // ---- Sensor ----
 
 // De naam van deze sensor. De Veldvlucht-app laat zien wat je hier invult.

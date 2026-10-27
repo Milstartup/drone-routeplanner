@@ -92,7 +92,9 @@ struct FieldEditRequest: Identifiable {
 struct RouteView: View {
     @ObservedObject var model: RouteModel
     @ObservedObject var fields: FieldStore
+    @ObservedObject var cloud: CloudStore
     let drone: DJIConnection
+    @State private var showAccount = false
     @State private var importing = false
     @State private var showRoute = false
     @State private var editing: FieldEditRequest?
@@ -153,6 +155,18 @@ struct RouteView: View {
             }
             .screenBackground()
             .navigationTitle("Route")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showAccount = true
+                    } label: {
+                        Label("Account", systemImage: cloud.isLoggedIn ? "person.crop.circle.badge.checkmark" : "person.crop.circle")
+                    }
+                }
+            }
+            .sheet(isPresented: $showAccount) {
+                AccountView(cloud: cloud)
+            }
             .navigationDestination(isPresented: $showRoute) {
                 RouteDetailView(model: model, drone: drone) { field in
                     editing = FieldEditRequest(field: field)
@@ -168,6 +182,7 @@ struct RouteView: View {
             .fullScreenCover(item: $editing) { request in
                 FieldEditorView(field: request.field, fields: fields) { saved in
                     model.load(field: saved)
+                    Task { await cloud.save(saved) }
                 }
             }
             .onChange(of: model.loadCount) { _, _ in
@@ -177,11 +192,13 @@ struct RouteView: View {
                                 titleVisibility: .visible, presenting: deleting) { field in
                 Button("Verwijder \(field.name)", role: .destructive) {
                     model.forget(fieldId: field.id)
-                    fields.delete(field.id)
+                    let id = field.id
+                    Task { await cloud.delete(id) }
+                    fields.delete(id)
                     showRoute = false
                 }
             } message: { _ in
-                Text("Ook de sensormetingen en het weer van dit veld verdwijnen. Vluchten en foto's blijven bewaard.")
+                Text("Ook de sensormetingen, het weer en het advies van dit veld verdwijnen, op deze iPhone en in de cloud. Vluchten en foto's blijven bewaard.")
             }
         }
     }

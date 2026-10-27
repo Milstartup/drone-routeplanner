@@ -41,6 +41,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>DJISDKAppKey</key>
 	<string>$(DJI_APP_KEY)</string>
+	<key>VeldvluchtCloudProject</key>
+	<string>$(SUPABASE_PROJECT)</string>
+	<key>VeldvluchtCloudKey</key>
+	<string>$(SUPABASE_KEY)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>

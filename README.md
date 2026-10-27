@@ -41,7 +41,7 @@ Een browser-app om fotovluchten te plannen voor een **DJI Mavic Mini** (het orig
 
 | Commando | Wat het doet |
 |---|---|
-| `npm.cmd test` | Draait de 71 automatische tests (rekenkern, validatie, JSON, bewerken, voorbeeldvelden voor de app). |
+| `npm.cmd test` | Draait de 92 automatische tests (rekenkern, validatie, JSON, bewerken, voorbeeldvelden voor de app, en het centrale systeem). |
 | `npm.cmd run typecheck` | Controleert de TypeScript-typen. |
 | `npm.cmd run build` | Maakt een productieversie in `dist/`. |
 | `npm.cmd run preview` | Toont die productieversie op <http://localhost:4173>. |
@@ -159,6 +159,8 @@ docs/        Routebestand, architectuur, stappenplan en onderzoek naar de DJI Mo
   voorbeelden/  Voorbeeldbestanden in alle dataformaten.
 ios/         De iPhone-app Veldvlucht (Swift, Xcode op een Mac). Zie ios/README.md.
 sensor/      De software voor het sensorkastje (ESP32). Zie sensor/README.md.
+centraal/    Het centrale systeem in de cloud (Supabase): database, advies elk uur, delen.
+             Zie centraal/README.md.
 src/fixtures/  Maakt de voorbeeldvelden waarmee de app zijn routeberekening controleert.
 ```
 
@@ -183,6 +185,8 @@ De iPhone-app **Veldvlucht** staat in [`ios/`](ios/README.md). De haalbaarheidst
 - **Route:** **een veld tekenen in de app** (hoeken aantikken; de app maakt de vliegbanen zoals deze planner), of een `.routeplan.json` van deze planner inlezen; daarna controleren, op de kaart tonen en vliegen;
 - **Veldkaart:** je eigen veld met sensoren, weer en wateradvies per strook, of voorbeeldgegevens;
 - **Vluchten:** de fotologs en logboeken.
+
+Met een account in het **centrale systeem** ([`centraal/`](centraal/README.md), in Supabase) staan je velden, metingen en adviezen ook in de cloud. Je sensorkastjes sturen er rechtstreeks naartoe, en je kunt anderen laten meekijken.
 
 Vliegen kan eerst alleen in de **simulator van DJI**. Echt vliegen wordt pas vrijgegeven als de tests in de simulator gelukt zijn. Wat nog getest moet worden, staat in [docs/TESTLIJST.md](docs/TESTLIJST.md). Zie verder:
 

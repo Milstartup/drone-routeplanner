@@ -80,6 +80,20 @@ async function calculate(env: Env, row: FieldRow, now: Date): Promise<void> {
 }
 
 /** One run: every field, or only `body.veld` (its uuid). */
+/**
+ * The key of the database: the new secret key (a JSON list of keys by name), or the older
+ * service_role key, which Supabase is phasing out.
+ */
+export function secretKey(get: (name: string) => string | undefined): string {
+  try {
+    const keys = JSON.parse(get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<string, string>;
+    if (keys.default) return keys.default;
+  } catch {
+    // Not readable: try the older key.
+  }
+  return get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+}
+
 export async function work(body: unknown, env: Env): Promise<{ status: number; body: object }> {
   try {
     const wanted = (body as { veld?: unknown } | null)?.veld;

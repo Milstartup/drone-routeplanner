@@ -33,7 +33,8 @@ Het centrale systeem uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md), hoofdstuk 4
 3. **New project**:
    - **Name:** `veldvlucht`;
    - **Database Password:** verzin een sterk wachtwoord en bewaar het in je wachtwoordbeheer. Je hebt het voor de installatie niet nodig;
-   - **Region:** iets in Europa, bijvoorbeeld *Central EU (Frankfurt)*.
+   - **Region:** iets in Europa, bijvoorbeeld *Central EU (Frankfurt)*;
+   - **de andere opties:** laat die staan zoals ze staan. Zet de **Data API** niet uit, want de app en de kastjes praten daarmee. *Automatically expose new tables* mag aan of uit: het installatiescript regelt de rechten zelf.
 4. Wacht tot het project klaar is.
 
 **Het centrale systeem installeren:**
@@ -119,7 +120,8 @@ PATH="$PWD/.tools/node/bin:$PATH" npm test
   - het delen;
   - dat de sleutels van de kastjes alleen voor de eigenaar zijn;
   - het ontvangen van metingen zonder dubbele;
-  - dat niemand zonder login iets kan lezen.
+  - dat niemand zonder login iets kan lezen;
+  - dat de rechten hetzelfde zijn in beide soorten Supabase-projecten: nieuwe projecten geven tabellen sinds mei 2026 niet meer vanzelf rechten, oudere wel.
 - `tests/rekenkern.test.ts` rekent dezelfde gevallen door als de tests van de app (`CentralTests.swift`). Die moeten precies hetzelfde advies geven, met dezelfde uitleg.
 - `tests/werk.test.ts` draait het programma van elk uur tegen een nep-database.
 

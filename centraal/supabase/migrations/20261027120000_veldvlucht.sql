@@ -164,11 +164,16 @@ drop policy if exists aandacht_verwijderen on public.aandacht;
 create policy aandacht_verwijderen on public.aandacht for delete to authenticated using (public.is_eigenaar(veld));
 
 -- Without a login nothing can be read or written, except through sensor_upload below.
+-- Everything is spelled out: since May 2026 new Supabase projects give tables no rights by
+-- themselves, and older projects give them all to every role. The rights must be the same in both.
 revoke all on public.velden, public.veld_leden, public.sensoren, public.sensormetingen,
-  public.weer, public.resultaten, public.vluchten, public.aandacht from anon;
+  public.weer, public.resultaten, public.vluchten, public.aandacht from anon, authenticated, service_role;
 grant select, insert, update, delete on public.velden, public.vluchten, public.aandacht to authenticated;
 grant select, delete on public.veld_leden to authenticated;
 grant select on public.sensoren, public.sensormetingen, public.weer, public.resultaten to authenticated;
+-- The edge function reads what it needs and saves the weather and the advice.
+grant select on public.velden, public.sensoren, public.sensormetingen, public.aandacht to service_role;
+grant select, insert, update on public.weer, public.resultaten to service_role;
 
 -- ---------------------------------------------------------------------------------------
 -- Functions for the app
@@ -184,7 +189,7 @@ begin
   end if;
 end;
 $$;
-revoke execute on function public.na_wijziging(uuid) from public;
+revoke execute on function public.na_wijziging(uuid) from public, anon, authenticated, service_role;
 
 -- Saves a field from the app and keeps its sensors in step. Returns each sensor's key,
 -- which the owner types into the sensor box.
@@ -315,7 +320,7 @@ $$;
 -- Only these functions may be called from the app (logged in) or by a box (anon).
 revoke execute on function public.bewaar_veld(text, text, jsonb), public.nodig_uit(text, text),
   public.leden(text), public.verwijder_lid(text, text), public.sensor_upload(text, jsonb),
-  public.is_eigenaar(uuid), public.mag_zien(uuid) from public;
+  public.is_eigenaar(uuid), public.mag_zien(uuid) from public, anon, authenticated, service_role;
 grant execute on function public.bewaar_veld(text, text, jsonb), public.nodig_uit(text, text),
   public.leden(text), public.verwijder_lid(text, text), public.is_eigenaar(uuid), public.mag_zien(uuid)
   to authenticated;

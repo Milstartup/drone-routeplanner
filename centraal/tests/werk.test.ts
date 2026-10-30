@@ -2,7 +2,7 @@
 // weather when needed, read the measurements and markers, and store weather and results.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { work } from '../supabase/functions/_shared/werk.ts';
+import { secretKey, work } from '../supabase/functions/_shared/werk.ts';
 
 const openMeteo = readFileSync(
   new URL('../../ios/VeldvluchtKern/Tests/VeldvluchtKernTests/open-meteo-voorbeeld.json', import.meta.url),
@@ -101,5 +101,19 @@ describe('the hourly work of the central system', () => {
     const result = await work({}, { baseUrl: 'https://proef.supabase.co', key: 'sb_secret_x', fetch: async () => new Response('stuk', { status: 503 }) });
     expect(result.status).toBe(500);
     expect(JSON.stringify(result.body)).toContain('503');
+  });
+});
+
+describe('secretKey', () => {
+  const from = (values: Record<string, string>) => (name: string) => values[name];
+
+  it('prefers the new secret key', () => {
+    expect(secretKey(from({ SUPABASE_SECRET_KEYS: '{"default":"sb_secret_a"}', SUPABASE_SERVICE_ROLE_KEY: 'eyJoud' }))).toBe('sb_secret_a');
+  });
+
+  it('falls back to the older key', () => {
+    expect(secretKey(from({ SUPABASE_SERVICE_ROLE_KEY: 'eyJoud' }))).toBe('eyJoud');
+    expect(secretKey(from({ SUPABASE_SECRET_KEYS: 'geen json', SUPABASE_SERVICE_ROLE_KEY: 'eyJoud' }))).toBe('eyJoud');
+    expect(secretKey(from({}))).toBe('');
   });
 });

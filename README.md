@@ -41,7 +41,7 @@ Een browser-app om fotovluchten te plannen voor een **DJI Mavic Mini** (het orig
 
 | Commando | Wat het doet |
 |---|---|
-| `npm.cmd test` | Draait de 92 automatische tests (rekenkern, validatie, JSON, bewerken, voorbeeldvelden voor de app, en het centrale systeem). |
+| `npm.cmd test` | Draait de 102 automatische tests (rekenkern, validatie, JSON, bewerken, voorbeeldvelden voor de app, en het centrale systeem). |
 | `npm.cmd run typecheck` | Controleert de TypeScript-typen. |
 | `npm.cmd run build` | Maakt een productieversie in `dist/`. |
 | `npm.cmd run preview` | Toont die productieversie op <http://localhost:4173>. |

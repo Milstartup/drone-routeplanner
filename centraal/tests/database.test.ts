@@ -17,14 +17,32 @@ const C = '00000000-0000-0000-0000-00000000000c';
 let db: PGlite;
 
 /** Runs SQL as a logged-in user (or as a sensor box without a login when `user` is null). */
-async function as<T>(user: string | null, sql: string, params: unknown[] = []): Promise<T[]> {
+async function as<T>(user: string | null, sql: string, params: unknown[] = [], role?: string): Promise<T[]> {
   await db.exec(`reset role; select set_config('request.jwt.claim.sub', '${user ?? ''}', false);`);
-  await db.exec(`set role ${user ? 'authenticated' : 'anon'}`);
+  await db.exec(`set role ${role ?? (user ? 'authenticated' : 'anon')}`);
   try {
     return (await db.query<T>(sql, params)).rows;
   } finally {
     await db.exec('reset role');
   }
+}
+
+/** A new database with Supabase's `auth` schema and roles imitated. */
+async function startDatabase(privileges = ''): Promise<void> {
+  db = new PGlite();
+  await db.exec(`
+    create role anon nologin;
+    create role authenticated nologin;
+    create role service_role nologin bypassrls;
+    create schema auth;
+    create table auth.users (id uuid primary key, email text);
+    create function auth.uid() returns uuid language sql stable as
+      $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    grant usage on schema public, auth to anon, authenticated, service_role;
+    grant execute on function auth.uid() to anon, authenticated, service_role;
+    insert into auth.users values ('${A}', 'a@voorbeeld.nl'), ('${B}', 'b@voorbeeld.nl'), ('${C}', 'c@voorbeeld.nl');
+    ${privileges}
+  `);
 }
 
 const upload = (sensorId: string, measurements: object[], extra: object = {}) =>
@@ -34,18 +52,7 @@ describe('central system database', () => {
   let keyS1 = '';
 
   beforeAll(async () => {
-    db = new PGlite();
-    await db.exec(`
-      create role anon nologin;
-      create role authenticated nologin;
-      create schema auth;
-      create table auth.users (id uuid primary key, email text);
-      create function auth.uid() returns uuid language sql stable as
-        $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-      grant usage on schema public, auth to anon, authenticated;
-      grant execute on function auth.uid() to anon, authenticated;
-      insert into auth.users values ('${A}', 'a@voorbeeld.nl'), ('${B}', 'b@voorbeeld.nl'), ('${C}', 'c@voorbeeld.nl');
-    `);
+    await startDatabase();
     await db.exec(migration);
     // Running it again must work: the install script may do that.
     await db.exec(migration);
@@ -134,5 +141,64 @@ describe('central system database', () => {
     await as(A, `delete from public.velden`);
     expect(await as(A, 'select * from public.velden')).toHaveLength(0);
     expect(await as(B, 'select * from public.veld_leden')).toHaveLength(0);
+  });
+});
+
+// Supabase has two kinds of project: since May 2026 new tables get no rights by themselves, and
+// older projects give them to every role. The migration must give the same rights in both.
+describe.each([
+  ['nothing automatically', `alter default privileges in schema public revoke execute on functions from public;`],
+  ['everything automatically', `
+    alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+    alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+    alter default privileges in schema public grant all on functions to anon, authenticated, service_role;`],
+])('rights in a Supabase project that gives %s', (_name, privileges) => {
+  let key = '';
+  const field = { format: 'veldvlucht/veld', sensors: [{ id: 'veld-s1' }] };
+  const service = <T>(sql: string, params: unknown[] = []) => as<T>(null, sql, params, 'service_role');
+
+  beforeAll(async () => {
+    await startDatabase(privileges);
+    await db.exec(migration);
+    const keys = await as<{ sleutel: string }>(A, 'select * from public.bewaar_veld($1, $2, $3)', ['veld', 'Veld', JSON.stringify(field)]);
+    key = keys[0].sleutel;
+  }, 120_000);
+
+  it('lets the app and a box do their work', async () => {
+    expect(await as(A, 'select * from public.velden')).toHaveLength(1);
+    expect(await as(A, 'select * from public.sensoren')).toHaveLength(1);
+    await as(null, 'select public.sensor_upload($1, $2)', [key, upload('veld-s1', [{ ageS: 60, raw: 2000 }])]);
+    expect(await as(A, 'select * from public.sensormetingen')).toHaveLength(1);
+  });
+
+  it('lets the edge function read everything and save weather and advice', async () => {
+    const [{ id }] = await service<{ id: string }>('select id, veld_id, veld from public.velden');
+    expect(await service(`select tijd, ruw, s.sensor_id from public.sensormetingen m join public.sensoren s on s.id = m.sensor`)).toHaveLength(1);
+    expect(await service('select lat, lng, reden from public.aandacht')).toHaveLength(0);
+    for (let round = 0; round < 2; round += 1) {
+      await service(`insert into public.weer (veld, verwachting) values ($1, '{}')
+        on conflict (veld) do update set verwachting = excluded.verwachting`, [id]);
+      await service(`insert into public.resultaten (veld, resultaten) values ($1, '{}')
+        on conflict (veld) do update set resultaten = excluded.resultaten`, [id]);
+    }
+    expect(await service('select * from public.weer')).toHaveLength(1);
+    expect(await as(A, 'select * from public.resultaten')).toHaveLength(1);
+  });
+
+  it('keeps the edge function to what it needs', async () => {
+    await expect(service('delete from public.velden')).rejects.toThrow('permission denied');
+    await expect(service(`update public.sensoren set sleutel = 'x'`)).rejects.toThrow('permission denied');
+  });
+
+  it('keeps out everyone else', async () => {
+    await expect(as(null, 'select * from public.velden')).rejects.toThrow('permission denied');
+    await expect(as(null, 'select * from public.sensoren')).rejects.toThrow('permission denied');
+    await expect(as(null, `select public.bewaar_veld('x', 'x', '{}')`)).rejects.toThrow('permission denied');
+    await expect(as(null, 'select public.is_eigenaar(null)')).rejects.toThrow('permission denied');
+    await expect(as(null, 'select public.na_wijziging(null)')).rejects.toThrow('permission denied');
+    await expect(as(A, 'select public.na_wijziging(null)')).rejects.toThrow('permission denied');
+    await expect(as(A, `update public.sensoren set sleutel = 'x'`)).rejects.toThrow('permission denied');
+    await expect(as(A, `insert into public.resultaten (veld, resultaten) select id, '{}' from public.velden`)).rejects.toThrow('permission denied');
+    await expect(as(B, 'select * from public.velden')).resolves.toHaveLength(0);
   });
 });

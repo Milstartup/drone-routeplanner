@@ -9,7 +9,7 @@ create table if not exists public.instellingen (
   waarde text not null
 );
 alter table public.instellingen enable row level security;
-revoke all on public.instellingen from anon, authenticated;
+revoke all on public.instellingen from anon, authenticated, service_role;
 
 create extension if not exists pg_net with schema extensions;
 create extension if not exists pg_cron;
@@ -30,7 +30,7 @@ begin
           case when v is null then '{}'::jsonb else jsonb_build_object('veld', v) end;
 end;
 $$;
-revoke execute on function public.bereken_opnieuw(uuid) from public, anon, authenticated;
+revoke execute on function public.bereken_opnieuw(uuid) from public, anon, authenticated, service_role;
 
 select cron.unschedule(jobid) from cron.job where jobname = 'veldvlucht-centraal';
 select cron.schedule('veldvlucht-centraal', '7 * * * *', 'select public.bereken_opnieuw(null)');

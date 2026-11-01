@@ -50,11 +50,9 @@ fi
 echo "Project: $REF (https://$REF.supabase.co)"
 
 stap "3. De database klaarzetten"
-echo "Vraagt het om een databasewachtwoord: druk gewoon op Enter (het is niet nodig)."
-"$SUPABASE" link --project-ref "$REF" --workdir "$ROOT/centraal"
-"$SUPABASE" db query --linked --workdir "$ROOT/centraal" -f "$ROOT/centraal/supabase/migrations/20261027120000_veldvlucht.sql" >/dev/null
-"$SUPABASE" db query --linked --workdir "$ROOT/centraal" -f "$ROOT/centraal/supabase/migrations/20261027120100_elk_uur.sql" >/dev/null
-"$SUPABASE" db query --linked --workdir "$ROOT/centraal" \
+"$SUPABASE" db query --linked --project-ref "$REF" --workdir "$ROOT/centraal" -f "$ROOT/centraal/supabase/migrations/20261027120000_veldvlucht.sql" >/dev/null
+"$SUPABASE" db query --linked --project-ref "$REF" --workdir "$ROOT/centraal" -f "$ROOT/centraal/supabase/migrations/20261027120100_elk_uur.sql" >/dev/null
+"$SUPABASE" db query --linked --project-ref "$REF" --workdir "$ROOT/centraal" \
   "insert into public.instellingen (naam, waarde) values ('project_url', 'https://$REF.supabase.co') on conflict (naam) do update set waarde = excluded.waarde" >/dev/null
 echo "Tabellen, regels, functies en de taak van elk uur staan klaar."
 

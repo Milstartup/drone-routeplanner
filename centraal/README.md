@@ -48,8 +48,7 @@ Het centrale systeem uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md), hoofdstuk 4
    bash centraal/installeer.sh
    ```
 3. Er opent een browser: **log in bij Supabase en geef toestemming**. Kom daarna terug naar de Terminal.
-4. Vraagt het om een databasewachtwoord: **druk gewoon op Enter**.
-5. Aan het eind staat *Klaar*, met twee regels "Even proberen":
+4. Aan het eind staat *Klaar*, met twee regels "Even proberen":
    - *Rekenkern:* `{"berekend":0,"problemen":[]}` (er zijn nog geen velden);
    - *Sensorontvangst:* een melding met *Onbekende sleutel*. Dat is goed: het was een nep-sleutel.
 

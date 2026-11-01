@@ -20,3 +20,4 @@ ios/VeldvluchtKern/.swiftpm/
 
 # Sensor box: the hotspot password stays on this Mac
 sensor/Veldsensor/Instellingen.h
+supabase/.temp/

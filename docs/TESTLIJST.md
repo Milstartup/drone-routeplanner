@@ -27,19 +27,23 @@ Stand: 27 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - het programma van elk uur tegen een nep-database, en dat de cloud precies hetzelfde advies geeft als de app;
   - de koppeling in de app tegen een nep-server: inloggen, synchroniseren, geen internet;
   - de foto-analyse met nagemaakte foto's: hij vond precies de ene gelige plant, op de goede plek.
-- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; een echt sensorkastje; het centrale systeem in een echt Supabase-project; jouw eigen indruk van de schermen.
+- **Het centrale systeem in je eigen Supabase-project (1 november 2026):**
+  - account, veld, weer en advies komen in de cloud en terug in de app;
+  - nep-metingen komen binnen, en dubbel versturen telt één keer;
+  - zonder login kun je geen velden lezen, en een verkeerde sleutel wordt geweigerd.
+- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
 
 ## A. Zonder drone (binnen, ongeveer 10 minuten)
 
-- [ ] **A1** De app opent met onderaan vier tabbladen: *Drone*, *Route*, *Veldkaart* en *Vluchten*.
+- [x] **A1** De app opent met onderaan vier tabbladen: *Drone*, *Route*, *Veldkaart* en *Vluchten*.
   - Op het beginscherm van de iPhone staat het nieuwe icoon: een groen veld met witte vliegbanen en een drone.
-- [ ] **A2** *Route* → **Voorbeeldroute laden**. Je hoort dit te zien:
+- [x] **A2** *Route* → **Voorbeeldroute laden**. Je hoort dit te zien:
   - vier tegels: *Afstand* 2,52 km (20 routepunten), *Vliegtijd* 12:04 min, *Foto's* 180 en *Hoogte* 30 m;
   - een groene kaart *Route is in orde*;
   - onderaan de groene knop **Vliegen in de simulator…**
-- [ ] **A3** *Route* → tik op het kaartje bovenaan (**Toon op de kaart**). Je hoort dit te zien:
+- [x] **A3** *Route* → tik op het kaartje bovenaan (**Toon op de kaart**). Je hoort dit te zien:
   - de luchtfoto met 10 gele banen, oranje stippellijnen en witte stipjes;
   - een blauw huisje en een groene vlag.
   - Wissel met *Kaart* rechtsboven naar Apple en terug.
@@ -49,10 +53,10 @@ Stand: 27 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   3. Open het: *Route* → **Routebestand openen…**
   4. Probeer het ook via de Bestanden-app: houd het bestand ingedrukt → *Deel* → *Veldvlucht*.
 - [ ] **A5** Open een willekeurig ander JSON-bestand. Er hoort een duidelijke rode melding te komen, en geen crash.
-- [ ] **A6** *Veldkaart*. Je hoort dit te zien:
+- [x] **A6** *Veldkaart*. Je hoort dit te zien:
   - de weerbalk met het beste vliegmoment;
   - 5 stroken (blauw, blauw, geel, geel, rood), 3 paarse markeringen en 3 turquoise druppels.
-- [ ] **A7** Tik op een strook (*Waarop gebaseerd*), een druppel (grafiek) en een paarse markering (reden).
+- [x] **A7** Tik op een strook (*Waarop gebaseerd*), een druppel (grafiek) en een paarse markering (reden).
 - [ ] **A8** De app vraagt om je locatie. Kies *Bij gebruik van app*: op de kaart hoort een blauwe stip te staan waar je bent.
 - [ ] **A9** *Veldkaart* → tik op **Voorbeeldgegevens**, onder de naam van het veld:
   - kies **Eigen bestand laden…** en neem een bestand uit `docs/voorbeelden`. Onder de naam staat dan *Eigen gegevens: …*;
@@ -162,8 +166,8 @@ Wat al getest is: de berekening van de route (gelijk aan de planner), het weer, 
 
 Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het installeert en gebruikt, staat in [centraal/README.md](../centraal/README.md).
 
-- [ ] **F1** Maak een gratis project op <https://supabase.com> (naam `veldvlucht`, regio in Europa). Het databasewachtwoord bewaar je zelf; niemand heeft het nodig.
-- [ ] **F2** Draai in de Terminal, in de projectmap:
+- [x] **F1** Maak een gratis project op <https://supabase.com> (naam `veldvlucht`, regio in Europa). Het databasewachtwoord bewaar je zelf; niemand heeft het nodig.
+- [x] **F2** Draai in de Terminal, in de projectmap:
   ```bash
   bash centraal/installeer.sh
   ```
@@ -172,12 +176,12 @@ Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het i
   - *Sensorontvangst:* een melding met *Onbekende sleutel*.
 
   Laat het Claude weten: die zet de nieuwe app op je iPhone.
-- [ ] **F3** *Route* → het poppetje linksboven → vul je e-mailadres en een wachtwoord in → **Account maken**.
+- [x] **F3** *Route* → het poppetje linksboven → vul je e-mailadres en een wachtwoord in → **Account maken**.
   - Je krijgt een e-mail van Supabase. Klik op de link. (De pagina die opent, mag een foutmelding geven.)
   - Log in. Je hoort een groene kaart *Ingelogd* te zien, met je e-mailadres.
-- [ ] **F4** **Nu synchroniseren**. Bij *Laatst gesynchroniseerd* staat de tijd van nu. Kijk in het dashboard van Supabase bij *Table Editor* → `velden`: staan je velden erin?
-- [ ] **F5** *Veldkaart* → je veld → **Sensoren plaatsen en ijken…** → **Bewaren**. Bij elke sensor staat nu een **sleutel**, met een kopieerknopje.
-- [ ] **F6** **Een nep-kastje naar de cloud**, vanaf de Mac. Vul de drie waarden in (*Route* → het poppetje, en de sleutel uit F5):
+- [x] **F4** **Nu synchroniseren**. Bij *Laatst gesynchroniseerd* staat de tijd van nu. Kijk in het dashboard van Supabase bij *Table Editor* → `velden`: staan je velden erin?
+- [x] **F5** *Veldkaart* → je veld → **Sensoren plaatsen en ijken…** → **Bewaren**. Bij elke sensor staat nu een **sleutel**, met een kopieerknopje.
+- [x] **F6** **Een nep-kastje naar de cloud**, vanaf de Mac. Vul de drie waarden in (*Route* → het poppetje, en de sleutel uit F5):
   ```bash
   python3 sensor/nep-sensorkastje.py --cloud JOUW_PROJECT --cloud-sleutel JOUW_CLOUD_SLEUTEL --sensor-sleutel JOUW_SENSOR_SLEUTEL --sensor mijn-veld-s1
   ```
@@ -188,7 +192,7 @@ Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het i
   - Zet de hotspot aan, maar laat de app **dicht**.
   - In de Serial Monitor hoort te staan: *Gelukt. De cloud zegt: …*
   - Open daarna de app: zijn de metingen er?
-- [ ] **F8** IJk de sensor (E10) en kies in het menu van de veldkaart **Advies nu laten berekenen**. Tik op de strook met de sensor. Onderaan hoort te staan: *Berekend door het centrale systeem in de cloud*.
+- [x] **F8** IJk de sensor (E10) en kies in het menu van de veldkaart **Advies nu laten berekenen**. Tik op de strook met de sensor. Onderaan hoort te staan: *Berekend door het centrale systeem in de cloud*.
 - [ ] **F9** Zet de iPhone in **vliegtuigmodus** en open de veldkaart. Het advies hoort er nog te zijn. Haal vliegtuigmodus weer weg.
 - [ ] **F10** **Delen:**
   1. *Veldkaart* → menu → **Delen met anderen…** → vul een tweede e-mailadres in. Dat moet al een account hebben: maak het eerst, net als bij F3.

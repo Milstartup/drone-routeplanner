@@ -183,7 +183,7 @@ Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het i
   ```
   - Het programma hoort te melden dat de metingen zijn ontvangen.
   - Synchroniseer de app: staat de turquoise druppel er, met de metingen?
-  - Draai het nog eens. Komen er geen dubbele metingen bij?
+  - Elke keer dat je dit draait, komen er nieuwe nep-metingen bij. Dat hoort zo: het nep-kastje doet alsof het opnieuw is aangezet.
 - [ ] **F7** Hetzelfde met het **echte kastje** (zie [sensor/README.md](../sensor/README.md)): zet `CLOUD_PROJECT`, `CLOUD_SLEUTEL` en `SENSOR_SLEUTEL` in `Instellingen.h` en zet het programma opnieuw op het bordje.
   - Zet de hotspot aan, maar laat de app **dicht**.
   - In de Serial Monitor hoort te staan: *Gelukt. De cloud zegt: …*

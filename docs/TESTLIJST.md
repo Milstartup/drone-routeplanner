@@ -57,13 +57,13 @@ Stand: 27 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - de weerbalk met het beste vliegmoment;
   - 5 stroken (blauw, blauw, geel, geel, rood), 3 paarse markeringen en 3 turquoise druppels.
 - [x] **A7** Tik op een strook (*Waarop gebaseerd*), een druppel (grafiek) en een paarse markering (reden).
-- [ ] **A8** De app vraagt om je locatie. Kies *Bij gebruik van app*: op de kaart hoort een blauwe stip te staan waar je bent.
+- [x] **A8** De app vraagt om je locatie. Kies *Bij gebruik van app*: op de kaart hoort een blauwe stip te staan waar je bent.
 - [ ] **A9** *Veldkaart* → tik op **Voorbeeldgegevens**, onder de naam van het veld:
   - kies **Eigen bestand laden…** en neem een bestand uit `docs/voorbeelden`. Onder de naam staat dan *Eigen gegevens: …*;
   - kies daarna **Voorbeeldgegevens gebruiken**.
-- [ ] **A10** *Vluchten* toont nog *Nog geen vluchten*.
+- [x] **A10** *Vluchten* toont nog *Nog geen vluchten*.
 - [ ] **A11** Buiten in de zon: is de veldkaart in één oogopslag te lezen? (stap 7, punt 3) En de tegels op het tabblad *Drone*?
-- [ ] **A12** Zet de iPhone op donker (*Instellingen → Weergave en helderheid → Donker*). Is alles nog goed te lezen? Zet hem daarna terug zoals je wilt.
+- [x] **A12** Zet de iPhone op donker (*Instellingen → Weergave en helderheid → Donker*). Is alles nog goed te lezen? Zet hem daarna terug zoals je wilt.
 
 ## B. Drone op tafel, zonder simulator (propellers eraf)
 
@@ -142,15 +142,15 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 
 Wat al getest is: de berekening van de route (gelijk aan de planner), het weer, het wateradvies en het ontvangen van metingen. Dat laatste is getest met nep-metingen vanaf de Mac. Een echt kastje en echte velden nog niet.
 
-- [ ] **E1** Ga naar een veld en open *Route* → **Veld tekenen**. Je hoort dit te zien:
+- [x] **E1** Ga naar een veld en open *Route* → **Veld tekenen**. Je hoort dit te zien:
   - de kaart springt naar je eigen plek (blauwe of groene stip);
   - na 3 aangetikte hoeken verschijnen de gele vliegbanen en de witte fotostipjes;
   - onderin staan afstand, vliegtijd, foto's en de grootte van het veld.
-- [ ] **E2** Sleep een hoek (vasthouden) en het huisje (startpunt). Haal een hoek weg (aantikken → *Verwijderen*). Probeer de knop met de pijl terug.
-- [ ] **E3** *Bewaren* → geef een naam. Het veld staat onder *Mijn velden*; tik erop. Klopt de route met je veld?
+- [x] **E2** Sleep een hoek (vasthouden) en het huisje (startpunt). Haal een hoek weg (aantikken → *Verwijderen*). Probeer de knop met de pijl terug.
+- [x] **E3** *Bewaren* → geef een naam. Het veld staat onder *Mijn velden*; tik erop. Klopt de route met je veld?
 - [ ] **E4** Vlieg dit veld in de simulator, net als in blok C (C2 t/m C11).
 - [ ] **E5** *⋯* → **Route delen** → AirDrop naar de Mac. Open het bestand in de planner (*JSON laden*): staat dezelfde route er?
-- [ ] **E6** *Veldkaart* → tik op de regel onder de naam → kies je veld. Je hoort dit te zien:
+- [x] **E6** *Veldkaart* → tik op de regel onder de naam → kies je veld. Je hoort dit te zien:
   - je veld in grijze stroken (*geen advies*: er zijn nog geen sensoren);
   - het weer van vandaag en de komende dagen, met het beste vliegmoment.
 - [ ] **E7** Zet in hetzelfde menu **Melding bij goed vliegweer** aan en sta meldingen toe. Komt er een melding, een uur voor het volgende goede moment?
@@ -193,7 +193,7 @@ Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het i
   - In de Serial Monitor hoort te staan: *Gelukt. De cloud zegt: …*
   - Open daarna de app: zijn de metingen er?
 - [x] **F8** IJk de sensor (E10) en kies in het menu van de veldkaart **Advies nu laten berekenen**. Tik op de strook met de sensor. Onderaan hoort te staan: *Berekend door het centrale systeem in de cloud*.
-- [ ] **F9** Zet de iPhone in **vliegtuigmodus** en open de veldkaart. Het advies hoort er nog te zijn. Haal vliegtuigmodus weer weg.
+- [x] **F9** Zet de iPhone in **vliegtuigmodus** en open de veldkaart. Het advies hoort er nog te zijn. Haal vliegtuigmodus weer weg.
 - [ ] **F10** **Delen:**
   1. *Veldkaart* → menu → **Delen met anderen…** → vul een tweede e-mailadres in. Dat moet al een account hebben: maak het eerst, net als bij F3.
   2. Log uit, en log in met dat tweede account.

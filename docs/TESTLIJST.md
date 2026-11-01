@@ -142,15 +142,15 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 
 Wat al getest is: de berekening van de route (gelijk aan de planner), het weer, het wateradvies en het ontvangen van metingen. Dat laatste is getest met nep-metingen vanaf de Mac. Een echt kastje en echte velden nog niet.
 
-- [x] **E1** Ga naar een veld en open *Route* → **Veld tekenen**. Je hoort dit te zien:
+- [ ] **E1** Ga naar een veld en open *Route* → **Veld tekenen**. Je hoort dit te zien:
   - de kaart springt naar je eigen plek (blauwe of groene stip);
   - na 3 aangetikte hoeken verschijnen de gele vliegbanen en de witte fotostipjes;
   - onderin staan afstand, vliegtijd, foto's en de grootte van het veld.
-- [x] **E2** Sleep een hoek (vasthouden) en het huisje (startpunt). Haal een hoek weg (aantikken → *Verwijderen*). Probeer de knop met de pijl terug.
-- [x] **E3** *Bewaren* → geef een naam. Het veld staat onder *Mijn velden*; tik erop. Klopt de route met je veld?
+- [ ] **E2** Sleep een hoek (vasthouden) en het huisje (startpunt). Haal een hoek weg (aantikken → *Verwijderen*). Probeer de knop met de pijl terug.
+- [ ] **E3** *Bewaren* → geef een naam. Het veld staat onder *Mijn velden*; tik erop. Klopt de route met je veld?
 - [ ] **E4** Vlieg dit veld in de simulator, net als in blok C (C2 t/m C11).
 - [ ] **E5** *⋯* → **Route delen** → AirDrop naar de Mac. Open het bestand in de planner (*JSON laden*): staat dezelfde route er?
-- [x] **E6** *Veldkaart* → tik op de regel onder de naam → kies je veld. Je hoort dit te zien:
+- [ ] **E6** *Veldkaart* → tik op de regel onder de naam → kies je veld. Je hoort dit te zien:
   - je veld in grijze stroken (*geen advies*: er zijn nog geen sensoren);
   - het weer van vandaag en de komende dagen, met het beste vliegmoment.
 - [ ] **E7** Zet in hetzelfde menu **Melding bij goed vliegweer** aan en sta meldingen toe. Komt er een melding, een uur voor het volgende goede moment?

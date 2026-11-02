@@ -379,7 +379,9 @@ extension DJIConnection: DJIFlightControllerDelegate {
         let seriousLow = state.isLowerThanSeriousBatteryWarningThreshold
         let landing = [.autoLanding, .confirmLanding].contains(state.flightMode)
         let returning = landing || state.flightMode == .goHome
-        let confirmationNeeded = state.isLandingConfirmationNeeded
+        // In the simulator (2 November 2026) the Mavic Mini stopped 0.5 m above the ground and
+        // waited; whichever of the two DJI uses for that, both count.
+        let confirmationNeeded = state.isLandingConfirmationNeeded || state.flightMode == .confirmLanding
         let wind: Int
         switch state.windWarning {
         case .level1: wind = 1

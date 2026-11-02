@@ -17,6 +17,7 @@ final class DJIConnection: NSObject, ObservableObject {
     private var loggedBattery = false
     private var loggedGPS = false
     private var loggedGoodGPS = false
+    private var loggedStorageKinds: Set<String> = []
     private let connectionKey = DJIProductKey(param: DJIParamConnection)
 
     /// Set by the flight screen while a route flight is open.
@@ -146,6 +147,7 @@ final class DJIConnection: NSObject, ObservableObject {
         loggedBattery = false
         loggedGPS = false
         loggedGoodGPS = false
+        loggedStorageKinds = []
         addLog(connected ? "Drone verbonden met de afstandsbediening." : "Drone niet (meer) verbonden met de afstandsbediening.")
         bindComponents()
         if connected {
@@ -441,6 +443,27 @@ extension DJIConnection: DJIBatteryDelegate {
 
 extension DJIConnection: DJICameraDelegate {
     func camera(_ camera: DJICamera, didUpdate storageState: DJICameraStorageState) {
+        let place: String
+        switch storageState.location {
+        case .sdCard: place = "SD-kaart"
+        case .internalStorage: place = "interne opslag"
+        default: place = "onbekende opslag"
+        }
+        // Each kind of report goes into the log once, so a test shows what the camera sends.
+        let kind = "\(place) \(storageState.isInitializing) \(storageState.isInserted) "
+            + "\(storageState.hasError) \(storageState.isFull) \(storageState.availableCaptureCount == 0)"
+        let internalStorage = storageState.location == .internalStorage
+        let report = "Camera meldt \(place): bezig \(storageState.isInitializing ? "ja" : "nee"), "
+            + "kaart \(storageState.isInserted ? "ja" : "nee"), fout \(storageState.hasError ? "ja" : "nee"), "
+            + "vol \(storageState.isFull ? "ja" : "nee"), ruimte voor \(storageState.availableCaptureCount) foto's"
+            + (internalStorage ? " (genegeerd)." : ".")
+        onMain { [self] in
+            if loggedStorageKinds.insert(kind).inserted { addLog(report) }
+        }
+        // The SDK can also report internal storage, which the Mavic Mini doesn't have. Shown on
+        // the same tile, those reports made the SD card flip between full and free.
+        guard !internalStorage else { return }
+
         let text: String
         if storageState.isInitializing {
             text = "wordt gelezen…"

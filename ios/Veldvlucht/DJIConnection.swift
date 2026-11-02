@@ -382,6 +382,7 @@ extension DJIConnection: DJIFlightControllerDelegate {
         // In the simulator (2 November 2026) the Mavic Mini stopped 0.5 m above the ground and
         // waited; whichever of the two DJI uses for that, both count.
         let confirmationNeeded = state.isLandingConfirmationNeeded || state.flightMode == .confirmLanding
+        let modeName = state.flightModeString
         let wind: Int
         switch state.windWarning {
         case .level1: wind = 1
@@ -401,7 +402,8 @@ extension DJIConnection: DJIFlightControllerDelegate {
                 batteryPercent: status.batteryPercent, batteryNeededToGoHome: needed,
                 gpsLevel: level, homePointSet: homeSet, windWarning: wind,
                 seriousLowBattery: seriousLow, droneReturningHome: returning,
-                droneLanding: landing, landingConfirmationNeeded: confirmationNeeded
+                droneLanding: landing, landingConfirmationNeeded: confirmationNeeded,
+                flightMode: modeName
             )
             lastTelemetry = telemetry
             onTelemetry?(telemetry)

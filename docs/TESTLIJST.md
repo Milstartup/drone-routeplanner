@@ -4,7 +4,7 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 ## Wat al getest is
 
-- **Op de Mac, 120 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 123 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -34,6 +34,11 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 - **Eerste vlucht in de simulator van DJI (2 november 2026):** je eigen veld *Vliegtest #1* (5 foto's). Opstijgen, richtingtest, route en landen gingen goed: 5 van 5 foto's op 30 m. Twee fouten gevonden en hersteld:
   - de tegel *SD-kaart* sprong heen en weer tussen vol en vrij: de drone meldt ook een "interne opslag" die de Mavic Mini niet heeft, en die meldingen negeert de app nu;
   - **Overnemen** tijdens het naar huis gaan zei "jij vliegt", terwijl de drone dat weigerde (time-out), en sprong dan terug naar "De drone keert zelf terug". Nu zegt de app pas "jij vliegt" als de drone het accepteert, gebruikt hij tijdens het landen *landen afbreken*, en zegt hij eerlijk als het niet lukt. Vier nieuwe nep-drone-tests.
+- **Tweede ronde in de simulator (2 november 2026, 9:23 tot 9:34):** pauze, Overnemen en de stick-test werkten, en de melding *De drone hangt net boven de grond en wacht* verscheen. Wat de app daarna beter doet:
+  - stopt de drone zelf met terugkeren (bijvoorbeeld door de pauzeknop van de afstandsbediening), dan zegt de app na 3 s *De drone keert niet meer terug … Jij vliegt*;
+  - land je zelf met de linkerstick omlaag, dan heet dat niet meer *De drone keert zelf terug*;
+  - twee keer steeg de drone niet op (*Verder vanaf foto 3*), zonder foutmelding. Nu schrijft de app daarbij op of de drone het commando aannam, of de motoren draaiden en in welke vluchtstand hij stond.
+  Drie nieuwe nep-drone-tests.
 - **Nog nooit getest:** de rest van blok C; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
@@ -95,9 +100,9 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - vliegt het vliegtuigje over de gele lijnen?
   - worden de stippen **groen**, zonder rode?
   - staat de hoogte rond 30 m en de snelheid rond 4 m/s?
-- [ ] **C5** **Vraag 3, hervatten:** druk midden in een baan op **Pauze** en wacht 10 seconden: hangt hij stil? Druk dan op **Hervatten**: gaat hij terug naar waar hij stopte en verder, zonder dubbele foto's?
-- [ ] **C6** Druk op **Overnemen**. Je hoort te zien: *Overgenomen: jij vliegt*. Daarna hoort **Hervatten** weer te werken.
-- [ ] **C7** Beweeg tijdens de route **kort een stick**. Je hoort te zien: *Je bewoog een stick: de app stuurt niet meer*. (Nodig om echt vliegen vrij te geven.)
+- [x] **C5** **Vraag 3, hervatten:** druk midden in een baan op **Pauze** en wacht 10 seconden: hangt hij stil? Druk dan op **Hervatten**: gaat hij terug naar waar hij stopte en verder, zonder dubbele foto's?
+- [x] **C6** Druk op **Overnemen**. Je hoort te zien: *Overgenomen: jij vliegt*. Daarna hoort **Hervatten** weer te werken.
+- [x] **C7** Beweeg tijdens de route **kort een stick**. Je hoort te zien: *Je bewoog een stick: de app stuurt niet meer*. (Nodig om echt vliegen vrij te geven.)
   - Houd daarna een stick vast en druk op **Hervatten**. In het logboek hoort te staan: *Laat eerst de sticks los*.
 - [ ] **C8** Druk op de **pauze/terugkeerknop van de afstandsbediening**. Wat doet de drone, en wat zegt de app? Je verwacht *De drone keert zelf terug*, zonder dat de app ertegenin stuurt.
 - [ ] **C9** Trek tijdens de route **de kabel uit de iPhone** en steek hem na 10 seconden terug. Je verwacht:
@@ -108,7 +113,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - Druk opnieuw op **Naar huis** en, als hij aan het **landen** is, nog eens op **Overnemen**. Je hoort *Landen is afgebroken; jij vliegt* te zien. Lukt het niet, dan hoort er *… afbreken lukt niet* te staan, en **niet** *jij vliegt*.
   - Hangt de drone net boven de grond stil? Dan hoort er te staan: *De drone hangt net boven de grond en wacht*. Houd dan de linkerstick omlaag tot de motoren stoppen.
 - [ ] **C11** Vlieg één route helemaal af, tot *Klaar* met 180 van 180 foto's. (Nodig om echt vliegen vrij te geven.) Een korte route van 5 foto's lukte al op 2 november en telt voor de app al mee; doe toch de hele voorbeeldroute, ongeveer 12 minuten.
-- [ ] **C12** **Verder met een nieuwe accu:**
+- [ ] **C12** **Verder met een nieuwe accu:** (2 november: de drone steeg twee keer niet op; zet drone en simulator opnieuw aan en probeer het nog eens)
   1. Start de route en druk halverwege op **Naar huis**.
   2. Sluit het vluchtscherm en open het opnieuw.
   3. Zet **Verder vanaf foto …** aan en start: begint hij bij die foto?

@@ -36,6 +36,8 @@ final class FakeDrone: DroneControl {
     var waitsForLandingConfirmation = false
     /// The drone refuses to stop going home or landing.
     var refusesCancel = false
+    /// The drone accepts the take-off command but stays on the ground.
+    var ignoresTakeOff = false
 
     private(set) var now = Date(timeIntervalSince1970: 1_793_000_000)
     private(set) var position: XY
@@ -146,6 +148,11 @@ final class FakeDrone: DroneControl {
         goingHome = true
     }
 
+    /// The pilot stops the return with the pause button on the remote controller: it hovers.
+    func stopOwnReturn() {
+        goingHome = false
+    }
+
     private func after(_ seconds: Double, _ action: @escaping () -> Void) {
         events.append((now.addingTimeInterval(seconds), action))
     }
@@ -157,6 +164,7 @@ final class FakeDrone: DroneControl {
     }
 
     func takeOff(completion: @escaping (Error?) -> Void) {
+        guard !ignoresTakeOff else { return completion(nil) }
         motorsOn = true
         after(1.0) { [self] in
             flying = true

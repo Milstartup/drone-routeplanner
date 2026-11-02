@@ -221,7 +221,7 @@ Vlieg hierbij nog niet.
   - de neus langs de vliegbanen.
 - **Foto's:** een losse foto bij elke geplande positie, met minstens 2 s ertussen. Een foto telt pas als de camera het bestand meldt. Het fotolog (`veld/fotolog`) staat per vlucht in de Bestanden-app.
 - **Alleen in de simulator:** zonder actieve simulator start de route niet.
-- **Getest met een nep-drone** (nu 120 tests in `ios/VeldvluchtKern`, na een onafhankelijke review met zes herstelde fouten):
+- **Getest met een nep-drone** (nu 123 tests in `ios/VeldvluchtKern`, na een onafhankelijke review met zes herstelde fouten):
   - de hele voorbeeldroute, met alle 180 foto's binnen 2 m van hun plek;
   - verwisselde assen en zijwind;
   - pauze en hervatten, overnemen en verbindingsverlies.

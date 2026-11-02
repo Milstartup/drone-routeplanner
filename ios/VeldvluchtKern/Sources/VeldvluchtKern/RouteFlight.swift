@@ -60,6 +60,8 @@ struct DroneTelemetry: Equatable {
     var droneLanding = false
     /// DJI: less than 0.3 m above the ground, the drone waits until the landing is confirmed.
     var landingConfirmationNeeded = false
+    /// DJI's name for the flight mode, only for the log.
+    var flightMode = ""
 }
 
 /// What the flight needs from the drone. DJIConnection implements it in the app.
@@ -234,6 +236,10 @@ final class RouteFlight: ObservableObject {
     private var cancellingReturn = false
     private var wasLanding = false
     private var wasWaitingToLand = false
+    /// The last time the drone's data showed it going home or landing.
+    private var lastReturnSeen: Date?
+    /// The drone confirmed the take-off command.
+    private var takeOffAccepted = false
     /// Distance along the route at the last tick with a position, for resuming without GPS.
     private var lastAlongM: Double?
     private var lastFileNumber: Int?
@@ -370,6 +376,8 @@ final class RouteFlight: ObservableObject {
             self.drone?.takeOff { [weak self] error in
                 if let error = error {
                     self?.addLog("Opstijgen meldt: \(error.localizedDescription) (de app kijkt of de drone toch vliegt).")
+                } else {
+                    self?.takeOffAccepted = true
                 }
             }
         }
@@ -487,8 +495,12 @@ final class RouteFlight: ObservableObject {
             self.homeCommandPending = false
             // Taken over in the meantime: then the pilot flies, no go-home.
             guard self.phaseVersion == version else { return }
+            self.lastReturnSeen = self.clock()
             self.drone?.goHome { [weak self] error in
-                guard let self = self, let error = error, self.phaseVersion == version else { return }
+                guard let self = self, self.phaseVersion == version else { return }
+                // The 3 s before "no longer going home" count from the drone's answer.
+                self.lastReturnSeen = self.clock()
+                guard let error = error else { return }
                 self.setPhase(.takenOver("Naar huis lukt niet: \(error.localizedDescription). Vlieg zelf terug."))
                 self.addLog("Naar huis lukt niet: \(error.localizedDescription). Vlieg zelf terug.")
             }
@@ -571,8 +583,18 @@ final class RouteFlight: ObservableObject {
                 if let next = continueAtPhoto {
                     addLog("Route nog niet af: een volgende vlucht kan verder vanaf foto \(next + 1).")
                 }
-            } else if let t = telemetry {
+            } else if let t = telemetry, t.connected {
                 noteLanding(t)
+                if t.droneReturningHome { lastReturnSeen = now }
+                // The drone stopped going home or landing by itself, for example with the pause
+                // button on the remote controller: then the pilot flies. The 3 s cover the moment
+                // before the drone's data shows a return that was just sent.
+                let since = max(phaseStart, lastReturnSeen ?? phaseStart)
+                if !t.droneReturningHome, t.isFlying, !homeCommandPending, !cancellingReturn,
+                   now.timeIntervalSince(since) >= 3 {
+                    setPhase(.takenOver("De drone keert niet meer terug."))
+                    addLog("De drone keert niet meer terug (bijvoorbeeld door de pauzeknop op de afstandsbediening). Jij vliegt\(Self.modeNote(t)).")
+                }
             }
         case .takenOver:
             if let t = telemetry, t.connected, !t.isFlying, !t.motorsOn {
@@ -584,14 +606,24 @@ final class RouteFlight: ObservableObject {
             } else if let t = telemetry, t.connected, t.droneReturningHome, now.timeIntervalSince(phaseStart) >= 2 {
                 // After a lost connection the drone may go home by itself (failsafe): show that.
                 // Not in the first 2 s, while the drone's data may still show a cancelled return.
+                // A landing here is the pilot's own (left stick down): noteLanding() reports it.
                 setPhase(.returningHome)
-                addLog("De drone keert zelf terug (failsafe of de terugkeerknop). Overnemen kan met de knop of de afstandsbediening.")
+                wasLanding = false
+                wasWaitingToLand = false
+                if !t.droneLanding {
+                    addLog("De drone keert zelf terug (failsafe of de terugkeerknop). Overnemen kan met de knop of de afstandsbediening.")
+                }
             }
         case _ where phase.isSteering:
             tickSteering(now)
         default:
             break
         }
+    }
+
+    /// ", vluchtstand: …" for the log, when the drone gave its flight mode.
+    private static func modeNote(_ t: DroneTelemetry) -> String {
+        t.flightMode.isEmpty ? "" : ", vluchtstand: \(t.flightMode)"
     }
 
     /// Says in the log when the return turns into a landing, and when the drone waits for the pilot.
@@ -618,6 +650,13 @@ final class RouteFlight: ObservableObject {
         } else if now.timeIntervalSince(phaseStart) > settings.takeoffTimeoutS, telemetry?.isFlying != true {
             setPhase(.failed("De drone is niet opgestegen."))
             addLog("De drone is niet opgestegen binnen \(Int(settings.takeoffTimeoutS)) s.")
+            // What the drone said, for finding out why (simulator test of 2 November 2026).
+            let answer = takeOffAccepted ? "nam het commando aan" : "gaf geen antwoord op het commando"
+            if let t = telemetry {
+                addLog("De drone \(answer). Motoren \(t.motorsOn ? "aan" : "uit"), hoogte \(String(format: "%.1f", t.altitudeM)) m\(Self.modeNote(t)).")
+            } else {
+                addLog("De drone \(answer). Geen gegevens van de drone.")
+            }
         }
     }
 

@@ -461,6 +461,46 @@ final class RouteFlightSafetyTests: XCTestCase {
         run(seconds: 1)
         XCTAssertEqual(flight.phase, .finished)
     }
+
+    func testPauseButtonDuringTheReturnHandsOver() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 20 }
+        flight.goHome()
+        run(seconds: 5)
+        drone.stopOwnReturn()
+        run(seconds: 2)
+        XCTAssertEqual(flight.phase, .returningHome, "nog niet in de eerste 3 s")
+        run(seconds: 2)
+        guard case .takenOver = flight.phase else { return XCTFail("\(flight.phase)") }
+        XCTAssertTrue(flight.log.contains { $0.text.contains("keert niet meer terug") })
+        flight.takeOver()
+        run(seconds: 1)
+        XCTAssertFalse(flight.log.contains { $0.text.contains("afbreken lukt niet") })
+    }
+
+    func testThePilotsOwnLandingIsNotCalledAReturn() {
+        goHomeUntilLanding()
+        flight.takeOver()
+        run(seconds: 3)
+        guard case .takenOver = flight.phase else { return XCTFail("\(flight.phase)") }
+        let before = flight.log.count
+        drone.startOwnReturn() // left stick down above the take-off point: the drone lands
+        run(seconds: 3)
+        XCTAssertEqual(flight.phase, .returningHome)
+        let after = flight.log.dropFirst(before).map(\.text)
+        XCTAssertTrue(after.contains("De drone landt."), "\(after)")
+        XCTAssertFalse(after.contains { $0.contains("keert zelf terug") }, "\(after)")
+        run(seconds: 600, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+    }
+
+    func testFailedTakeOffSaysWhatTheDroneReported() {
+        drone.ignoresTakeOff = true
+        flight.start()
+        run(seconds: 25)
+        guard case .failed = flight.phase else { return XCTFail("\(flight.phase)") }
+        XCTAssertTrue(flight.log.contains { $0.text.contains("nam het commando aan. Motoren uit") }, "\(flight.log.map(\.text))")
+    }
 }
 
 /// One test per finding of the independent review (26 October 2026).

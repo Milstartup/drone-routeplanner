@@ -394,6 +394,73 @@ final class RouteFlightSafetyTests: XCTestCase {
         flight.sticksMoved()
         XCTAssertTrue(flight.stickTakeOverHappened)
     }
+
+    // MARK: Simulator test of 2 November 2026: "Overnemen" while the drone went home
+
+    private func goHomeUntilLanding() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        flight.goHome()
+        run(seconds: 600) { [unowned self] in drone.landing }
+        XCTAssertTrue(drone.landing)
+    }
+
+    func testTakeOverWhileGoingHomeStopsGoingHome() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 20 }
+        flight.goHome()
+        run(seconds: 2)
+        XCTAssertTrue(drone.goingHome)
+        XCTAssertFalse(drone.landing)
+        flight.takeOver()
+        run(seconds: 5)
+        guard case .takenOver = flight.phase else { return XCTFail("\(flight.phase)") }
+        XCTAssertFalse(drone.goingHome)
+        XCTAssertTrue(flight.log.contains { $0.text == "Naar huis is afgebroken; jij vliegt." })
+    }
+
+    func testTakeOverWhileLandingStopsTheLanding() {
+        goHomeUntilLanding()
+        flight.takeOver()
+        run(seconds: 1)
+        guard case .takenOver = flight.phase else { return XCTFail("\(flight.phase)") }
+        XCTAssertFalse(drone.goingHome)
+        XCTAssertTrue(drone.flying, "hangt stil in de lucht")
+        XCTAssertTrue(flight.log.contains { $0.text == "Landen is afgebroken; jij vliegt." })
+        run(seconds: 5)
+        guard case .takenOver = flight.phase else { return XCTFail("springt terug: \(flight.phase)") }
+    }
+
+    func testRefusedTakeOverKeepsTheReturnAndSaysSo() {
+        drone.refusesCancel = true
+        goHomeUntilLanding()
+        for _ in 0..<6 {
+            flight.takeOver()
+            run(seconds: 0.5)
+            XCTAssertEqual(flight.phase, .returningHome)
+        }
+        run(seconds: 3)
+        XCTAssertEqual(flight.phase, .returningHome)
+        XCTAssertFalse(flight.log.contains { $0.text.contains("jij vliegt") }, "zegt niet dat de piloot vliegt")
+        XCTAssertFalse(flight.log.contains { $0.text.contains("keert zelf terug") }, "springt niet heen en weer")
+        XCTAssertLessThanOrEqual(flight.log.filter { $0.text.contains("afbreken lukt niet") }.count, 2,
+                                 "één poging tegelijk")
+        XCTAssertTrue(flight.log.contains { $0.text.contains("pauzeknop op de afstandsbediening") })
+        run(seconds: 600, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+    }
+
+    func testWaitingToLandIsExplained() {
+        drone.waitsForLandingConfirmation = true
+        goHomeUntilLanding()
+        run(seconds: 60) { [unowned self] in drone.telemetry().landingConfirmationNeeded }
+        run(seconds: 1)
+        XCTAssertTrue(flight.log.contains { $0.text == "De drone landt." })
+        XCTAssertEqual(flight.log.filter { $0.text.contains("linkerstick omlaag") }.count, 1)
+        drone.landByPilot()
+        run(seconds: 1)
+        XCTAssertEqual(flight.phase, .finished)
+    }
 }
 
 /// One test per finding of the independent review (26 October 2026).

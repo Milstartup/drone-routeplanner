@@ -377,7 +377,9 @@ extension DJIConnection: DJIFlightControllerDelegate {
         let simulator = fc.simulator?.isSimulatorActive ?? false
         let homeSet = state.isHomeLocationSet
         let seriousLow = state.isLowerThanSeriousBatteryWarningThreshold
-        let returning = [.goHome, .autoLanding, .confirmLanding].contains(state.flightMode)
+        let landing = [.autoLanding, .confirmLanding].contains(state.flightMode)
+        let returning = landing || state.flightMode == .goHome
+        let confirmationNeeded = state.isLandingConfirmationNeeded
         let wind: Int
         switch state.windWarning {
         case .level1: wind = 1
@@ -396,7 +398,8 @@ extension DJIConnection: DJIFlightControllerDelegate {
                 velocityNorth: north, velocityEast: east, isFlying: isFlying, motorsOn: motorsOn,
                 batteryPercent: status.batteryPercent, batteryNeededToGoHome: needed,
                 gpsLevel: level, homePointSet: homeSet, windWarning: wind,
-                seriousLowBattery: seriousLow, droneReturningHome: returning
+                seriousLowBattery: seriousLow, droneReturningHome: returning,
+                droneLanding: landing, landingConfirmationNeeded: confirmationNeeded
             )
             lastTelemetry = telemetry
             onTelemetry?(telemetry)
@@ -590,6 +593,11 @@ extension DJIConnection: DroneControl {
     func cancelGoHome(completion: @escaping (Error?) -> Void) {
         guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
         fc.cancelGoHome { [weak self] error in self?.onMain { completion(error) } }
+    }
+
+    func cancelLanding(completion: @escaping (Error?) -> Void) {
+        guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
+        fc.cancelLanding { [weak self] error in self?.onMain { completion(error) } }
     }
 }
 

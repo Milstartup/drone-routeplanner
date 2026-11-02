@@ -56,6 +56,10 @@ struct DroneTelemetry: Equatable {
     var seriousLowBattery = false
     /// The drone is going home or landing on its own (low battery, failsafe or the RC button).
     var droneReturningHome = false
+    /// The last part of that: the drone comes down to land.
+    var droneLanding = false
+    /// DJI: less than 0.3 m above the ground, the drone waits until the landing is confirmed.
+    var landingConfirmationNeeded = false
 }
 
 /// What the flight needs from the drone. DJIConnection implements it in the app.
@@ -70,6 +74,8 @@ protocol DroneControl: AnyObject {
     func shootPhoto(completion: @escaping (Error?) -> Void)
     func goHome(completion: @escaping (Error?) -> Void)
     func cancelGoHome(completion: @escaping (Error?) -> Void)
+    /// Going home ends in a landing; only this stops that last part.
+    func cancelLanding(completion: @escaping (Error?) -> Void)
 }
 
 struct FlightLogEntry: Identifiable, Equatable {
@@ -222,6 +228,12 @@ final class RouteFlight: ObservableObject {
     private var releaseFailed = false
     /// The take-over came from a stick; counts once Virtual Stick is really off.
     private var stickReleasePending = false
+    /// goHome() is still switching Virtual Stick off; the go-home command has not gone out.
+    private var homeCommandPending = false
+    /// A take-over asked the drone to stop going home or landing; waiting for its answer.
+    private var cancellingReturn = false
+    private var wasLanding = false
+    private var wasWaitingToLand = false
     /// Distance along the route at the last tick with a position, for resuming without GPS.
     private var lastAlongM: Double?
     private var lastFileNumber: Int?
@@ -393,10 +405,35 @@ final class RouteFlight: ObservableObject {
     func takeOver(reason: String = "Overgenomen door de piloot.", byStick: Bool = false) {
         switch phase {
         case .returningHome:
-            setPhase(.takenOver(reason))
-            addLog("\(reason) Naar huis is afgebroken; jij vliegt.")
-            drone?.cancelGoHome { [weak self] error in
-                if let error = error { self?.addLog("Naar huis afbreken lukt niet: \(error.localizedDescription)") }
+            if homeCommandPending {
+                // The new phase stops goHome() from sending the command.
+                setPhase(.takenOver(reason))
+                addLog("\(reason) Naar huis is afgebroken; jij vliegt.")
+                return
+            }
+            // The drone is going home or landing: it is only taken over once it agrees. Until
+            // then the phase stays, so the screen never says "jij vliegt" while it is not true.
+            guard !cancellingReturn else { return }
+            cancellingReturn = true
+            let landing = telemetry?.droneLanding == true
+            let what = landing ? "Landen" : "Naar huis"
+            let version = phaseVersion
+            addLog("\(reason) \(what) afbreken…")
+            let done: (Error?) -> Void = { [weak self] error in
+                guard let self = self else { return }
+                self.cancellingReturn = false
+                guard self.phaseVersion == version else { return }
+                if let error = error {
+                    self.addLog("\(what) afbreken lukt niet: \(error.localizedDescription). De drone gaat zelf verder. Stoppen kan met de pauzeknop op de afstandsbediening.")
+                    return
+                }
+                self.setPhase(.takenOver(reason))
+                self.addLog("\(what) is afgebroken; jij vliegt.")
+            }
+            if landing {
+                drone?.cancelLanding(completion: done)
+            } else {
+                drone?.cancelGoHome(completion: done)
             }
         case .takenOver:
             setPhase(.takenOver(reason))
@@ -444,9 +481,12 @@ final class RouteFlight: ObservableObject {
         setPhase(.returningHome)
         addLog(reason)
         let version = phaseVersion
+        homeCommandPending = true
         drone?.setVirtualStick(enabled: false) { [weak self] _ in
+            guard let self = self else { return }
+            self.homeCommandPending = false
             // Taken over in the meantime: then the pilot flies, no go-home.
-            guard let self = self, self.phaseVersion == version else { return }
+            guard self.phaseVersion == version else { return }
             self.drone?.goHome { [weak self] error in
                 guard let self = self, let error = error, self.phaseVersion == version else { return }
                 self.setPhase(.takenOver("Naar huis lukt niet: \(error.localizedDescription). Vlieg zelf terug."))
@@ -531,6 +571,8 @@ final class RouteFlight: ObservableObject {
                 if let next = continueAtPhoto {
                     addLog("Route nog niet af: een volgende vlucht kan verder vanaf foto \(next + 1).")
                 }
+            } else if let t = telemetry {
+                noteLanding(t)
             }
         case .takenOver:
             if let t = telemetry, t.connected, !t.isFlying, !t.motorsOn {
@@ -539,8 +581,9 @@ final class RouteFlight: ObservableObject {
                 if let next = continueAtPhoto {
                     addLog("Een volgende vlucht kan verder vanaf foto \(next + 1).")
                 }
-            } else if let t = telemetry, t.connected, t.droneReturningHome {
+            } else if let t = telemetry, t.connected, t.droneReturningHome, now.timeIntervalSince(phaseStart) >= 2 {
                 // After a lost connection the drone may go home by itself (failsafe): show that.
+                // Not in the first 2 s, while the drone's data may still show a cancelled return.
                 setPhase(.returningHome)
                 addLog("De drone keert zelf terug (failsafe of de terugkeerknop). Overnemen kan met de knop of de afstandsbediening.")
             }
@@ -549,6 +592,18 @@ final class RouteFlight: ObservableObject {
         default:
             break
         }
+    }
+
+    /// Says in the log when the return turns into a landing, and when the drone waits for the pilot.
+    private func noteLanding(_ t: DroneTelemetry) {
+        if t.droneLanding && !wasLanding {
+            addLog("De drone landt.")
+        }
+        if t.landingConfirmationNeeded && !wasWaitingToLand {
+            addLog("De drone hangt net boven de grond en wacht. Landen: houd de linkerstick omlaag tot de motoren stoppen.")
+        }
+        wasLanding = t.droneLanding
+        wasWaitingToLand = t.landingConfirmationNeeded
     }
 
     private func tickTakeOff(_ now: Date) {

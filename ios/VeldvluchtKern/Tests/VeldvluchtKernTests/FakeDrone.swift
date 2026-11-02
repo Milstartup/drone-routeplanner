@@ -32,6 +32,10 @@ final class FakeDrone: DroneControl {
     /// Shot numbers where the camera reports an error although the photo is taken.
     var falseErrors: Set<Int> = []
     var gpsLost = false
+    /// At the end of going home, wait 0.3 m above the ground until the pilot lands.
+    var waitsForLandingConfirmation = false
+    /// The drone refuses to stop going home or landing.
+    var refusesCancel = false
 
     private(set) var now = Date(timeIntervalSince1970: 1_793_000_000)
     private(set) var position: XY
@@ -78,9 +82,14 @@ final class FakeDrone: DroneControl {
             homePointSet: homePointSet,
             windWarning: windWarning,
             seriousLowBattery: seriousLowBattery,
-            droneReturningHome: goingHome
+            droneReturningHome: goingHome,
+            droneLanding: landing,
+            landingConfirmationNeeded: landing && waitsForLandingConfirmation && altitude <= 0.3 + 1e-6
         )
     }
+
+    /// The last part of going home: above the take-off point, coming down.
+    var landing: Bool { flying && goingHome && hypot(position.x, position.y) <= 0.5 }
 
     func step(_ dt: Double) {
         now = now.addingTimeInterval(dt)
@@ -98,7 +107,7 @@ final class FakeDrone: DroneControl {
                             y: -position.y / distance * min(5, distance) - wind.y)
             } else {
                 target = XY(x: -wind.x, y: -wind.y)
-                targetAltitude = 0
+                targetAltitude = waitsForLandingConfirmation ? 0.3 : 0
             }
         } else if flying, virtualStick, let sticks = lastSticks, let sent = lastSendTime, now.timeIntervalSince(sent) < 0.5 {
             // DJI: without fresh commands the drone hovers.
@@ -207,7 +216,21 @@ final class FakeDrone: DroneControl {
         completion(nil)
     }
 
+    /// While landing this times out, like DJI's cancelGoHome in the simulator on 2 November 2026.
     func cancelGoHome(completion: @escaping (Error?) -> Void) {
+        guard !refusesCancel, !landing else {
+            after(2) { completion(FlightError(message: "time-out")) }
+            return
+        }
+        goingHome = false
+        completion(nil)
+    }
+
+    func cancelLanding(completion: @escaping (Error?) -> Void) {
+        guard !refusesCancel, landing else {
+            after(2) { completion(FlightError(message: "time-out")) }
+            return
+        }
         goingHome = false
         completion(nil)
     }

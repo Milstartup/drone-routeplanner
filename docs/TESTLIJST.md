@@ -1,10 +1,10 @@
 # Testlijst iPhone-app Veldvlucht
 
-Stand: 27 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
+Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
 
 ## Wat al getest is
 
-- **Op de Mac, 69 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 120 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -31,7 +31,10 @@ Stand: 27 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - account, veld, weer en advies komen in de cloud en terug in de app;
   - nep-metingen komen binnen, en dubbel versturen telt één keer;
   - zonder login kun je geen velden lezen, en een verkeerde sleutel wordt geweigerd.
-- **Nog nooit getest:** alles met de echte drone in de simulator van DJI; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
+- **Eerste vlucht in de simulator van DJI (2 november 2026):** je eigen veld *Vliegtest #1* (5 foto's). Opstijgen, richtingtest, route en landen gingen goed: 5 van 5 foto's op 30 m. Twee fouten gevonden en hersteld:
+  - de tegel *SD-kaart* sprong heen en weer tussen vol en vrij: de drone meldt ook een "interne opslag" die de Mavic Mini niet heeft, en die meldingen negeert de app nu;
+  - **Overnemen** tijdens het naar huis gaan zei "jij vliegt", terwijl de drone dat weigerde (time-out), en sprong dan terug naar "De drone keert zelf terug". Nu zegt de app pas "jij vliegt" als de drone het accepteert, gebruikt hij tijdens het landen *landen afbreken*, en zegt hij eerlijk als het niet lukt. Vier nieuwe nep-drone-tests.
+- **Nog nooit getest:** de rest van blok C; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
 
@@ -81,14 +84,14 @@ Stand: 27 oktober 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute geeft er 180 (ongeveer 720 MB).
 
-- [ ] **C1** **Simulator starten**:
+- [x] **C1** **Simulator starten**:
   - de badge wordt groen (*SIMULATOR*);
   - het rode vliegtuigje springt naar het startpunt van de route.
 
   Lukt dit niet, stuur dan het logboek: of de simulator van de SDK op de Mavic Mini werkt, is nog onbekend.
-- [ ] **C2** **Route starten** → vink de drie punten af → **Starten**. Onderin gaan de fases voorbij: *Voorbereiden → Opstijgen → Klimmen → Richtingtest → Naar het begin → Route vliegen*.
-- [ ] **C3** **Vraag 1, de richting:** wat staat er na de richtingtest in het logboek? (Bijvoorbeeld *pitch = oost, roll = noord*.) Schrijf het hier op: ____________________
-- [ ] **C4** **Vraag 2, de foto's:**
+- [x] **C2** **Route starten** → vink de drie punten af → **Starten**. Onderin gaan de fases voorbij: *Voorbereiden → Opstijgen → Klimmen → Richtingtest → Naar het begin → Route vliegen*.
+- [x] **C3** **Vraag 1, de richting:** wat staat er na de richtingtest in het logboek? (Bijvoorbeeld *pitch = oost, roll = noord*.) Schrijf het hier op: *pitch = oost, roll = noord (zoals DJI beschrijft)*, 2 november 2026
+- [x] **C4** **Vraag 2, de foto's:** (5 van 5 op 30 m met *Vliegtest #1*; kijk bij C11 nog eens met 180 foto's)
   - vliegt het vliegtuigje over de gele lijnen?
   - worden de stippen **groen**, zonder rode?
   - staat de hoogte rond 30 m en de snelheid rond 4 m/s?
@@ -101,7 +104,10 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - *Overgenomen* (of *De drone keert zelf terug*);
   - de app gaat nooit vanzelf verder.
 - [ ] **C10** Druk op **Naar huis**: de drone keert terug en landt (in de simulator).
-- [ ] **C11** Vlieg één route helemaal af, tot *Klaar* met 180 van 180 foto's. (Nodig om echt vliegen vrij te geven.)
+  - Druk tijdens het terugkeren op **Overnemen**. Je hoort *Naar huis is afgebroken; jij vliegt* te zien, en de drone hangt stil.
+  - Druk opnieuw op **Naar huis** en, als hij aan het **landen** is, nog eens op **Overnemen**. Je hoort *Landen is afgebroken; jij vliegt* te zien. Lukt het niet, dan hoort er *… afbreken lukt niet* te staan, en **niet** *jij vliegt*.
+  - Hangt de drone net boven de grond stil? Dan hoort er te staan: *De drone hangt net boven de grond en wacht*. Houd dan de linkerstick omlaag tot de motoren stoppen.
+- [ ] **C11** Vlieg één route helemaal af, tot *Klaar* met 180 van 180 foto's. (Nodig om echt vliegen vrij te geven.) Een korte route van 5 foto's lukte al op 2 november en telt voor de app al mee; doe toch de hele voorbeeldroute, ongeveer 12 minuten.
 - [ ] **C12** **Verder met een nieuwe accu:**
   1. Start de route en druk halverwege op **Naar huis**.
   2. Sluit het vluchtscherm en open het opnieuw.

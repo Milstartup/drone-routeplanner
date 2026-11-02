@@ -603,6 +603,11 @@ extension DJIConnection: DroneControl {
         guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
         fc.cancelLanding { [weak self] error in self?.onMain { completion(error) } }
     }
+
+    func confirmLanding(completion: @escaping (Error?) -> Void) {
+        guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
+        fc.confirmLanding { [weak self] error in self?.onMain { completion(error) } }
+    }
 }
 
 #if DEBUG

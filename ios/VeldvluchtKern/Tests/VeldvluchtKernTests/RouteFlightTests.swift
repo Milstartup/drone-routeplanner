@@ -456,10 +456,25 @@ final class RouteFlightSafetyTests: XCTestCase {
         run(seconds: 60) { [unowned self] in drone.telemetry().landingConfirmationNeeded }
         run(seconds: 1)
         XCTAssertTrue(flight.log.contains { $0.text == "De drone landt." })
-        XCTAssertEqual(flight.log.filter { $0.text.contains("linkerstick omlaag") }.count, 1)
+        XCTAssertEqual(flight.log.filter { $0.text.contains("Tik dan op Landen") }.count, 1)
+        XCTAssertTrue(flight.canConfirmLanding)
         drone.landByPilot()
         run(seconds: 1)
         XCTAssertEqual(flight.phase, .finished)
+        XCTAssertFalse(flight.canConfirmLanding)
+    }
+
+    func testLandenButtonLetsTheWaitingDroneLand() {
+        drone.waitsForLandingConfirmation = true
+        goHomeUntilLanding()
+        XCTAssertFalse(flight.canConfirmLanding, "nog niet zo laag")
+        flight.confirmLanding()
+        XCTAssertFalse(flight.log.contains { $0.text.contains("Landen bevestigd") }, "alleen als de drone wacht")
+        run(seconds: 60) { [unowned self] in flight.canConfirmLanding }
+        flight.confirmLanding()
+        run(seconds: 10, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+        XCTAssertFalse(flight.log.contains { $0.text.contains("bevestigen lukt niet") })
     }
 
     func testPauseButtonDuringTheReturnHandsOver() {

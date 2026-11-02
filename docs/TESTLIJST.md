@@ -4,7 +4,7 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 ## Wat al getest is
 
-- **Op de Mac, 123 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 124 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -39,6 +39,7 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - land je zelf met de linkerstick omlaag, dan heet dat niet meer *De drone keert zelf terug*;
   - twee keer steeg de drone niet op (*Verder vanaf foto 3*), zonder foutmelding. Nu schrijft de app daarbij op of de drone het commando aannam, of de motoren draaiden en in welke vluchtstand hij stond.
   Drie nieuwe nep-drone-tests.
+- **Landen op 0,5 m:** de drone bleef net boven de grond hangen, ook met de linkerstick omlaag. Nu verschijnt dan een groene knop **Landen** (DJI's *landen bevestigen*). Eén nieuwe nep-drone-test.
 - **Nog nooit getest:** de rest van blok C; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
@@ -111,7 +112,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 - [ ] **C10** Druk op **Naar huis**: de drone keert terug en landt (in de simulator).
   - Druk tijdens het terugkeren op **Overnemen**. Je hoort *Naar huis is afgebroken; jij vliegt* te zien, en de drone hangt stil.
   - Druk opnieuw op **Naar huis** en, als hij aan het **landen** is, nog eens op **Overnemen**. Je hoort *Landen is afgebroken; jij vliegt* te zien. Lukt het niet, dan hoort er *… afbreken lukt niet* te staan, en **niet** *jij vliegt*.
-  - Hangt de drone net boven de grond stil? Dan hoort er te staan: *De drone hangt net boven de grond en wacht*. Houd dan de linkerstick omlaag tot de motoren stoppen.
+  - Hangt de drone net boven de grond stil? Dan hoort er te staan: *De drone hangt net boven de grond en wacht* en een groene knop **Landen**. Tik erop: landt hij? Lukt het niet, druk dan op **Overnemen** en houd de linkerstick omlaag tot de motoren stoppen.
 - [ ] **C11** Vlieg één route helemaal af, tot *Klaar* met 180 van 180 foto's. (Nodig om echt vliegen vrij te geven.) Een korte route van 5 foto's lukte al op 2 november en telt voor de app al mee; doe toch de hele voorbeeldroute, ongeveer 12 minuten.
 - [ ] **C12** **Verder met een nieuwe accu:** (2 november: de drone steeg twee keer niet op; zet drone en simulator opnieuw aan en probeer het nog eens)
   1. Start de route en druk halverwege op **Naar huis**.

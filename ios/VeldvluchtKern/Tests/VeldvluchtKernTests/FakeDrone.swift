@@ -234,6 +234,12 @@ final class FakeDrone: DroneControl {
         completion(nil)
     }
 
+    func confirmLanding(completion: @escaping (Error?) -> Void) {
+        guard landing, waitsForLandingConfirmation else { return completion(FlightError(message: "niet aan het landen")) }
+        waitsForLandingConfirmation = false
+        completion(nil)
+    }
+
     func cancelLanding(completion: @escaping (Error?) -> Void) {
         guard !refusesCancel, landing else {
             after(2) { completion(FlightError(message: "time-out")) }

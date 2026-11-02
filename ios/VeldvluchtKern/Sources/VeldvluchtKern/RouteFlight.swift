@@ -78,6 +78,8 @@ protocol DroneControl: AnyObject {
     func cancelGoHome(completion: @escaping (Error?) -> Void)
     /// Going home ends in a landing; only this stops that last part.
     func cancelLanding(completion: @escaping (Error?) -> Void)
+    /// Lets the drone land when it waits just above the ground.
+    func confirmLanding(completion: @escaping (Error?) -> Void)
 }
 
 struct FlightLogEntry: Identifiable, Equatable {
@@ -483,6 +485,22 @@ final class RouteFlight: ObservableObject {
         }
     }
 
+    /// The drone waits just above the ground for the pilot to confirm the landing.
+    var canConfirmLanding: Bool {
+        phase.isAirborne && telemetry?.landingConfirmationNeeded == true
+    }
+
+    /// The "Landen" button: the pilot has looked at the ground and lets the drone land.
+    func confirmLanding() {
+        guard canConfirmLanding else { return }
+        addLog("Landen bevestigd door de piloot.")
+        drone?.confirmLanding { [weak self] error in
+            if let error = error {
+                self?.addLog("Landen bevestigen lukt niet: \(error.localizedDescription). Druk op Overnemen en houd dan de linkerstick omlaag tot de motoren stoppen.")
+            }
+        }
+    }
+
     func goHome(reason: String = "Naar huis door de piloot.") {
         guard phase.isAirborne, phase != .returningHome else { return }
         rememberResumePoint()
@@ -632,7 +650,9 @@ final class RouteFlight: ObservableObject {
             addLog("De drone landt.")
         }
         if t.landingConfirmationNeeded && !wasWaitingToLand {
-            addLog("De drone hangt net boven de grond en wacht. Landen: houd de linkerstick omlaag tot de motoren stoppen.")
+            // In the simulator (2 November 2026) holding the left stick down did not land it
+            // here; after Overnemen it did.
+            addLog("De drone hangt net boven de grond en wacht. Is de grond goed? Tik dan op Landen.")
         }
         wasLanding = t.droneLanding
         wasWaitingToLand = t.landingConfirmationNeeded

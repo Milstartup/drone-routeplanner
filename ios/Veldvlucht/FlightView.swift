@@ -561,21 +561,28 @@ struct FlightScreen: View {
     @ViewBuilder
     private var controls: some View {
         if flight.phase.isAirborne {
-            HStack(spacing: 10) {
-                if flight.phase.canResume {
-                    Button { confirmResume = true } label: { Label("Hervatten", systemImage: "play.fill") }
-                        .buttonStyle(ActionButtonStyle(color: .actionGo, stacked: true))
-                } else {
-                    Button { flight.pause() } label: { Label("Pauze", systemImage: "pause.fill") }
-                        .buttonStyle(ActionButtonStyle(color: .actionHold, stacked: true))
-                        .disabled(!flight.phase.canPause)
+            VStack(spacing: 10) {
+                // DJI stops just above the ground and waits until the pilot confirms the landing.
+                if flight.canConfirmLanding {
+                    Button { flight.confirmLanding() } label: { Label("Landen", systemImage: "arrow.down.to.line") }
+                        .buttonStyle(ActionButtonStyle(color: .actionGo))
                 }
-                // Also after a take-over: tapping again switches Virtual Stick off once more.
-                Button { flight.takeOver() } label: { Label("Overnemen", systemImage: "hand.raised.fill") }
-                    .buttonStyle(ActionButtonStyle(color: .actionTakeOver, stacked: true))
-                Button { flight.goHome() } label: { Label("Naar huis", systemImage: "house.fill") }
-                    .buttonStyle(ActionButtonStyle(color: .actionStop, stacked: true))
-                    .disabled(flight.phase == .returningHome)
+                HStack(spacing: 10) {
+                    if flight.phase.canResume {
+                        Button { confirmResume = true } label: { Label("Hervatten", systemImage: "play.fill") }
+                            .buttonStyle(ActionButtonStyle(color: .actionGo, stacked: true))
+                    } else {
+                        Button { flight.pause() } label: { Label("Pauze", systemImage: "pause.fill") }
+                            .buttonStyle(ActionButtonStyle(color: .actionHold, stacked: true))
+                            .disabled(!flight.phase.canPause)
+                    }
+                    // Also after a take-over: tapping again switches Virtual Stick off once more.
+                    Button { flight.takeOver() } label: { Label("Overnemen", systemImage: "hand.raised.fill") }
+                        .buttonStyle(ActionButtonStyle(color: .actionTakeOver, stacked: true))
+                    Button { flight.goHome() } label: { Label("Naar huis", systemImage: "house.fill") }
+                        .buttonStyle(ActionButtonStyle(color: .actionStop, stacked: true))
+                        .disabled(flight.phase == .returningHome)
+                }
             }
         } else {
             VStack(alignment: .leading, spacing: 14) {

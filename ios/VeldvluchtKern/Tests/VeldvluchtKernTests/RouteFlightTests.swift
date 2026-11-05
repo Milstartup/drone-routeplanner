@@ -535,6 +535,25 @@ final class RouteFlightSafetyTests: XCTestCase {
         XCTAssertTrue(texts.contains("Verbinding met de drone weg."), "\(texts)")
         XCTAssertTrue(texts.contains("Verbinding met de drone terug."), "\(texts)")
     }
+
+    func testLogsTheSimulatorStoppingDuringTheReturn() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        flight.goHome()
+        run(seconds: 2)
+        drone.connected = false
+        run(seconds: 1)
+        drone.simulatorActive = false
+        drone.connected = true
+        run(seconds: 1)
+        XCTAssertEqual(flight.log.filter { $0.text == "De simulator staat uit." }.count, 1, "\(flight.log.map(\.text))")
+    }
+
+    func testRefusesToStartWithAnAlmostEmptyBattery() {
+        drone.batteryPercent = 31
+        flight.update(drone.telemetry())
+        XCTAssertEqual(flight.preflightProblems(), ["Accu te leeg: 31 % (minimaal 40 %)."])
+    }
 }
 
 /// One test per finding of the independent review (26 October 2026).

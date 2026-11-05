@@ -4,7 +4,7 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 ## Wat al getest is
 
-- **Op de Mac, 125 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 127 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -42,6 +42,7 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 - **Landen op 0,5 m:** de drone bleef net boven de grond hangen, ook met de linkerstick omlaag. Nu verschijnt dan een groene knop **Landen** (DJI's *landen bevestigen*). Eén nieuwe nep-drone-test.
 - **Derde ronde in de simulator (5 november 2026):** je veld *Vliegtest #2* (18 foto's) in twee vluchten. Halverwege **Naar huis** (7 foto's), daarna **Verder vanaf foto 8** (11 foto's): samen 18 van 18, niets gemist. Beide keren landde hij met de knop **Landen**, 4 seconden na het tikken.
 - **Logboek uitgebreid (5 november 2026):** C8 en C9 waren niet terug te vinden in het logboek. Nu schrijft de app in elke fase in de lucht op wanneer de verbinding wegvalt en terugkomt, en elke nieuwe vluchtstand van de drone (bijvoorbeeld *Joystick*, *GoHome*, *AutoLanding*). Eén nieuwe nep-drone-test.
+- **Voorbeeldroute in de simulator (5 november 2026, 23:53):** 91 van de 180 foto's, niets gemist. Toen was de accu op 31 % en ging de drone volgens de regels naar huis. Een tweede vlucht vanaf foto 92 begon met dezelfde lege accu en keerde na een minuut om. In de simulator start de app nu pas vanaf 40 % accu. Tijdens het terugkeren trok je de kabel eruit; na 19 seconden stond de drone "op de grond" in vluchtstand *GPS*. Waarschijnlijk stopte de simulator bij het loskoppelen, en dat schrijft de app voortaan op. Twee nieuwe nep-drone-tests.
 - **Nog nooit getest:** de rest van blok C; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
@@ -115,7 +116,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - Druk tijdens het terugkeren op **Overnemen**. Je hoort *Naar huis is afgebroken; jij vliegt* te zien, en de drone hangt stil.
   - Druk opnieuw op **Naar huis** en, als hij aan het **landen** is, nog eens op **Overnemen**. Je hoort *Landen is afgebroken; jij vliegt* te zien. Lukt het niet, dan hoort er *… afbreken lukt niet* te staan, en **niet** *jij vliegt*.
   - Hangt de drone net boven de grond stil? Dan hoort er te staan: *De drone hangt net boven de grond en wacht* en een groene knop **Landen**. Tik erop: landt hij? Lukt het niet, druk dan op **Overnemen** en houd de linkerstick omlaag tot de motoren stoppen.
-- [ ] **C11** Vlieg één route helemaal af, tot *Klaar* met 180 van 180 foto's. (Nodig om echt vliegen vrij te geven.) Een korte route van 5 foto's lukte al op 2 november en telt voor de app al mee; doe toch de hele voorbeeldroute, ongeveer 12 minuten.
+- [ ] **C11** Vlieg één route helemaal af, tot *Klaar* met 180 van 180 foto's. (Nodig om echt vliegen vrij te geven.) Een korte route van 5 foto's lukte al op 2 november en telt voor de app al mee; doe toch de hele voorbeeldroute, ongeveer 12 minuten, **met een volle accu** (op 5 november was de accu na 91 foto's op).
 - [x] **C12** **Verder met een nieuwe accu:** (2 november steeg hij twee keer niet op; op 5 november, na drone en simulator opnieuw aan, lukte het wel)
   1. Start de route en druk halverwege op **Naar huis**.
   2. Sluit het vluchtscherm en open het opnieuw.

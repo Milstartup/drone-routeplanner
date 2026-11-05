@@ -158,7 +158,9 @@ final class RouteFlight: ObservableObject {
         /// Step 3 of the plan: fly only in DJI's simulator.
         var requireSimulator = true
         var minSatellites = 8
-        var minBatteryPercent = 30
+        /// Below this the drone soon goes home anyway (5 November 2026: from 31 % it turned back
+        /// within a minute), so a flight would only take off and land again.
+        var minBatteryPercent = 40
         /// Go home when the battery is this close to what DJI says is needed to get back.
         var batteryMarginPercent = 10
         var maxStartDistanceM = 30.0
@@ -534,6 +536,10 @@ final class RouteFlight: ObservableObject {
         if phase.isAirborne, let old = self.telemetry {
             if old.connected != telemetry.connected, !phase.isSteering {
                 addLog(telemetry.connected ? "Verbinding met de drone terug." : "Verbinding met de drone weg.")
+            }
+            // While the app steers, the simulator stopping is already logged by the take-over.
+            if telemetry.connected, old.simulatorActive != telemetry.simulatorActive, !phase.isSteering {
+                addLog(telemetry.simulatorActive ? "De simulator staat weer aan." : "De simulator staat uit.")
             }
             if telemetry.connected, !telemetry.flightMode.isEmpty, telemetry.flightMode != lastLoggedFlightMode {
                 lastLoggedFlightMode = telemetry.flightMode

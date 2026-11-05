@@ -516,6 +516,25 @@ final class RouteFlightSafetyTests: XCTestCase {
         guard case .failed = flight.phase else { return XCTFail("\(flight.phase)") }
         XCTAssertTrue(flight.log.contains { $0.text.contains("nam het commando aan. Motoren uit") }, "\(flight.log.map(\.text))")
     }
+
+    func testLogsConnectionAndFlightModeChangesInTheAir() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        drone.flightModeName = "Joystick"
+        run(seconds: 1)
+        drone.flightModeName = "GoHome"
+        flight.goHome()
+        run(seconds: 2)
+        drone.connected = false
+        run(seconds: 1)
+        drone.connected = true
+        run(seconds: 1)
+        let texts = flight.log.map(\.text)
+        XCTAssertEqual(texts.filter { $0 == "Vluchtstand van de drone: Joystick." }.count, 1)
+        XCTAssertEqual(texts.filter { $0 == "Vluchtstand van de drone: GoHome." }.count, 1, "niet opnieuw na de verbinding")
+        XCTAssertTrue(texts.contains("Verbinding met de drone weg."), "\(texts)")
+        XCTAssertTrue(texts.contains("Verbinding met de drone terug."), "\(texts)")
+    }
 }
 
 /// One test per finding of the independent review (26 October 2026).

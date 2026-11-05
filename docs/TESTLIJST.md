@@ -4,7 +4,7 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 ## Wat al getest is
 
-- **Op de Mac, 124 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 125 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -41,6 +41,7 @@ Stand: 2 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   Drie nieuwe nep-drone-tests.
 - **Landen op 0,5 m:** de drone bleef net boven de grond hangen, ook met de linkerstick omlaag. Nu verschijnt dan een groene knop **Landen** (DJI's *landen bevestigen*). Eén nieuwe nep-drone-test.
 - **Derde ronde in de simulator (5 november 2026):** je veld *Vliegtest #2* (18 foto's) in twee vluchten. Halverwege **Naar huis** (7 foto's), daarna **Verder vanaf foto 8** (11 foto's): samen 18 van 18, niets gemist. Beide keren landde hij met de knop **Landen**, 4 seconden na het tikken.
+- **Logboek uitgebreid (5 november 2026):** C8 en C9 waren niet terug te vinden in het logboek. Nu schrijft de app in elke fase in de lucht op wanneer de verbinding wegvalt en terugkomt, en elke nieuwe vluchtstand van de drone (bijvoorbeeld *Joystick*, *GoHome*, *AutoLanding*). Eén nieuwe nep-drone-test.
 - **Nog nooit getest:** de rest van blok C; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).

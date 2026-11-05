@@ -242,6 +242,7 @@ final class RouteFlight: ObservableObject {
     private var lastReturnSeen: Date?
     /// The drone confirmed the take-off command.
     private var takeOffAccepted = false
+    private var lastLoggedFlightMode: String?
     /// Distance along the route at the last tick with a position, for resuming without GPS.
     private var lastAlongM: Double?
     private var lastFileNumber: Int?
@@ -528,6 +529,17 @@ final class RouteFlight: ObservableObject {
     // MARK: - Input from the drone
 
     func update(_ telemetry: DroneTelemetry) {
+        // So a test can be checked afterwards (C8, C9): what changed while the drone was in the
+        // air. While the app steers, losing the connection is already logged by the take-over.
+        if phase.isAirborne, let old = self.telemetry {
+            if old.connected != telemetry.connected, !phase.isSteering {
+                addLog(telemetry.connected ? "Verbinding met de drone terug." : "Verbinding met de drone weg.")
+            }
+            if telemetry.connected, !telemetry.flightMode.isEmpty, telemetry.flightMode != lastLoggedFlightMode {
+                lastLoggedFlightMode = telemetry.flightMode
+                addLog("Vluchtstand van de drone: \(telemetry.flightMode).")
+            }
+        }
         self.telemetry = telemetry
     }
 

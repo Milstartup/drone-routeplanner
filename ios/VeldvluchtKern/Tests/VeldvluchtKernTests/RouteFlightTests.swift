@@ -554,6 +554,43 @@ final class RouteFlightSafetyTests: XCTestCase {
         flight.update(drone.telemetry())
         XCTAssertEqual(flight.preflightProblems(), ["Accu te leeg: 31 % (minimaal 40 %)."])
     }
+
+    func testPointsTheCameraStraightDownBeforeTakeOff() {
+        XCTAssertEqual(drone.cameraPitchDeg, 0)
+        flight.start()
+        run(seconds: 30) { [unowned self] in drone.flying }
+        XCTAssertEqual(drone.cameraPitchDeg, -90)
+        let texts = flight.log.map(\.text)
+        let down = texts.firstIndex(of: "Camera recht naar beneden.")
+        let takeOff = texts.firstIndex(of: "Opstijgen…")
+        XCTAssertNotNil(down, "\(texts)")
+        XCTAssertLessThan(down ?? .max, takeOff ?? .min)
+    }
+
+    func testDoesNotTakeOffWhenTheCameraCannotPointDown() {
+        drone.refusesCameraDown = true
+        flight.start()
+        run(seconds: 5)
+        guard case .failed = flight.phase else { return XCTFail("\(flight.phase)") }
+        XCTAssertFalse(drone.motorsOn)
+        XCTAssertTrue(flight.log.contains { $0.text.contains("Camera recht naar beneden draaien lukt niet: gimbal geeft geen antwoord") },
+                      "\(flight.log.map(\.text))")
+    }
+
+    func testTurnsATiltedCameraBackDuringTheRoute() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 5 }
+        // The pilot turns the gimbal wheel on the remote controller.
+        drone.cameraPitchDeg = -45
+        let photos = flight.photoLog.photos.count
+        run(seconds: 60) { [unowned self] in flight.photoLog.photos.count >= photos + 2 }
+        XCTAssertEqual(drone.cameraPitchDeg, -90)
+        let warnings = flight.log.filter { $0.text.contains("kijkt niet recht naar beneden (-45°)") }
+        XCTAssertEqual(warnings.count, 1, "\(flight.log.map(\.text))")
+        run(seconds: 2500, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+        XCTAssertEqual(flight.missedPhotos, [])
+    }
 }
 
 /// One test per finding of the independent review (26 October 2026).

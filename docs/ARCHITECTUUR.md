@@ -59,7 +59,7 @@ Elk onderdeel heeft één taak en praat met de andere alleen via vastgelegde dat
 
 - Het vliegen en het fotograferen werken zoals beschreven in [STAPPENPLAN.md](STAPPENPLAN.md): de app maakt een losse foto op elke geplande fotopositie.
 - Na de vlucht gaan de foto's (van de microSD-kaart) plus het **fotolog** van de app naar het centrale systeem.
-- **Wat de camera kan:** de Mavic Mini heeft een gewone kleurencamera (RGB, 12 MP). Op 30 m is dat ongeveer 1,1 cm per pixel, dus losse broccoliplanten zijn goed te zien.
+- **Wat de camera kan:** de Mavic Mini heeft een gewone kleurencamera (RGB, 12 MP). Op 30 m is dat ongeveer 1,1 cm per pixel, dus losse broccoliplanten zijn goed te zien. De app draait de camera vóór het opstijgen recht naar beneden (−90°) en zet hem tijdens de route terug als hij scheef staat.
 - **Wat de camera niet kan:** hij ziet wat het oog ziet, dus vergeling, slappe of achterblijvende planten en kale plekken. Watertekort dat nog niet zichtbaar is, ziet hij niet; daarvoor zijn warmte- of multispectrale camera's nodig.
 - **Gevolg voor het wateradvies:** dat steunt dus vooral op de sensoren en het weer. De foto's laten zien **waar** het slechter gaat.
 - **Plaatsnauwkeurigheid:** de Mini houdt zijn positie volgens DJI op ongeveer ±1,5 m (met GPS). Een markering op de kaart ligt daardoor naar schatting binnen 1 à 2 m van de echte plant. Dat moet bij de eerste vluchten gecontroleerd worden.

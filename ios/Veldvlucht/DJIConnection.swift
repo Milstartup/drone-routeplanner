@@ -27,6 +27,8 @@ final class DJIConnection: NSObject, ObservableObject {
     var onPhotoSaved: ((String) -> Void)?
     private(set) var lastTelemetry: DroneTelemetry?
     private var sticksDeflected = false
+    /// From the gimbal's own reports; nil while it has not reported.
+    private var cameraPitch: Double?
 
     private var aircraft: DJIAircraft? { DJISDKManager.product() as? DJIAircraft }
 
@@ -116,7 +118,9 @@ final class DJIConnection: NSObject, ObservableObject {
         aircraft?.remoteController?.delegate = self
         product?.battery?.delegate = self
         product?.camera?.delegate = self
+        product?.gimbal?.delegate = self
         status.hasCamera = product?.camera != nil
+        if product?.gimbal == nil { cameraPitch = nil }
 
         if aircraft?.flightController == nil {
             status.satelliteCount = nil
@@ -403,7 +407,7 @@ extension DJIConnection: DJIFlightControllerDelegate {
                 gpsLevel: level, homePointSet: homeSet, windWarning: wind,
                 seriousLowBattery: seriousLow, droneReturningHome: returning,
                 droneLanding: landing, landingConfirmationNeeded: confirmationNeeded,
-                flightMode: modeName
+                flightMode: modeName, cameraPitchDeg: cameraPitch
             )
             lastTelemetry = telemetry
             onTelemetry?(telemetry)
@@ -500,6 +504,15 @@ extension DJIConnection: DJICameraDelegate {
             addLog("Foto opgeslagen op de SD-kaart: \(text).")
             onPhotoSaved?(fileName)
         }
+    }
+}
+
+// MARK: - Gimbal
+
+extension DJIConnection: DJIGimbalDelegate {
+    func gimbal(_ gimbal: DJIGimbal, didUpdate state: DJIGimbalState) {
+        let pitch = Double(state.attitudeInDegrees.pitch)
+        onMain { [self] in cameraPitch = pitch }
     }
 }
 
@@ -607,6 +620,13 @@ extension DJIConnection: DroneControl {
     func confirmLanding(completion: @escaping (Error?) -> Void) {
         guard let fc = aircraft?.flightController else { return completion(FlightError(message: "Geen vluchtcomputer.")) }
         fc.confirmLanding { [weak self] error in self?.onMain { completion(error) } }
+    }
+
+    func pointCameraDown(completion: @escaping (Error?) -> Void) {
+        guard let gimbal = aircraft?.gimbal else { return completion(FlightError(message: "Geen gimbal gevonden.")) }
+        let down = DJIGimbalRotation(pitchValue: -90, rollValue: nil, yawValue: nil, time: 1,
+                                     mode: .absoluteAngle, ignore: true)
+        gimbal.rotate(with: down) { [weak self] error in self?.onMain { completion(error) } }
     }
 }
 

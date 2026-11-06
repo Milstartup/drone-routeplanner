@@ -62,6 +62,8 @@ struct DroneTelemetry: Equatable {
     var landingConfirmationNeeded = false
     /// DJI's name for the flight mode, only for the log.
     var flightMode = ""
+    /// The camera's tilt: 0 straight ahead, −90 straight down; nil when unknown.
+    var cameraPitchDeg: Double? = nil
 }
 
 /// What the flight needs from the drone. DJIConnection implements it in the app.
@@ -80,6 +82,9 @@ protocol DroneControl: AnyObject {
     func cancelLanding(completion: @escaping (Error?) -> Void)
     /// Lets the drone land when it waits just above the ground.
     func confirmLanding(completion: @escaping (Error?) -> Void)
+    /// Tilts the camera to −90°: the route, the photo footprint and the plant positions all
+    /// assume it looks straight down.
+    func pointCameraDown(completion: @escaping (Error?) -> Void)
 }
 
 struct FlightLogEntry: Identifiable, Equatable {
@@ -173,6 +178,8 @@ final class RouteFlight: ObservableObject {
         var photoLeadM = 0.3
         var photoLateM = 3.0
         var minPhotoIntervalS = 2.0
+        /// At 30 m every 5° of tilt moves the photo about 2.6 m over the ground.
+        var maxCameraTiltDeg = 5.0
         var telemetryTimeoutS = 1.0
         var takeoffTimeoutS = 20.0
         var axisTestSpeedMps = 1.0
@@ -245,6 +252,7 @@ final class RouteFlight: ObservableObject {
     /// The drone confirmed the take-off command.
     private var takeOffAccepted = false
     private var lastLoggedFlightMode: String?
+    private var turningCameraDown = false
     /// Distance along the route at the last tick with a position, for resuming without GPS.
     private var lastAlongM: Double?
     private var lastFileNumber: Int?
@@ -374,16 +382,30 @@ final class RouteFlight: ObservableObject {
                 return
             }
             self.addLog("Failsafe: naar huis op \(Int(goHomeHeight)) m bij verbindingsverlies. Camera op losse foto's.")
-            self.setPhase(.takingOff)
-            self.addLog("Opstijgen…")
-            // DJI: the completion can report an error while the take-off works, so the
-            // loop decides from the telemetry whether the drone flies.
-            self.drone?.takeOff { [weak self] error in
+            self.drone?.pointCameraDown { [weak self] error in
+                guard let self = self, self.phase == .preparing else { return }
                 if let error = error {
-                    self?.addLog("Opstijgen meldt: \(error.localizedDescription) (de app kijkt of de drone toch vliegt).")
-                } else {
-                    self?.takeOffAccepted = true
+                    let message = "Camera recht naar beneden draaien lukt niet: \(error.localizedDescription)"
+                    self.setPhase(.failed(message))
+                    self.addLog("\(message) Zonder dat zijn de foto's niet te gebruiken; de drone stijgt niet op.")
+                    return
                 }
+                self.addLog("Camera recht naar beneden.")
+                self.takeOff()
+            }
+        }
+    }
+
+    private func takeOff() {
+        setPhase(.takingOff)
+        addLog("Opstijgen…")
+        // DJI: the completion can report an error while the take-off works, so the
+        // loop decides from the telemetry whether the drone flies.
+        drone?.takeOff { [weak self] error in
+            if let error = error {
+                self?.addLog("Opstijgen meldt: \(error.localizedDescription) (de app kijkt of de drone toch vliegt).")
+            } else {
+                self?.takeOffAccepted = true
             }
         }
     }
@@ -1051,6 +1073,11 @@ final class RouteFlight: ObservableObject {
 
     private func shoot(_ photo: FlightPlan.Photo, now: Date, t: DroneTelemetry) {
         guard let position = t.position else { return }
+        // For example after the gimbal wheel on the remote controller was turned.
+        if let pitch = t.cameraPitchDeg, abs(pitch + 90) > settings.maxCameraTiltDeg {
+            addLog("Foto \(photo.index + 1): de camera kijkt niet recht naar beneden (\(Int(pitch.rounded()))°). De app draait hem terug.")
+            turnCameraDown()
+        }
         shootInProgress = true
         lastShotTime = now
         pendingShots.append(PendingShot(plannedIndex: photo.index, time: now, position: position,
@@ -1061,6 +1088,17 @@ final class RouteFlight: ObservableObject {
             if let error = error, let i = self.pendingShots.firstIndex(where: { $0.plannedIndex == photo.index }) {
                 // DJI sometimes reports an error although it worked; a file may still come.
                 self.pendingShots[i].cameraError = error.localizedDescription
+            }
+        }
+    }
+
+    private func turnCameraDown() {
+        guard !turningCameraDown else { return }
+        turningCameraDown = true
+        drone?.pointCameraDown { [weak self] error in
+            self?.turningCameraDown = false
+            if let error = error {
+                self?.addLog("Camera terugdraaien lukt niet: \(error.localizedDescription)")
             }
         }
     }

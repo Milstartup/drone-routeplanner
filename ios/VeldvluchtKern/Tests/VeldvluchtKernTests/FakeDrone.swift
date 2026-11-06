@@ -40,6 +40,9 @@ final class FakeDrone: DroneControl {
     var ignoresTakeOff = false
     /// DJI's name for the flight mode; empty like before the app reported it.
     var flightModeName = ""
+    /// The camera's tilt; 0 (straight ahead) like the Mavic Mini after switching on.
+    var cameraPitchDeg = 0.0
+    var refusesCameraDown = false
 
     private(set) var now = Date(timeIntervalSince1970: 1_793_000_000)
     private(set) var position: XY
@@ -89,7 +92,8 @@ final class FakeDrone: DroneControl {
             droneReturningHome: goingHome,
             droneLanding: landing,
             landingConfirmationNeeded: landing && waitsForLandingConfirmation && altitude <= 0.3 + 1e-6,
-            flightMode: flightModeName
+            flightMode: flightModeName,
+            cameraPitchDeg: cameraPitchDeg
         )
     }
 
@@ -240,6 +244,12 @@ final class FakeDrone: DroneControl {
     func confirmLanding(completion: @escaping (Error?) -> Void) {
         guard landing, waitsForLandingConfirmation else { return completion(FlightError(message: "niet aan het landen")) }
         waitsForLandingConfirmation = false
+        completion(nil)
+    }
+
+    func pointCameraDown(completion: @escaping (Error?) -> Void) {
+        guard !refusesCameraDown else { return completion(FlightError(message: "gimbal geeft geen antwoord")) }
+        cameraPitchDeg = -90
         completion(nil)
     }
 

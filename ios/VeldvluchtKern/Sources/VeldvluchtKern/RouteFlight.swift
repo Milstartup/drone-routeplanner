@@ -1158,7 +1158,9 @@ final class RouteFlight: ObservableObject {
         guard !turningCameraDown, now.timeIntervalSince(lastCameraTurn ?? .distantPast) >= 2 else { return }
         turningCameraDown = true
         lastCameraTurn = now
-        addLog("De camera kijkt niet recht naar beneden (\(Int(pitch.rounded()))°). De app draait hem terug.")
+        // Real flights of 6 November 2026: −80° to −83° for about a second when the drone braked
+        // or sped up, without anyone touching the gimbal wheel. The photo then came a moment later.
+        addLog("De camera kijkt even niet recht naar beneden (\(Int(pitch.rounded()))°). De app wacht met de foto en draait hem terug.")
         drone?.pointCameraDown { [weak self] error in
             self?.turningCameraDown = false
             if let error = error {

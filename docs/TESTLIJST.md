@@ -58,6 +58,12 @@ Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 - **Eerste echte vlucht (6 november 2026, 11:34 tot 11:36):** *Echte vlucht test #1*, 4 foto's.
   - Camera recht naar beneden, opstijgen, de route, **4 van 4 foto's** op 30 à 30,5 m, precies 12 m uit elkaar en met de neus langs de baan (156°). Daarna naar huis en zelf geland, zonder te wachten op 0,5 m zoals in de simulator.
   - De **eerste richtingtest mislukte** (*met alleen pitch bewoog de drone schuin, 48°*); de route startte dus niet, zoals bedoeld. Na **Hervatten** lukte hij wel. De oorzaak is waarschijnlijk GPS: een echte GPS-positie zwalkt een halve tot een hele meter, en de test bewoog maar 2 m. Nu beweegt de test 3 s met 2 m/s (zo'n 6 m per richting), en meet hij de wind aan de snelheid die de drone zelf meldt in plaats van aan twee GPS-posities. Het logboek schrijft ook op wat hij precies mat (*Gemeten: pitch … m naar …°*). Eén nieuwe nep-drone-test met zwalkende GPS.
+- **Tweede en derde echte vlucht (6 november 2026, 11:48 en 11:51):** dezelfde route.
+  - De nieuwe richtingtest lukte **beide keren meteen** (gemeten: pitch 5,5 en 6,2 m naar het oosten, roll 6,7 en 5,9 m naar het noorden, binnen 7° van de as).
+  - Pauze, Hervatten, Overnemen met de knop en met een stick werkten allemaal. Bij beide overnames meldde DJI eerst een fout (−1008) bij het uitzetten van Virtual Stick, maar de drone stond al in vluchtstand *GPS*, dus jij had meteen de besturing; de tweede poging lukte een seconde later.
+  - De knop met het huisje: de drone ging zelf naar huis (*GoHome*) en de app stuurde niet meer.
+  - Vijf keer stond de camera even op −80° tot −83°, telkens bij afremmen of optrekken, zonder dat het wieltje werd aangeraakt. De app wachtte dan met de foto: **geen enkele foto gemist**, één foto lag 2 m later dan gepland. Het bericht zegt nu *De camera kijkt even niet recht naar beneden … De app wacht met de foto*.
+  - In de derde vlucht vloog de drone met de neus naar achteren (335°); de app kiest de kant die het minst draaien kost. Dat mag: het fotolog bewaart de richting.
 - **Nog nooit getest:** een lange echte vlucht; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
@@ -144,7 +150,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 - [x] **C15** (gemeld door jou, 6 november) Druk op **Simulator stoppen** en zet de drone **uit en weer aan**.
 - [x] **C16** (6 november 2026, 9:58: gelukt; een scheve foto slaat de app nu over) **Camera recht naar beneden** (nieuw sinds 6 november). Start een korte route in de simulator, bijvoorbeeld *Vliegtest #2*:
   - Kijk bij het starten naar de drone: draait de camera **recht naar beneden** voordat de motoren starten? In het logboek hoort *Camera recht naar beneden.* te staan.
-  - Draai tijdens de route even aan het **wieltje linksboven** op de afstandsbediening, zodat de camera kantelt. Je hoort te zien: *De camera kijkt niet recht naar beneden (…°). De app draait hem terug.* De camera gaat weer naar beneden, en een foto die op dat moment aan de beurt was, telt als *gemist*.
+  - Draai tijdens de route even aan het **wieltje linksboven** op de afstandsbediening, zodat de camera kantelt. Je hoort te zien: *De camera kijkt even niet recht naar beneden (…°). De app wacht met de foto en draait hem terug.* De camera gaat weer naar beneden, en een foto die op dat moment aan de beurt was, telt als *gemist*.
 
 ## D. Eerste echte vluchten (stap 5), alleen als blok C helemaal goed ging
 
@@ -161,16 +167,16 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - de accu is minstens 50 %;
   - de drone geeft geen windwaarschuwing;
   - de drone staat binnen 30 m van het startpunt.
-- [ ] **D3** (6 november: opgestegen en gevlogen, maar Pauze, Hervatten en Overnemen met een stick staan nog niet in het logboek) **Echt vliegen** → vink de controlelijst af → **Alles gecontroleerd: opstijgen**. **Houd de afstandsbediening vast.** Na de richtingtest, op hoogte:
+- [x] **D3** (6 november 2026, tweede vlucht: Pauze, Hervatten, Overnemen met de knop en met een stick) **Echt vliegen** → vink de controlelijst af → **Alles gecontroleerd: opstijgen**. **Houd de afstandsbediening vast.** Na de richtingtest, op hoogte:
   - probeer **Pauze** en **Hervatten**;
   - probeer **Overnemen** met een stick.
 - [x] **D4** (6 november 2026: 4 van 4 foto's op hun plek, en zelf geland na *naar huis*; de camera bleef recht naar beneden) Volgt de drone de banen? Maakt hij de foto's? Landt hij weer bij het startpunt?
-  - Staat er *De camera kijkt niet recht naar beneden* in het logboek terwijl je het wieltje niet aanraakte? Druk dan op **Naar huis** en meld het: dan staat de grens van 5° te krap voor een echte vlucht.
+  - Even *De camera kijkt even niet recht naar beneden* bij afremmen of optrekken is normaal (6 november: −80° tot −83°, een seconde lang). Worden er daardoor foto's **gemist**, meld het dan: dan staat de grens van 5° te krap.
 - [ ] **D5** Na de vlucht (stap 5, punt 2):
   1. Zet de foto's van de SD-kaart op de Mac, samen met het fotolog (*Vluchten* → *Delen*).
   2. Controleer: zijn alle geplande foto's er? Liggen ze op de goede plek? Zijn ze scherp genoeg om de planten te beoordelen? Kijkt de camera recht naar beneden (alleen grond, geen horizon)? Staat er GPS in?
-- [ ] **D6** Op veilige hoogte: wat doet één druk op de **pauzeknop** van de afstandsbediening? Volgens de handleiding remt de drone af. (Hoofdstuk 6.5 van het DJI-document.)
-- [ ] **D7** (1 van 3 gedaan, 6 november) Na 3 geslaagde echte vluchten vervalt de grens van 800 m. Ga daarna stap voor stap groter, tot een heel veld.
+- [x] **D6** (6 november 2026: de drone ging zelf naar huis, en de app stuurde niet meer) Op veilige hoogte: wat doet één druk op de **pauzeknop** van de afstandsbediening? Volgens de handleiding remt de drone af. (Hoofdstuk 6.5 van het DJI-document.)
+- [x] **D7** (3 van 3 op 6 november 2026; de grens van 800 m is nu weg) Na 3 geslaagde echte vluchten vervalt de grens van 800 m. Ga daarna stap voor stap groter, tot een heel veld.
 
 ## E. Veld tekenen, sensoren, weer en advies (nieuw, 26 oktober 2026)
 

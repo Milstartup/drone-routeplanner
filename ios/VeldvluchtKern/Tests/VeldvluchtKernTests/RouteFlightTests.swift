@@ -626,7 +626,7 @@ final class RouteFlightSafetyTests: XCTestCase {
         run(seconds: 60) { [unowned self] in flight.photoLog.photos.count >= photos + 2 }
         XCTAssertEqual(drone.cameraPitchDeg, -90)
         let texts = flight.log.map(\.text)
-        XCTAssertEqual(texts.filter { $0 == "De camera kijkt niet recht naar beneden (-45°). De app draait hem terug." }.count, 1, "\(texts)")
+        XCTAssertEqual(texts.filter { $0 == "De camera kijkt even niet recht naar beneden (-45°). De app wacht met de foto en draait hem terug." }.count, 1, "\(texts)")
         run(seconds: 2500, until: finished)
         XCTAssertEqual(flight.phase, .finished)
         XCTAssertEqual(drone.tiltedShots, 0, "geen scheve foto's")

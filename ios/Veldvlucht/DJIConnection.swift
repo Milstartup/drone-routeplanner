@@ -556,12 +556,23 @@ extension DJIConnection: DroneControl {
                 if let error = error { return done(FlightError(message: "Failsafe instellen: \(error.localizedDescription)")) }
                 fc.setGoHomeHeightInMeters(UInt(goHomeHeightM.rounded(.up))) { error in
                     if let error = error { return done(FlightError(message: "Terugkeerhoogte instellen: \(error.localizedDescription)")) }
+                    // 6 November 2026 the photos came out 16:9 (4000 × 2250): a quarter less ground
+                    // per photo than the planner counts on. If 4:3 is refused, fly anyway.
+                    let fourThree: (Error?) -> Void = { [weak self] error in
+                        if let error = error { return done(error) }
+                        camera.setPhotoAspectRatio(.ratio4_3) { error in
+                            if let error = error {
+                                self?.onMain { self?.addLog("Fotoformaat 4:3 lukt niet: \(error.localizedDescription)") }
+                            }
+                            done(nil)
+                        }
+                    }
                     if camera.isFlatCameraModeSupported() {
-                        camera.setFlatMode(.photoSingle) { error in done(error) }
+                        camera.setFlatMode(.photoSingle) { error in fourThree(error) }
                     } else {
                         camera.setMode(.shootPhoto) { error in
                             if let error = error { return done(error) }
-                            camera.setShootPhotoMode(.single) { error in done(error) }
+                            camera.setShootPhotoMode(.single) { error in fourThree(error) }
                         }
                     }
                 }

@@ -81,6 +81,19 @@ final class RouteFlightTests: XCTestCase {
         assertAllPhotosOnTheirPlace()
     }
 
+    func testBuildsUpSpeedGently() {
+        start()
+        run(seconds: 120) { [unowned self] in flight.phase == .toStart }
+        // The direction test itself makes short, sudden moves; after it everything is gentle.
+        drone.largestSpeedRise = 0
+        runUntilFinished()
+        XCTAssertEqual(flight.phase, .finished)
+        assertAllPhotosOnTheirPlace()
+        // 1 m/s² at 10 commands per second, plus the bit the drone still drifted when the
+        // steering started (it builds up from the drone's own speed).
+        XCTAssertLessThanOrEqual(drone.largestSpeedRise, 0.12)
+    }
+
     func testDirectionTestCopesWithGPSWander() {
         // 6 November 2026: on the first real flight the first direction test failed (48°).
         for phase in stride(from: 0.0, to: 6.2, by: 0.4) {

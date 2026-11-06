@@ -175,6 +175,10 @@ final class RouteFlight: ObservableObject {
         var arriveRadiusM = 1.0
         var arriveSpeedMps = 0.8
         var brakingMps2 = 1.0
+        /// Real flights of 6 November 2026: going from 0 to 4 m/s at once tilted the drone up
+        /// to 20°, and the camera then hung 5 to 8.5° off straight down in the photo. So speed
+        /// builds up gently; slowing down is not limited.
+        var maxAccelerationMps2 = 1.0
         var crossGain = 0.5
         var maxCrossSpeedMps = 1.5
         var maxCrossTrackM = 8.0
@@ -282,6 +286,9 @@ final class RouteFlight: ObservableObject {
     /// Built up from steady offsets, to cancel wind the drone does not cancel itself.
     private var windCorrection = XY(x: 0, y: 0)
     private var lastSteerTime: Date?
+    /// The last velocity the steering sent, for building up speed gently.
+    private var lastSentVelocity: XY?
+    private var lastSentTime: Date?
     /// Where the drone holds still while climbing or paused.
     private var holdPoint: XY?
     /// The pilot took over by moving a stick (the simulator test of that safety rule).
@@ -876,13 +883,22 @@ final class RouteFlight: ObservableObject {
             break
         }
 
-        send(velocity: velocity, heading: heading, t: t)
+        send(velocity: velocity, heading: heading, t: t, now: now)
     }
 
     // MARK: - Steering
 
-    private func send(velocity: XY, heading: Double?, t: DroneTelemetry) {
+    private func send(velocity wanted: XY, heading: Double?, t: DroneTelemetry, now: Date) {
         guard let drone = drone else { return }
+        // After a gap (direction test, pause, take-over) start from how fast the drone really goes.
+        let recent = lastSentTime.map { now.timeIntervalSince($0) <= 0.5 } ?? false
+        let base = recent ? lastSentVelocity ?? XY(x: 0, y: 0) : XY(x: t.velocityEast, y: t.velocityNorth)
+        let elapsed = recent ? now.timeIntervalSince(lastSentTime ?? now) : 0.1
+        let allowed = hypot(base.x, base.y) + settings.maxAccelerationMps2 * elapsed
+        let speed = hypot(wanted.x, wanted.y)
+        let velocity = speed > allowed ? XY(x: wanted.x / speed * allowed, y: wanted.y / speed * allowed) : wanted
+        lastSentVelocity = velocity
+        lastSentTime = now
         let mapping = axisMapping ?? .documented
         let raw = mapping.sticks(east: velocity.x, north: velocity.y)
         var yawRate = 0.0

@@ -62,6 +62,8 @@ final class FakeDrone: DroneControl {
     private(set) var virtualStick = false
     private(set) var goingHome = false
     private(set) var sendCount = 0
+    /// The biggest rise in commanded speed from one command to the next (m/s).
+    var largestSpeedRise = 0.0
     /// Where the drone was each time the camera took a photo.
     private(set) var shots: [(time: Date, position: XY)] = []
 
@@ -218,6 +220,9 @@ final class FakeDrone: DroneControl {
     }
 
     func send(_ sticks: StickValues) {
+        if let last = lastSticks {
+            largestSpeedRise = max(largestSpeedRise, hypot(sticks.pitch, sticks.roll) - hypot(last.pitch, last.roll))
+        }
         sendCount += 1
         lastSticks = sticks
         lastSendTime = now

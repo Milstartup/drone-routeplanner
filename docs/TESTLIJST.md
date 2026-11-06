@@ -4,7 +4,7 @@ Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 ## Wat al getest is
 
-- **Op de Mac, 132 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 133 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -64,6 +64,12 @@ Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - De knop met het huisje: de drone ging zelf naar huis (*GoHome*) en de app stuurde niet meer.
   - Vijf keer stond de camera even op −80° tot −83°, telkens bij afremmen of optrekken, zonder dat het wieltje werd aangeraakt. De app wachtte dan met de foto: **geen enkele foto gemist**, één foto lag 2 m later dan gepland. Het bericht zegt nu *De camera kijkt even niet recht naar beneden … De app wacht met de foto*.
   - In de derde vlucht vloog de drone met de neus naar achteren (335°); de app kiest de kant die het minst draaien kost. Dat mag: het fotolog bewaart de richting.
+- **De foto's van de drie echte vluchten bekeken (6 november 2026, D5):** DJI_0440 tot en met DJI_0450, gekopieerd naar *echte-vlucht-1* op het bureaublad.
+  - Alle 11 foto's zijn er, en de GPS-positie in elke foto is gelijk aan die in het fotolog (binnen een halve meter).
+  - Scherp genoeg: op ware grootte zie je losse grassprieten en blaadjes van een paar centimeter. Sluitertijd 1/160 tot 1/200 s bij ISO 100; bij 4 m/s is dat 2 à 2,5 cm beweging, ongeveer 2 pixels. Een broccoliplant is tientallen pixels breed.
+  - **De foto's waren 16:9** (4000 × 2250) in plaats van 4:3 (4000 × 3000). Dan dekt een foto een kwart minder grond dan de planner rekent. Nu zet de app de camera vóór het opstijgen op 4:3.
+  - **De camera stond in 6 van de 11 foto's 5 tot 8,5° scheef**, telkens vlak na optrekken of afremmen: de drone kantelde dan tot 20°, en de camera liep achter. In de eerste vlucht, zonder pauzes, stond hij steeds op −90°. Nu bouwt de app de snelheid rustig op (hooguit 1 m/s per seconde); afremmen blijft even snel. Eén nieuwe nep-drone-test.
+  - Er zaten twee mensen op een bankje onder de route.
 - **Nog nooit getest:** een lange echte vlucht; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
@@ -172,11 +178,15 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - probeer **Overnemen** met een stick.
 - [x] **D4** (6 november 2026: 4 van 4 foto's op hun plek, en zelf geland na *naar huis*; de camera bleef recht naar beneden) Volgt de drone de banen? Maakt hij de foto's? Landt hij weer bij het startpunt?
   - Even *De camera kijkt even niet recht naar beneden* bij afremmen of optrekken is normaal (6 november: −80° tot −83°, een seconde lang). Worden er daardoor foto's **gemist**, meld het dan: dan staat de grens van 5° te krap.
-- [ ] **D5** Na de vlucht (stap 5, punt 2):
+- [x] **D5** (6 november 2026: GPS en scherpte goed; 16:9 en een scheve camera bij optrekken zijn verbeterd, zie D8) Na de vlucht (stap 5, punt 2):
   1. Zet de foto's van de SD-kaart op de Mac, samen met het fotolog (*Vluchten* → *Delen*).
   2. Controleer: zijn alle geplande foto's er? Liggen ze op de goede plek? Zijn ze scherp genoeg om de planten te beoordelen? Kijkt de camera recht naar beneden (alleen grond, geen horizon)? Staat er GPS in?
 - [x] **D6** (6 november 2026: de drone ging zelf naar huis, en de app stuurde niet meer) Op veilige hoogte: wat doet één druk op de **pauzeknop** van de afstandsbediening? Volgens de handleiding remt de drone af. (Hoofdstuk 6.5 van het DJI-document.)
 - [x] **D7** (3 van 3 op 6 november 2026; de grens van 800 m is nu weg) Na 3 geslaagde echte vluchten vervalt de grens van 800 m. Ga daarna stap voor stap groter, tot een heel veld.
+- [ ] **D8** Vlieg nog eens dezelfde korte route, op een plek zonder mensen onder de route. Zet daarna de nieuwe foto's op de Mac (zoals bij D5) en laat Claude ze nakijken:
+  - zijn ze nu 4000 × 3000 (4:3)?
+  - staat de camera in elke foto binnen 2° van recht naar beneden? (Dat staat in de foto zelf, Claude leest het uit.)
+  - de drone trekt nu rustiger op: na de bocht duurt het ongeveer 4 seconden voor hij op 4 m/s vliegt.
 
 ## E. Veld tekenen, sensoren, weer en advies (nieuw, 26 oktober 2026)
 

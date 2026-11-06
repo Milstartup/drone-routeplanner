@@ -4,7 +4,7 @@ Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 ## Wat al getest is
 
-- **Op de Mac, 131 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 132 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -55,7 +55,10 @@ Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - C16: je draaide zes keer aan het wieltje; de app zag het elke keer en draaide de camera terug. Maar die zes foto's werden toch gemaakt en telden mee. Een scheve foto ligt meters naast de plek en zet planten op de verkeerde plaats op de kaart. Nu slaat de app een foto over zolang de camera scheef staat. Omdat de foto's elkaar overlappen, blijft de grond toch helemaal in beeld.
   - **Landen** werd twee keer kort na elkaar getikt, en beide tikken gingen naar de drone. Nu verdwijnt de knop na één tik.
   - Eén stick bewogen tijdens de richtingtest: de app gaf de besturing meteen terug, en **Hervatten** werkte.
-- **Nog nooit getest:** echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
+- **Eerste echte vlucht (6 november 2026, 11:34 tot 11:36):** *Echte vlucht test #1*, 4 foto's.
+  - Camera recht naar beneden, opstijgen, de route, **4 van 4 foto's** op 30 à 30,5 m, precies 12 m uit elkaar en met de neus langs de baan (156°). Daarna naar huis en zelf geland, zonder te wachten op 0,5 m zoals in de simulator.
+  - De **eerste richtingtest mislukte** (*met alleen pitch bewoog de drone schuin, 48°*); de route startte dus niet, zoals bedoeld. Na **Hervatten** lukte hij wel. De oorzaak is waarschijnlijk GPS: een echte GPS-positie zwalkt een halve tot een hele meter, en de test bewoog maar 2 m. Nu beweegt de test 3 s met 2 m/s (zo'n 6 m per richting), en meet hij de wind aan de snelheid die de drone zelf meldt in plaats van aan twee GPS-posities. Het logboek schrijft ook op wat hij precies mat (*Gemeten: pitch … m naar …°*). Eén nieuwe nep-drone-test met zwalkende GPS.
+- **Nog nooit getest:** een lange echte vlucht; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
 
@@ -151,23 +154,23 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 - je bent zelf de piloot en ziet de drone de hele vlucht;
 - de **propellers zitten erop en goed vast**.
 
-- [ ] **D1** Maak in de planner een **korte route**: 2 à 3 banen, korter dan 800 m, met het startpunt waar je staat. Zet hem op de iPhone.
-- [ ] **D2** Open het vluchtscherm. De keuze **Echt vliegen** hoort te verschijnen (vrijgegeven door C7 en C11). Lees de oranje punten en los ze op:
+- [x] **D1** (6 november 2026: *Echte vlucht test #1*, 4 foto's) Maak in de planner een **korte route**: 2 à 3 banen, korter dan 800 m, met het startpunt waar je staat. Zet hem op de iPhone.
+- [x] **D2** (6 november 2026) Open het vluchtscherm. De keuze **Echt vliegen** hoort te verschijnen (vrijgegeven door C7 en C11). Lees de oranje punten en los ze op:
   - minstens 10 satellieten en GPS-signaal 4;
   - het thuispunt is gezet;
   - de accu is minstens 50 %;
   - de drone geeft geen windwaarschuwing;
   - de drone staat binnen 30 m van het startpunt.
-- [ ] **D3** **Echt vliegen** → vink de controlelijst af → **Alles gecontroleerd: opstijgen**. **Houd de afstandsbediening vast.** Na de richtingtest, op hoogte:
+- [ ] **D3** (6 november: opgestegen en gevlogen, maar Pauze, Hervatten en Overnemen met een stick staan nog niet in het logboek) **Echt vliegen** → vink de controlelijst af → **Alles gecontroleerd: opstijgen**. **Houd de afstandsbediening vast.** Na de richtingtest, op hoogte:
   - probeer **Pauze** en **Hervatten**;
   - probeer **Overnemen** met een stick.
-- [ ] **D4** Volgt de drone de banen? Maakt hij de foto's? Landt hij weer bij het startpunt?
+- [x] **D4** (6 november 2026: 4 van 4 foto's op hun plek, en zelf geland na *naar huis*; de camera bleef recht naar beneden) Volgt de drone de banen? Maakt hij de foto's? Landt hij weer bij het startpunt?
   - Staat er *De camera kijkt niet recht naar beneden* in het logboek terwijl je het wieltje niet aanraakte? Druk dan op **Naar huis** en meld het: dan staat de grens van 5° te krap voor een echte vlucht.
 - [ ] **D5** Na de vlucht (stap 5, punt 2):
   1. Zet de foto's van de SD-kaart op de Mac, samen met het fotolog (*Vluchten* → *Delen*).
   2. Controleer: zijn alle geplande foto's er? Liggen ze op de goede plek? Zijn ze scherp genoeg om de planten te beoordelen? Kijkt de camera recht naar beneden (alleen grond, geen horizon)? Staat er GPS in?
 - [ ] **D6** Op veilige hoogte: wat doet één druk op de **pauzeknop** van de afstandsbediening? Volgens de handleiding remt de drone af. (Hoofdstuk 6.5 van het DJI-document.)
-- [ ] **D7** Na 3 geslaagde echte vluchten vervalt de grens van 800 m. Ga daarna stap voor stap groter, tot een heel veld.
+- [ ] **D7** (1 van 3 gedaan, 6 november) Na 3 geslaagde echte vluchten vervalt de grens van 800 m. Ga daarna stap voor stap groter, tot een heel veld.
 
 ## E. Veld tekenen, sensoren, weer en advies (nieuw, 26 oktober 2026)
 

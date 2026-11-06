@@ -9,6 +9,10 @@ final class RouteFlightTests: XCTestCase {
     override func setUpWithError() throws {
         let file = try RoutePlanFile.read(TestFiles.data("voorbeeld.routeplan.json"))
         plan = FlightPlan(file)
+        setUpFlight()
+    }
+
+    private func setUpFlight() {
         drone = FakeDrone(projection: plan.projection)
         let fake = drone!
         flight = RouteFlight(plan: plan, drone: fake, flightId: "test-1", fieldId: "veld-noord", clock: { fake.now })
@@ -75,6 +79,19 @@ final class RouteFlightTests: XCTestCase {
         XCTAssertEqual(flight.axisMapping, drone.mapping)
         XCTAssertEqual(flight.phase, .finished)
         assertAllPhotosOnTheirPlace()
+    }
+
+    func testDirectionTestCopesWithGPSWander() {
+        // 6 November 2026: on the first real flight the first direction test failed (48°).
+        for phase in stride(from: 0.0, to: 6.2, by: 0.4) {
+            setUpFlight()
+            drone.gpsWanderM = 1.0
+            drone.gpsWanderPhase = phase
+            start()
+            run(seconds: 120) { [unowned self] in flight.axisMapping != nil || flight.log.contains { $0.text.hasPrefix("Richtingtest mislukt") } }
+            XCTAssertEqual(flight.axisMapping, .documented, "fase \(phase): \(flight.log.map(\.text))")
+            XCTAssertTrue(flight.log.contains { $0.text.hasPrefix("Gemeten: pitch ") }, "\(flight.log.map(\.text))")
+        }
     }
 
     func testFindsReversedAxes() {
@@ -670,7 +687,10 @@ final class ReviewFindingsTests: XCTestCase {
             return flight.phase == .toStart
         }
         XCTAssertEqual(flight.phase, .toStart)
-        XCTAssertLessThan(farthest, 6, "de drone dreef \(farthest) m weg vóór de richtingtest klaar was")
+        // The test itself moves the drone one leg east and one north; 3 m more is drift.
+        let settings = RouteFlight.Settings()
+        let testMoves = hypot(1, 1) * settings.axisTestSpeedMps * settings.axisMoveS
+        XCTAssertLessThan(farthest, testMoves + 3, "de drone dreef \(farthest) m weg vóór de richtingtest klaar was")
     }
 
     /// 1b. After a failed direction test the pause must not run away either.

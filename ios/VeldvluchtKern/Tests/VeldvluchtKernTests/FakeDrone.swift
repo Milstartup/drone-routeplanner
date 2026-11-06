@@ -34,6 +34,10 @@ final class FakeDrone: DroneControl {
     /// Shot numbers where the camera reports an error although the photo is taken.
     var falseErrors: Set<Int> = []
     var gpsLost = false
+    /// GPS positions wander slowly around the true position by up to this much (metres),
+    /// like a real receiver; the velocity the drone reports does not.
+    var gpsWanderM = 0.0
+    var gpsWanderPhase = 0.0
     /// At the end of going home, wait 0.3 m above the ground until the pilot lands.
     var waitsForLandingConfirmation = false
     /// The drone refuses to stop going home or landing.
@@ -79,7 +83,7 @@ final class FakeDrone: DroneControl {
             connected: connected && cableConnected,
             remoteControllerConnected: cableConnected,
             simulatorActive: simulatorActive,
-            position: gpsLost ? nil : projection.toLatLng(position),
+            position: gpsLost ? nil : projection.toLatLng(reportedPosition),
             satelliteCount: satellites,
             altitudeM: altitude,
             headingDeg: heading,
@@ -100,6 +104,11 @@ final class FakeDrone: DroneControl {
             flightMode: flightModeName,
             cameraPitchDeg: cameraPitchDeg
         )
+    }
+
+    private var reportedPosition: XY {
+        let s = now.timeIntervalSince1970 / 3 + gpsWanderPhase
+        return XY(x: position.x + gpsWanderM * sin(s), y: position.y + gpsWanderM * cos(s * 0.77))
     }
 
     /// The last part of going home: above the take-off point, coming down.

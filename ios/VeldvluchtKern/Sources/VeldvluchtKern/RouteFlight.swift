@@ -185,8 +185,10 @@ final class RouteFlight: ObservableObject {
         var maxCameraTiltDeg = 5.0
         var telemetryTimeoutS = 1.0
         var takeoffTimeoutS = 20.0
-        var axisTestSpeedMps = 1.0
-        var axisMoveS = 2.0
+        /// The first real flight (6 November 2026) failed its first direction test at 1 m/s
+        /// for 2 s ("schuin, 48°"): next to a 2 m move the GPS wander is too big.
+        var axisTestSpeedMps = 2.0
+        var axisMoveS = 3.0
         var axisSettleS = 2.0
         var maxYawRate = 30.0
         /// Wind compensation: how fast a steady offset from the line or target is corrected.
@@ -273,6 +275,10 @@ final class RouteFlight: ObservableObject {
     private var axisStep = AxisStep.settle
     private var axisStepStart: Date
     private var axisMarks: [(time: Date, point: XY)] = []
+    /// The drone's own velocity while it hovers before the test: the drift from wind. Its
+    /// velocity is much steadier than the difference of two GPS positions.
+    private var driftSum = XY(x: 0, y: 0)
+    private var driftSamples = 0
     /// Built up from steady offsets, to cancel wind the drone does not cancel itself.
     private var windCorrection = XY(x: 0, y: 0)
     private var lastSteerTime: Date?
@@ -816,7 +822,7 @@ final class RouteFlight: ObservableObject {
                 }
             }
         case .checkingAxes:
-            sendAxisTest(now, p)
+            sendAxisTest(now, p, t)
             return
         case .toStart:
             let target = plan.waypoints.first ?? p
@@ -1003,15 +1009,21 @@ final class RouteFlight: ObservableObject {
         axisStep = .settle
         axisStepStart = now
         axisMarks = []
+        driftSum = XY(x: 0, y: 0)
+        driftSamples = 0
         addLog("Richtingtest: eerst stilhangen, dan alleen pitch, dan alleen roll, elk \(Int(settings.axisMoveS)) s met \(Int(settings.axisTestSpeedMps)) m/s.")
     }
 
-    private func sendAxisTest(_ now: Date, _ p: XY) {
+    private func sendAxisTest(_ now: Date, _ p: XY, _ t: DroneTelemetry) {
         let elapsed = now.timeIntervalSince(axisStepStart)
         switch axisStep {
         case .settle:
             // Raw zero for 3 s; the last 2 s show how far wind makes the drone drift.
             if axisMarks.isEmpty, elapsed >= 1 { axisMarks.append((now, p)) }
+            if !axisMarks.isEmpty {
+                driftSum = XY(x: driftSum.x + t.velocityEast, y: driftSum.y + t.velocityNorth)
+                driftSamples += 1
+            }
             if elapsed >= 3 { nextAxisStep(.pitch, now, mark: p) }
         case .pitch where elapsed >= settings.axisMoveS:
             nextAxisStep(.afterPitch, now)
@@ -1041,9 +1053,8 @@ final class RouteFlight: ObservableObject {
         // Marks: drift start, before pitch, before roll (= after pitch), after roll.
         guard axisMarks.count == 4 else { return }
         let m = axisMarks
-        let driftTime = m[1].time.timeIntervalSince(m[0].time)
-        let drift = driftTime > 0
-            ? XY(x: (m[1].point.x - m[0].point.x) / driftTime, y: (m[1].point.y - m[0].point.y) / driftTime)
+        let drift = driftSamples > 0
+            ? XY(x: driftSum.x / Double(driftSamples), y: driftSum.y / Double(driftSamples))
             : XY(x: 0, y: 0)
         func move(_ a: Int, _ b: Int) -> XY {
             let seconds = m[b].time.timeIntervalSince(m[a].time)
@@ -1051,12 +1062,19 @@ final class RouteFlight: ObservableObject {
         }
         let pitchMove = move(1, 2)
         let rollMove = move(2, 3)
+        func described(_ move: XY) -> String {
+            let bearing = Int(FlightPlan.Leg.bearing(from: XY(x: 0, y: 0), to: move).rounded()) % 360
+            return "\(String(format: "%.1f", hypot(move.x, move.y))) m naar \(bearing)°"
+        }
+        // So the log shows how clear the test was (0° is north, 90° east).
+        let measured = "Gemeten: pitch \(described(pitchMove)), roll \(described(rollMove))."
         do {
             let mapping = try AxisMapping.measure(pitchMove: pitchMove, rollMove: rollMove)
             axisMapping = mapping
             windCorrection = XY(x: 0, y: 0)
             let same = mapping == .documented ? "zoals DJI beschrijft" : "ANDERS dan DJI beschrijft; de app stuurt daarop bij"
             addLog("Richtingtest gelukt: \(mapping.description) (\(same)).")
+            addLog(measured)
             if routeStarted {
                 setPhase(.toResumePoint)
             } else {
@@ -1066,6 +1084,7 @@ final class RouteFlight: ObservableObject {
         } catch {
             setPhase(.paused(error.localizedDescription))
             addLog("\(error.localizedDescription) De route start niet. Kies Overnemen of Naar huis.")
+            addLog(measured)
         }
     }
 

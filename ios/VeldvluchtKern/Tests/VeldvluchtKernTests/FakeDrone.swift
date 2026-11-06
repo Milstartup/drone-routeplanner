@@ -45,6 +45,8 @@ final class FakeDrone: DroneControl {
     /// The camera's tilt; 0 (straight ahead) like the Mavic Mini after switching on.
     var cameraPitchDeg = 0.0
     var refusesCameraDown = false
+    /// Photos taken while the camera did not look straight down.
+    private(set) var tiltedShots = 0
 
     private(set) var now = Date(timeIntervalSince1970: 1_793_000_000)
     private(set) var position: XY
@@ -218,6 +220,7 @@ final class FakeDrone: DroneControl {
             return
         }
         shots.append((now, position))
+        if abs(cameraPitchDeg + 90) > 0.5 { tiltedShots += 1 }
         let shotNumber = shots.count
         completion(falseErrors.contains(shotNumber) ? FlightError(message: "time-out") : nil)
         after(0.6) { [self] in
@@ -252,8 +255,9 @@ final class FakeDrone: DroneControl {
 
     func pointCameraDown(completion: @escaping (Error?) -> Void) {
         guard !refusesCameraDown else { return completion(FlightError(message: "gimbal geeft geen antwoord")) }
-        cameraPitchDeg = -90
+        // DJI accepts the command at once; the gimbal needs a moment to get there.
         completion(nil)
+        after(1) { [self] in cameraPitchDeg = -90 }
     }
 
     func cancelLanding(completion: @escaping (Error?) -> Void) {

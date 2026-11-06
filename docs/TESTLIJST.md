@@ -49,7 +49,13 @@ Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - *Vliegtest #2*: pauze en hervatten goed. Daarna de kabel eruit (C9): de app nam over en ging niet vanzelf verder. Na 23 s stond de simulator uit en de drone weer op de grond. Dat is nu twee keer gezien: **de kabel lostrekken stopt de simulator van DJI**. Wat de echte drone dan doet, kan de simulator dus niet laten zien.
   - De foto's in het fotolog lopen door zonder gaten. Eén foto (DJI_0413) vroeg de app niet; die staat terecht niet in het fotolog.
   - Wat de app nu beter zegt: bij een losse kabel *Kabel tussen iPhone en afstandsbediening los* (en niet meer dat de drone na 3 s terugkeert, want dat geldt alleen als de radioverbinding tussen afstandsbediening en drone wegvalt), en bij een gestopte simulator *De simulator is gestopt* in plaats van *Geland door de piloot*. Eén nieuwe nep-drone-test.
-- **Nog nooit getest:** de rest van blok C; echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
+- **Vijfde ronde in de simulator (6 november 2026, 9:55 tot 10:01), met *camera recht naar beneden*:** daarmee is **blok C af**.
+  - Beide vluchten begonnen met *Camera recht naar beneden.*
+  - C8: na de knop met het huisje op de afstandsbediening keerde de drone zelf terug, en de app stuurde niet meer.
+  - C16: je draaide zes keer aan het wieltje; de app zag het elke keer en draaide de camera terug. Maar die zes foto's werden toch gemaakt en telden mee. Een scheve foto ligt meters naast de plek en zet planten op de verkeerde plaats op de kaart. Nu slaat de app een foto over zolang de camera scheef staat. Omdat de foto's elkaar overlappen, blijft de grond toch helemaal in beeld.
+  - **Landen** werd twee keer kort na elkaar getikt, en beide tikken gingen naar de drone. Nu verdwijnt de knop na één tik.
+  - Eén stick bewogen tijdens de richtingtest: de app gaf de besturing meteen terug, en **Hervatten** werkte.
+- **Nog nooit getest:** echt vliegen; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
 
@@ -114,7 +120,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 - [x] **C6** Druk op **Overnemen**. Je hoort te zien: *Overgenomen: jij vliegt*. Daarna hoort **Hervatten** weer te werken.
 - [x] **C7** Beweeg tijdens de route **kort een stick**. Je hoort te zien: *Je bewoog een stick: de app stuurt niet meer*. (Nodig om echt vliegen vrij te geven.)
   - Houd daarna een stick vast en druk op **Hervatten**. In het logboek hoort te staan: *Laat eerst de sticks los*.
-- [ ] **C8** (6 november: niet terug te vinden in het logboek. De drone kreeg geen andere vluchtstand, maar om 9:40:10 kwam er een foto die de app niet vroeg; misschien is de fotoknop ingedrukt.) Druk op de **pauze/terugkeerknop van de afstandsbediening**. Wat doet de drone, en wat zegt de app? Je verwacht *De drone keert zelf terug*, zonder dat de app ertegenin stuurt.
+- [x] **C8** (6 november 2026, 9:56: de drone keerde zelf terug en de app stuurde niet meer) Druk op de **pauze/terugkeerknop van de afstandsbediening**. Wat doet de drone, en wat zegt de app? Je verwacht *De drone keert zelf terug*, zonder dat de app ertegenin stuurt.
 - [x] **C9** (6 november 2026: de app nam over en ging niet vanzelf verder; de simulator stopte bij het lostrekken) Trek tijdens de route **de kabel uit de iPhone** en steek hem na 10 seconden terug. Je verwacht:
   - *Overgenomen* (of *De drone keert zelf terug*);
   - de app gaat nooit vanzelf verder.
@@ -133,9 +139,9 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - in de Bestanden-app staan de vluchten onder *Op mijn iPhone → Veldvlucht → Vluchten*.
 - [x] **C14** (gemeld door jou, 6 november; de nummers in het fotolog lopen door zonder gaten) Op de SD-kaart staan de nieuwe foto's, en de bestandsnamen kloppen met het fotolog.
 - [x] **C15** (gemeld door jou, 6 november) Druk op **Simulator stoppen** en zet de drone **uit en weer aan**.
-- [ ] **C16** **Camera recht naar beneden** (nieuw sinds 6 november). Start een korte route in de simulator, bijvoorbeeld *Vliegtest #2*:
+- [x] **C16** (6 november 2026, 9:58: gelukt; een scheve foto slaat de app nu over) **Camera recht naar beneden** (nieuw sinds 6 november). Start een korte route in de simulator, bijvoorbeeld *Vliegtest #2*:
   - Kijk bij het starten naar de drone: draait de camera **recht naar beneden** voordat de motoren starten? In het logboek hoort *Camera recht naar beneden.* te staan.
-  - Draai tijdens de route even aan het **wieltje linksboven** op de afstandsbediening, zodat de camera kantelt. Bij de volgende foto hoort te staan: *de camera kijkt niet recht naar beneden … De app draait hem terug*, en de camera gaat weer naar beneden.
+  - Draai tijdens de route even aan het **wieltje linksboven** op de afstandsbediening, zodat de camera kantelt. Je hoort te zien: *De camera kijkt niet recht naar beneden (…°). De app draait hem terug.* De camera gaat weer naar beneden, en een foto die op dat moment aan de beurt was, telt als *gemist*.
 
 ## D. Eerste echte vluchten (stap 5), alleen als blok C helemaal goed ging
 
@@ -156,6 +162,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   - probeer **Pauze** en **Hervatten**;
   - probeer **Overnemen** met een stick.
 - [ ] **D4** Volgt de drone de banen? Maakt hij de foto's? Landt hij weer bij het startpunt?
+  - Staat er *De camera kijkt niet recht naar beneden* in het logboek terwijl je het wieltje niet aanraakte? Druk dan op **Naar huis** en meld het: dan staat de grens van 5° te krap voor een echte vlucht.
 - [ ] **D5** Na de vlucht (stap 5, punt 2):
   1. Zet de foto's van de SD-kaart op de Mac, samen met het fotolog (*Vluchten* → *Delen*).
   2. Controleer: zijn alle geplande foto's er? Liggen ze op de goede plek? Zijn ze scherp genoeg om de planten te beoordelen? Kijkt de camera recht naar beneden (alleen grond, geen horizon)? Staat er GPS in?

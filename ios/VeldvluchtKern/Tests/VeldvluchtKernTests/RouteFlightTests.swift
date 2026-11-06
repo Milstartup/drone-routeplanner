@@ -472,6 +472,9 @@ final class RouteFlightSafetyTests: XCTestCase {
         XCTAssertFalse(flight.log.contains { $0.text.contains("Landen bevestigd") }, "alleen als de drone wacht")
         run(seconds: 60) { [unowned self] in flight.canConfirmLanding }
         flight.confirmLanding()
+        XCTAssertFalse(flight.canConfirmLanding, "de knop verdwijnt na één tik")
+        flight.confirmLanding()
+        XCTAssertEqual(flight.log.filter { $0.text == "Landen bevestigd door de piloot." }.count, 1)
         run(seconds: 10, until: finished)
         XCTAssertEqual(flight.phase, .finished)
         XCTAssertFalse(flight.log.contains { $0.text.contains("bevestigen lukt niet") })
@@ -597,19 +600,24 @@ final class RouteFlightSafetyTests: XCTestCase {
                       "\(flight.log.map(\.text))")
     }
 
-    func testTurnsATiltedCameraBackDuringTheRoute() {
+    func testSkipsPhotosWhileTheCameraIsTiltedAndTurnsItBack() {
         flight.start()
         run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 5 }
-        // The pilot turns the gimbal wheel on the remote controller.
+        // The pilot turns the gimbal wheel on the remote controller (6 November 2026).
         drone.cameraPitchDeg = -45
         let photos = flight.photoLog.photos.count
         run(seconds: 60) { [unowned self] in flight.photoLog.photos.count >= photos + 2 }
         XCTAssertEqual(drone.cameraPitchDeg, -90)
-        let warnings = flight.log.filter { $0.text.contains("kijkt niet recht naar beneden (-45°)") }
-        XCTAssertEqual(warnings.count, 1, "\(flight.log.map(\.text))")
+        let texts = flight.log.map(\.text)
+        XCTAssertEqual(texts.filter { $0 == "De camera kijkt niet recht naar beneden (-45°). De app draait hem terug." }.count, 1, "\(texts)")
         run(seconds: 2500, until: finished)
         XCTAssertEqual(flight.phase, .finished)
-        XCTAssertEqual(flight.missedPhotos, [])
+        XCTAssertEqual(drone.tiltedShots, 0, "geen scheve foto's")
+        XCTAssertLessThanOrEqual(flight.missedPhotos.count, 1)
+        for index in flight.missedPhotos {
+            XCTAssertTrue(flight.log.contains { $0.text == "Foto \(index + 1) gemist: de camera keek niet recht naar beneden (-45°)." }, "\(flight.log.map(\.text))")
+        }
+        XCTAssertEqual(flight.photoLog.photos.count, plan.photos.count - flight.missedPhotos.count)
     }
 }
 

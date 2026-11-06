@@ -256,6 +256,10 @@ final class RouteFlight: ObservableObject {
     private var takeOffAccepted = false
     private var lastLoggedFlightMode: String?
     private var turningCameraDown = false
+    private var lastCameraTurn: Date?
+    /// Set by a tap on Landen until the drone stops waiting: one tap is enough (6 November
+    /// 2026: two taps a second apart both went to the drone).
+    @Published private var landingConfirmSent = false
     /// Distance along the route at the last tick with a position, for resuming without GPS.
     private var lastAlongM: Double?
     private var lastFileNumber: Int?
@@ -520,15 +524,17 @@ final class RouteFlight: ObservableObject {
 
     /// The drone waits just above the ground for the pilot to confirm the landing.
     var canConfirmLanding: Bool {
-        phase.isAirborne && telemetry?.landingConfirmationNeeded == true
+        phase.isAirborne && telemetry?.landingConfirmationNeeded == true && !landingConfirmSent
     }
 
     /// The "Landen" button: the pilot has looked at the ground and lets the drone land.
     func confirmLanding() {
         guard canConfirmLanding else { return }
+        landingConfirmSent = true
         addLog("Landen bevestigd door de piloot.")
         drone?.confirmLanding { [weak self] error in
             if let error = error {
+                self?.landingConfirmSent = false
                 self?.addLog("Landen bevestigen lukt niet: \(Self.clause(error)). Druk op Overnemen en houd dan de linkerstick omlaag tot de motoren stoppen.")
             }
         }
@@ -561,6 +567,7 @@ final class RouteFlight: ObservableObject {
     // MARK: - Input from the drone
 
     func update(_ telemetry: DroneTelemetry) {
+        if !telemetry.landingConfirmationNeeded { landingConfirmSent = false }
         // So a test can be checked afterwards (C8, C9): what changed while the drone was in the
         // air. While the app steers, losing the connection is already logged by the take-over.
         if phase.isAirborne, let old = self.telemetry {
@@ -1077,11 +1084,15 @@ final class RouteFlight: ObservableObject {
             // A photo at the very end of a leg: the drone stops within the arrival radius.
             let lead = photoOnLeg > leg.lengthM - settings.arriveRadiusM ? settings.arriveRadiusM + 0.2 : settings.photoLeadM
             guard alongLegM >= photoOnLeg - lead else { return }
-            if canShoot(now) {
+            // A tilted photo lies metres off and would put plants in the wrong place, so it is
+            // skipped. With the planned overlap its neighbours still cover that ground.
+            let tilt = cameraTilt(t)
+            if let pitch = tilt { turnCameraDown(from: pitch, now: now) }
+            if tilt == nil, canShoot(now) {
                 shoot(photo, now: now, t: t)
                 nextPhotoIndex += 1
             } else if alongLegM > photoOnLeg + settings.photoLateM {
-                markMissed(photo.index, "de camera was nog niet klaar")
+                markMissed(photo.index, tilt.map { "de camera keek niet recht naar beneden (\(Int($0.rounded()))°)" } ?? "de camera was nog niet klaar")
             }
             return
         }
@@ -1102,11 +1113,6 @@ final class RouteFlight: ObservableObject {
 
     private func shoot(_ photo: FlightPlan.Photo, now: Date, t: DroneTelemetry) {
         guard let position = t.position else { return }
-        // For example after the gimbal wheel on the remote controller was turned.
-        if let pitch = t.cameraPitchDeg, abs(pitch + 90) > settings.maxCameraTiltDeg {
-            addLog("Foto \(photo.index + 1): de camera kijkt niet recht naar beneden (\(Int(pitch.rounded()))°). De app draait hem terug.")
-            turnCameraDown()
-        }
         shootInProgress = true
         lastShotTime = now
         pendingShots.append(PendingShot(plannedIndex: photo.index, time: now, position: position,
@@ -1121,13 +1127,23 @@ final class RouteFlight: ObservableObject {
         }
     }
 
-    private func turnCameraDown() {
-        guard !turningCameraDown else { return }
+    /// The camera's tilt when it clearly does not look straight down, for example after the
+    /// gimbal wheel on the remote controller was turned. nil when it is fine or unknown.
+    private func cameraTilt(_ t: DroneTelemetry) -> Double? {
+        guard let pitch = t.cameraPitchDeg, abs(pitch + 90) > settings.maxCameraTiltDeg else { return nil }
+        return pitch
+    }
+
+    private func turnCameraDown(from pitch: Double, now: Date) {
+        // The gimbal takes about a second; DJI may answer before it gets there.
+        guard !turningCameraDown, now.timeIntervalSince(lastCameraTurn ?? .distantPast) >= 2 else { return }
         turningCameraDown = true
+        lastCameraTurn = now
+        addLog("De camera kijkt niet recht naar beneden (\(Int(pitch.rounded()))°). De app draait hem terug.")
         drone?.pointCameraDown { [weak self] error in
             self?.turningCameraDown = false
             if let error = error {
-                self?.addLog("Camera terugdraaien lukt niet: \(error.localizedDescription)")
+                self?.addLog("Camera terugdraaien lukt niet: \(Self.clause(error)).")
             }
         }
     }

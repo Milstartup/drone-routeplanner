@@ -164,6 +164,7 @@ final class DJIConnection: NSObject, ObservableObject {
             status.simulatorActive = false
             if var telemetry = lastTelemetry {
                 telemetry.connected = false
+                telemetry.remoteControllerConnected = status.remoteConnected
                 telemetry.time = Date()
                 lastTelemetry = telemetry
                 onTelemetry?(telemetry)
@@ -400,7 +401,8 @@ extension DJIConnection: DJIFlightControllerDelegate {
             status.isFlying = isFlying
             if status.simulatorActive != simulator { status.simulatorActive = simulator }
             let telemetry = DroneTelemetry(
-                time: Date(), connected: status.aircraftConnected, simulatorActive: simulator,
+                time: Date(), connected: status.aircraftConnected,
+                remoteControllerConnected: status.remoteConnected, simulatorActive: simulator,
                 position: position, satelliteCount: satellites, altitudeM: altitude, headingDeg: heading,
                 velocityNorth: north, velocityEast: east, isFlying: isFlying, motorsOn: motorsOn,
                 batteryPercent: status.batteryPercent, batteryNeededToGoHome: needed,

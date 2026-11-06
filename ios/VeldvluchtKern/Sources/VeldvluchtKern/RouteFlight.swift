@@ -32,6 +32,9 @@ struct DroneTelemetry: Equatable {
     var time: Date
     /// Remote controller and drone connected.
     var connected: Bool
+    /// The iPhone is connected to the remote controller (the cable). Without it the app cannot
+    /// reach the drone either, but the remote controller still can.
+    var remoteControllerConnected = true
     var simulatorActive: Bool
     var position: LatLng?
     var satelliteCount: Int
@@ -459,7 +462,7 @@ final class RouteFlight: ObservableObject {
                 self.cancellingReturn = false
                 guard self.phaseVersion == version else { return }
                 if let error = error {
-                    self.addLog("\(what) afbreken lukt niet: \(error.localizedDescription). De drone gaat zelf verder. Stoppen kan met de pauzeknop op de afstandsbediening.")
+                    self.addLog("\(what) afbreken lukt niet: \(Self.clause(error)). De drone gaat zelf verder. Stoppen kan met de pauzeknop op de afstandsbediening.")
                     return
                 }
                 self.setPhase(.takenOver(reason))
@@ -477,7 +480,12 @@ final class RouteFlight: ObservableObject {
         case _ where phase.isSteering || phase == .takingOff:
             rememberResumePoint()
             setPhase(.takenOver(reason))
-            addLog("\(reason) Virtual Stick staat uit; jij vliegt met de sticks.")
+            if telemetry?.remoteControllerConnected == false {
+                // The app cannot switch Virtual Stick off now; it keeps trying until the cable is back.
+                addLog("\(reason) Volgens DJI hangt de drone stil. Steek de kabel terug, of houd de terugkeerknop op de afstandsbediening ingedrukt.")
+            } else {
+                addLog("\(reason) Virtual Stick staat uit; jij vliegt met de sticks.")
+            }
             releaseSticks(byStick: byStick)
         default:
             return
@@ -493,7 +501,7 @@ final class RouteFlight: ObservableObject {
             guard let self = self else { return }
             if let error = error {
                 if !self.releaseFailed {
-                    self.addLog("Virtual Stick uitzetten lukt niet: \(error.localizedDescription). De app probeert het elke seconde opnieuw.")
+                    self.addLog("Virtual Stick uitzetten lukt niet: \(Self.clause(error)). De app probeert het elke seconde opnieuw.")
                 }
                 self.releaseFailed = true
                 return
@@ -521,7 +529,7 @@ final class RouteFlight: ObservableObject {
         addLog("Landen bevestigd door de piloot.")
         drone?.confirmLanding { [weak self] error in
             if let error = error {
-                self?.addLog("Landen bevestigen lukt niet: \(error.localizedDescription). Druk op Overnemen en houd dan de linkerstick omlaag tot de motoren stoppen.")
+                self?.addLog("Landen bevestigen lukt niet: \(Self.clause(error)). Druk op Overnemen en houd dan de linkerstick omlaag tot de motoren stoppen.")
             }
         }
     }
@@ -544,8 +552,8 @@ final class RouteFlight: ObservableObject {
                 // The 3 s before "no longer going home" count from the drone's answer.
                 self.lastReturnSeen = self.clock()
                 guard let error = error else { return }
-                self.setPhase(.takenOver("Naar huis lukt niet: \(error.localizedDescription). Vlieg zelf terug."))
-                self.addLog("Naar huis lukt niet: \(error.localizedDescription). Vlieg zelf terug.")
+                self.setPhase(.takenOver("Naar huis lukt niet: \(Self.clause(error)). Vlieg zelf terug."))
+                self.addLog("Naar huis lukt niet: \(Self.clause(error)). Vlieg zelf terug.")
             }
         }
     }
@@ -557,7 +565,8 @@ final class RouteFlight: ObservableObject {
         // air. While the app steers, losing the connection is already logged by the take-over.
         if phase.isAirborne, let old = self.telemetry {
             if old.connected != telemetry.connected, !phase.isSteering {
-                addLog(telemetry.connected ? "Verbinding met de drone terug." : "Verbinding met de drone weg.")
+                addLog(telemetry.connected ? "Verbinding met de drone terug."
+                       : telemetry.remoteControllerConnected ? "Verbinding met de drone weg." : "Kabel tussen iPhone en afstandsbediening los.")
             }
             // While the app steers, the simulator stopping is already logged by the take-over.
             if telemetry.connected, old.simulatorActive != telemetry.simulatorActive, !phase.isSteering {
@@ -637,7 +646,7 @@ final class RouteFlight: ObservableObject {
             if let t = telemetry, !t.isFlying, !t.motorsOn {
                 setPhase(.finished)
                 let planned = plan.photos.count - firstPhotoIndex
-                addLog("Geland. \(photoLog.photos.count) van \(planned) foto's bevestigd, \(missedPhotos.count) gemist.")
+                addLog("\(landedText(t)) \(photoLog.photos.count) van \(planned) foto's bevestigd, \(missedPhotos.count) gemist.")
                 if let next = continueAtPhoto {
                     addLog("Route nog niet af: een volgende vlucht kan verder vanaf foto \(next + 1).")
                 }
@@ -657,7 +666,7 @@ final class RouteFlight: ObservableObject {
         case .takenOver:
             if let t = telemetry, t.connected, !t.isFlying, !t.motorsOn {
                 setPhase(.finished)
-                addLog("Geland door de piloot. \(photoLog.photos.count) foto's bevestigd.")
+                addLog("\(landedText(t, byPilot: true)) \(photoLog.photos.count) foto's bevestigd.")
                 if let next = continueAtPhoto {
                     addLog("Een volgende vlucht kan verder vanaf foto \(next + 1).")
                 }
@@ -677,6 +686,22 @@ final class RouteFlight: ObservableObject {
         default:
             break
         }
+    }
+
+    /// On 5 and 6 November 2026 pulling the cable stopped DJI's simulator, which puts the drone
+    /// back on the ground: that is no landing.
+    private func landedText(_ t: DroneTelemetry, byPilot: Bool = false) -> String {
+        if settings.requireSimulator, !t.simulatorActive {
+            return "De simulator is gestopt, dus de drone staat weer op de grond."
+        }
+        return byPilot ? "Geland door de piloot." : "Geland."
+    }
+
+    /// An error's text without its closing full stop, to use inside a sentence.
+    private static func clause(_ error: Error) -> String {
+        var text = error.localizedDescription
+        while text.hasSuffix(".") { text.removeLast() }
+        return text
     }
 
     /// ", vluchtstand: …" for the log, when the drone gave its flight mode.
@@ -723,7 +748,11 @@ final class RouteFlight: ObservableObject {
     private func tickSteering(_ now: Date) {
         guard !waitingForDrone, let drone = drone else { return }
         guard let t = telemetry, t.connected else {
-            takeOver(reason: "Verbinding met de drone weg. Bij verlies van de verbinding keert de drone na 3 s zelf terug.")
+            if telemetry?.remoteControllerConnected == false {
+                takeOver(reason: "Kabel tussen iPhone en afstandsbediening los: de app kan niet meer sturen.")
+            } else {
+                takeOver(reason: "Verbinding met de drone weg. Bij verlies van de verbinding keert de drone na 3 s zelf terug.")
+            }
             return
         }
         guard now.timeIntervalSince(t.time) <= settings.telemetryTimeoutS, let position = t.position else {
@@ -941,7 +970,7 @@ final class RouteFlight: ObservableObject {
             }
             if let error = error {
                 self.setPhase(.takenOver("Virtual Stick aanzetten lukt niet: \(error.localizedDescription)"))
-                self.addLog("Virtual Stick aanzetten lukt niet: \(error.localizedDescription). Jij vliegt.")
+                self.addLog("Virtual Stick aanzetten lukt niet: \(Self.clause(error)). Jij vliegt.")
                 return
             }
             self.setPhase(next)

@@ -13,6 +13,8 @@ final class FakeDrone: DroneControl {
     var mapping = AxisMapping.documented
     var simulatorActive = true
     var connected = true
+    /// The cable between the iPhone and the remote controller.
+    var cableConnected = true
     var batteryPercent = 90
     var batteryNeededToGoHome = 12
     var satellites = 12
@@ -72,7 +74,8 @@ final class FakeDrone: DroneControl {
     func telemetry() -> DroneTelemetry {
         DroneTelemetry(
             time: now,
-            connected: connected,
+            connected: connected && cableConnected,
+            remoteControllerConnected: cableConnected,
             simulatorActive: simulatorActive,
             position: gpsLost ? nil : projection.toLatLng(position),
             satelliteCount: satellites,

@@ -555,6 +555,26 @@ final class RouteFlightSafetyTests: XCTestCase {
         XCTAssertEqual(flight.preflightProblems(), ["Accu te leeg: 31 % (minimaal 40 %)."])
     }
 
+    func testPullingTheCableIsExplainedAndSoIsTheStoppedSimulator() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        drone.cableConnected = false
+        run(seconds: 1)
+        guard case .takenOver = flight.phase else { return XCTFail("\(flight.phase)") }
+        let texts = flight.log.map(\.text)
+        XCTAssertTrue(texts.contains { $0.hasPrefix("Kabel tussen iPhone en afstandsbediening los") && $0.contains("hangt de drone stil") }, "\(texts)")
+        XCTAssertFalse(texts.contains { $0.contains("keert de drone na 3 s") }, "dat geldt voor de radioverbinding")
+        // 6 November 2026: the simulator had stopped and the drone stood on the ground again.
+        drone.simulatorActive = false
+        drone.landByPilot()
+        drone.cableConnected = true
+        run(seconds: 1)
+        XCTAssertEqual(flight.phase, .finished)
+        let end = flight.log.map(\.text)
+        XCTAssertTrue(end.contains("De simulator is gestopt, dus de drone staat weer op de grond. \(flight.photoLog.photos.count) foto's bevestigd."), "\(end)")
+        XCTAssertFalse(end.contains { $0.hasPrefix("Geland door de piloot") })
+    }
+
     func testPointsTheCameraStraightDownBeforeTakeOff() {
         XCTAssertEqual(drone.cameraPitchDeg, 0)
         flight.start()

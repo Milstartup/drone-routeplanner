@@ -77,7 +77,7 @@ Stand: 9 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - Het kapje staat nu ook in de controlelijst vóór een echte vlucht.
   - In het logboek schreef de app meteen *Camera recht naar beneden*, en daarna nooit *De camera kijkt even niet recht naar beneden*. De gimbal meldde dus niets, of ongeveer −90°. Meldde hij niets, dan houdt de nieuwe controle de drone nu op de grond. Meldde hij −90° terwijl de camera vastzat, dan helpt alleen de controlelijst. Daarom zet het logboek nu achter *Camera recht naar beneden* de hoek die de gimbal meldt.
   - Om 8:42:15 was de verbinding met de drone ongeveer 5 seconden weg. De app stopte met sturen, zoals bedoeld. Na **Hervatten** ging de route verder vanaf foto 2, en alle 17 foto's zijn bevestigd.
-  - Het automatische landen hield twee keer op: om 8:45:09 en 8:45:34 stond de drone weer in vluchtstand *GPS*. De derde keer landde hij wel, na een tik op **Landen**. Nog uitzoeken: stopte de drone vanzelf, of werd een stick of de pauzeknop aangeraakt?
+  - Het automatische landen hield twee keer op: om 8:45:09 en 8:45:34 stond de drone weer in vluchtstand *GPS*. De derde keer landde hij wel, na een tik op **Landen**. Dat kwam doordat de piloot ingreep, en de app meldde het goed (*De drone keert niet meer terug … Jij vliegt*).
   - Uit de foto's: op de banen heen kantelde de drone 12 à 13°, en terug maar −2°. Er stond dus waarschijnlijk flinke wind langs de banen.
 - **Nog nooit getest:** een lange echte vlucht; een echt sensorkastje; jouw eigen indruk van alle schermen.
 

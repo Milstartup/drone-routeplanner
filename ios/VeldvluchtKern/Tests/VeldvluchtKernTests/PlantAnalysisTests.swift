@@ -47,6 +47,25 @@ final class PlantAnalysisTests: XCTestCase {
         XCTAssertTrue(findings.allSatisfy { (0.3...0.8).contains($0.confidence) })
     }
 
+    /// Found with made-up overlapping photos (9 November 2026): a plant cut off by the edge of
+    /// the photo looked small, and every photo got a row of false markers along its edges.
+    func testAPlantCutOffByTheEdgeIsNotMarked() {
+        var image = photo()
+        // Only a sliver of this plant is in the photo.
+        for y in 75...89 {
+            for x in 0...1 {
+                let i = (y * image.width + x) * 4
+                (image.rgba[i], image.rgba[i + 1], image.rgba[i + 2]) = (45, 140, 50)
+            }
+        }
+        let plants = PlantAnalysis.plants(rgba: image.rgba, width: image.width, height: image.height)
+        XCTAssertEqual(plants.count, 25)
+        XCTAssertEqual(plants.filter(\.touchesEdge).count, 1)
+        let findings = PlantAnalysis.findings(plants)
+        XCTAssertEqual(findings.count, 2, "\(findings.map(\.reason))")
+        XCTAssertFalse(findings.contains { $0.plant.touchesEdge })
+    }
+
     func testAPhotoWithoutPlantsGivesNothing() {
         let width = 50
         let rgba = [UInt8]((0..<(width * width)).flatMap { _ in [UInt8(122), 92, 64, 255] })

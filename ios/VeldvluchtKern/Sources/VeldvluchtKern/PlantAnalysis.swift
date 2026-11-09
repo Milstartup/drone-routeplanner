@@ -14,6 +14,8 @@ enum PlantAnalysis {
         var areaPx: Int
         /// Mean greenness: 2g − r − b of the chromatic colours (0 = grey, higher = greener).
         var greenness: Double
+        /// Part of the plant lies outside the photo, so it looks smaller than it is.
+        var touchesEdge = false
     }
 
     /// A plant that needs attention, with why and how sure.
@@ -61,9 +63,11 @@ enum PlantAnalysis {
             var sumX = 0.0
             var sumY = 0.0
             var sumGreen = 0.0
+            var touchesEdge = false
             while let p = stack.popLast() {
                 let x = p % width
                 let y = p / width
+                touchesEdge = touchesEdge || x == 0 || y == 0 || x == width - 1 || y == height - 1
                 count += 1
                 sumX += Double(x)
                 sumY += Double(y)
@@ -76,7 +80,7 @@ enum PlantAnalysis {
             }
             if count >= settings.minAreaPx {
                 plants.append(Plant(x: sumX / Double(count), y: sumY / Double(count), areaPx: count,
-                                    greenness: sumGreen / Double(count)))
+                                    greenness: sumGreen / Double(count), touchesEdge: touchesEdge))
             }
         }
         return plants
@@ -111,8 +115,10 @@ enum PlantAnalysis {
         return (Double(bestBin) + 1) / Double(bins) * 3 - 1
     }
 
-    /// Plants much less green or much smaller than the other plants in the same photo.
+    /// Plants much less green or much smaller than the other plants in the same photo. A plant
+    /// partly outside the photo only looks small: the overlapping photo shows it whole.
     static func findings(_ plants: [Plant], settings: Settings = Settings()) -> [Finding] {
+        let plants = plants.filter { !$0.touchesEdge }
         guard plants.count >= settings.minPlants else { return [] }
         let greens = plants.map(\.greenness)
         let areas = plants.map { Double($0.areaPx) }

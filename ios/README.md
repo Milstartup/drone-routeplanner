@@ -378,7 +378,7 @@ Het rekenwerk (routebestand, controles, dataformaten) staat apart in `Veldvlucht
    swift test
    ```
 
-Onderaan moet staan: *Executed 135 tests, with 0 failures*.
+Onderaan moet staan: *Executed 146 tests, with 0 failures*.
 
 - De tests lezen ook alle voorbeeldbestanden uit `docs/voorbeelden`, dus een fout in zo'n bestand valt meteen op.
 - **De stuurlus wordt getest met een nep-drone** (`FakeDrone.swift`): een eenvoudig model dat reageert op stuurcommando's, met een vertraging, en eventueel met wind. Daarmee vliegt de test de hele voorbeeldroute en controleert hij:
@@ -392,7 +392,8 @@ Onderaan moet staan: *Executed 135 tests, with 0 failures*.
 - **Veld tekenen** (`FieldPlannerTests`): voor drie velden die de routeplanner zelf maakte, geeft de app precies hetzelfde routebestand. Ook: rechthoeken, een U-vorm, te kleine velden en een veldgrens die zichzelf kruist.
 - **Weer, sensoren en advies** (`CentralTests`): een echt antwoord van Open-Meteo met de vliegmomenten, uploads van een kastje (ook dubbel verstuurd), en alle regels van het wateradvies.
 - **De cloud** (`CloudTests`): inloggen, een verlopen login vernieuwen, velden bewaren met de sleutels van de kastjes, metingen lezen, en wat er gebeurt zonder internet. Tegen een nep-server.
-- **De foto-analyse** (`PlantAnalysisTests`): een nagemaakte foto met een gelige en een kleine plant, en de plek op de grond bij elke vliegrichting.
+- **De foto-analyse** (`PlantAnalysisTests`): een nagemaakte foto met een gelige en een kleine plant, een plant die half buiten de foto valt, en de plek op de grond bij elke vliegrichting.
+- **Het leer-systeem voor de AI** (`PlantLearningTests`): het vierkant rond een plant, welke gewone planten worden uitgeknipt, de namen van de plaatjes, genoeg plaatjes om te leren, één foto per plant, en wanneer de AI een markering geeft.
 
 **De planner op de Mac.** Node.js staat alleen in de projectmap (`.tools/node`, niet in git). Zo draai je de 71 tests van de planner:
 ```bash
@@ -488,7 +489,9 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `VeldvluchtKern/…/WaterAdvisor.swift` | Wateradvies per strook met eenvoudige regels (dezelfde als in de cloud: `centraal/supabase/functions/_shared/rekenkern.ts`). |
 | `VeldvluchtKern/…/Cloud.swift` | Praat met Supabase: inloggen, velden, metingen, weer, advies, vluchten, delen. |
 | `VeldvluchtKern/…/PlantAnalysis.swift` | **De foto-analyse:** planten vinden, afwijkende markeren, hun plek op de grond uitrekenen. |
+| `VeldvluchtKern/…/PlantLearning.swift` | **Het leer-systeem voor de AI:** welke planten als plaatje worden uitgeknipt, en wat de AI-uitkomst op de veldkaart betekent. Alleen voor `foto-analyse`; de app gebruikt het niet. |
 | `VeldvluchtKern/Sources/FotoAnalyse/main.swift` | Het programma `foto-analyse` voor op de Mac (zie [centraal/README.md](../centraal/README.md)). |
+| `VeldvluchtKern/Sources/FotoAnalyse/Leren.swift` | Plaatjes uitknippen, leren met Create ML (`foto-analyse leer`) en de AI per plant vragen. |
 | `VeldvluchtKern/…/RoutePlanFile.swift` | Het routebestand inlezen. Andere formaten en ongeldige coördinaten worden geweigerd. |
 | `VeldvluchtKern/…/RouteCheck.swift` | De controles op de route, en de eigen berekening van afstand en vliegtijd. |
 | `VeldvluchtKern/…/FieldFormats.swift` | De dataformaten uit hoofdstuk 6 van [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md). |

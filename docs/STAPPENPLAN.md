@@ -16,7 +16,7 @@ Stand op 27 oktober 2026:
   - een eerste foto-analyse op de Mac, zonder getrainde AI.
 
   Je installeert het zelf in een gratis Supabase-project, met één script.
-- **Nog te bouwen:** een getrainde AI (na de eerste echte vluchten).
+- **Het leer-systeem voor een eigen AI** (9 november 2026): de foto-analyse knipt planten uit als plaatjes, jij sorteert ze per soort, en Create ML leert ervan op de Mac. Getest met nagemaakte foto's. Nog nodig: foto's van je eigen veld.
 - **Wat jij nog moet testen, staat in [TESTLIJST.md](TESTLIJST.md).**
 
 Achtergrond:
@@ -221,7 +221,7 @@ Vlieg hierbij nog niet.
   - de neus langs de vliegbanen.
 - **Foto's:** een losse foto bij elke geplande positie, met minstens 2 s ertussen. Een foto telt pas als de camera het bestand meldt. Het fotolog (`veld/fotolog`) staat per vlucht in de Bestanden-app.
 - **Alleen in de simulator:** zonder actieve simulator start de route niet.
-- **Getest met een nep-drone** (nu 135 tests in `ios/VeldvluchtKern`, na een onafhankelijke review met zes herstelde fouten):
+- **Getest met een nep-drone** (nu 146 tests in `ios/VeldvluchtKern`, na een onafhankelijke review met zes herstelde fouten):
   - de hele voorbeeldroute, met alle 180 foto's binnen 2 m van hun plek;
   - verwisselde assen en zijwind;
   - pauze en hervatten, overnemen en verbindingsverlies.
@@ -350,7 +350,7 @@ De regels staan in [ARCHITECTUUR.md](ARCHITECTUUR.md), hoofdstuk 4.
 - **Nog te doen:**
   - het installeren in je eigen Supabase-project (`bash centraal/installeer.sh`);
   - testen (blok F van [TESTLIJST.md](TESTLIJST.md));
-  - een getrainde AI (punt 5 hieronder).
+  - de AI laten leren van foto's van je eigen veld (punt 5 hieronder, en blok G van [TESTLIJST.md](TESTLIJST.md)).
 
 Stap voor stap, zodat elke stap zelf al nut heeft:
 

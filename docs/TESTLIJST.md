@@ -4,7 +4,7 @@ Stand: 9 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
 
 ## Wat al getest is
 
-- **Op de Mac, 135 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 146 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -79,6 +79,11 @@ Stand: 9 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - Om 8:42:15 was de verbinding met de drone ongeveer 5 seconden weg. De app stopte met sturen, zoals bedoeld. Na **Hervatten** ging de route verder vanaf foto 2, en alle 17 foto's zijn bevestigd.
   - Het automatische landen hield twee keer op: om 8:45:09 en 8:45:34 stond de drone weer in vluchtstand *GPS*. De derde keer landde hij wel, na een tik op **Landen**. Dat kwam doordat de piloot ingreep, en de app meldde het goed (*De drone keert niet meer terug … Jij vliegt*).
   - Uit de foto's: op de banen heen kantelde de drone 12 à 13°, en terug maar −2°. Er stond dus waarschijnlijk flinke wind langs de banen.
+- **Het leer-systeem voor de AI (9 november 2026), alleen met nagemaakte foto's:** een nagemaakt broccoliveld met gezonde, te droge en zieke planten en onkruid.
+  - De analyse knipte 880 plaatjes uit. Een script sorteerde ze zoals jij dat zou doen. Create ML leerde ervan in 4 minuten.
+  - Daarna keek de AI naar een ander nagemaakt veld met overlappende foto's: hij vond 117 van de 118 te droge en 114 van de 115 zieke planten. Eén van de 859 gezonde planten noemde hij ten onrechte ziek. Elke plant kreeg hoogstens één markering.
+  - Daarbij kwam een fout in de foto-analyse aan het licht: een plant die half buiten de foto viel, leek klein en kreeg een markering. Op een echt veld zou dat langs de rand van elke foto gebeuren. Nu telt zo'n plant niet mee; op de foto ernaast staat hij heel.
+  - Op nagemaakte planten is dit makkelijk. Hoe goed de AI op je echte veld wordt, hangt af van hoeveel plaatjes je sorteert.
 - **Nog nooit getest:** een lange echte vlucht; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
@@ -268,6 +273,15 @@ Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het i
      ```
   3. Je hoort per foto het aantal planten te zien. In de simulator fotografeert de drone geen veld, dus daar zijn het er 0 of een paar.
   4. Bij een echte vlucht boven een veld: probeer ook `--upload`. Synchroniseer de app: staan er paarse markeringen? Kloppen ze met wat je in het veld ziet?
+
+## G. De AI laten leren (nieuw, 9 november 2026)
+
+Pas na een echte vlucht boven een veld met planten. Hoe het werkt, staat in [centraal/README.md](../centraal/README.md), "De AI laten leren".
+
+- [ ] **G1** Na de analyse (F12): open in Finder **Documenten** → **Veldvlucht-AI** → **nog-labelen**. Je hoort plaatjes te zien met één plant in het midden en wat grond eromheen. Is de plant goed te herkennen?
+- [ ] **G2** Loop in het veld naar 5 à 10 markeringen (tik erop voor het nummer, *Plek 7*). Sleep de plaatjes daarna naar de map van hun soort. Sleep ook 10 gewone planten naar `gezond`.
+- [ ] **G3** Draai `foto-analyse leer`. Welk percentage zie je bij *Plaatjes die hij niet had gezien*? ____ %
+- [ ] **G4** Analyseer dezelfde vlucht opnieuw, met `--upload`. Staan er markeringen met *AI:* op de veldkaart? Kloppen ze met wat je in het veld ziet?
 
 ## Wat je naar Claude stuurt
 

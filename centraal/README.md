@@ -10,7 +10,7 @@ Het centrale systeem uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md), hoofdstuk 4
 - **Delen:** de eigenaar van een veld kan anderen met een Veldvlucht-account laten meekijken. Zij zien het veld, de sensoren, het weer en het advies, maar kunnen niets veranderen.
 - **Foto-analyse:** die draait op je Mac, want de foto's zijn te groot voor de gratis cloud (zie "De foto-analyse op je Mac"). De gevonden planten komen in de cloud en zo op de veldkaart.
 
-**Wat het nog niet doet:** een getrainde AI. De foto-analyse en het advies werken met eenvoudige regels die je kunt controleren (hoofdstuk 7 van ARCHITECTUUR.md).
+**AI:** de foto-analyse en het advies werken met eenvoudige regels die je kunt controleren (hoofdstuk 7 van ARCHITECTUUR.md). Daarnaast kan een **eigen AI** leren van foto's van jouw veld. Dat gebeurt op je Mac, en pas als jij plaatjes van planten hebt gesorteerd (zie "De AI laten leren").
 
 ## Wat er in deze map staat
 
@@ -83,7 +83,7 @@ Na een vlucht:
    ```bash
    swift run --package-path ios/VeldvluchtKern foto-analyse ~/Pictures/vlucht-1
    ```
-   Je ziet per foto hoeveel planten er zijn en hoeveel er opvallen. Het programma schrijft `aandacht.geojson` in de map.
+   Je ziet per foto hoeveel planten er zijn en hoeveel er opvallen. Het programma schrijft `aandacht.geojson` in de map. Het knipt ook plaatjes van planten uit voor de AI (zie "De AI laten leren").
 5. Tevreden? Zet de plekken in het centrale systeem:
    ```bash
    swift run --package-path ios/VeldvluchtKern foto-analyse ~/Pictures/vlucht-1 --upload
@@ -96,12 +96,68 @@ Na een vlucht:
 - Per plant meet het hoe groen en hoe groot die is.
 - Planten die **veel minder groen** of **veel kleiner** zijn dan de andere planten op dezelfde foto, krijgen de markering *aandacht nodig*.
 - Uit de plek van de drone, de hoogte en de vliegrichting (in het fotolog) rekent het uit waar die plant op de grond staat. Zie je dezelfde plant op twee foto's, dan telt hij één keer.
+- Een plant die half buiten een foto valt, beoordeelt het niet: hij lijkt dan kleiner dan hij is. Op de foto ernaast staat hij heel.
+- Elke markering krijgt een nummer: *Plek 1*, *Plek 2*, enzovoort.
 - **Grenzen:**
   - het werkt alleen met foto's recht naar beneden;
   - onkruid en schaduw kunnen meetellen;
   - watertekort dat je nog niet ziet, ziet de analyse ook niet.
 
   Controleer de markeringen dus in het veld.
+
+## De AI laten leren
+
+De vaste regels hierboven zien alleen of een plant geler of kleiner is dan de planten eromheen. Een AI kan meer leren, bijvoorbeeld hoe een zieke plant eruitziet. Maar alleen van **voorbeelden van jouw eigen veld**: plaatjes van planten waarvan jij in het veld hebt gekeken wat er aan de hand was. De AI leert op je Mac, met **Create ML** van Apple. Dat zit gratis in Xcode, je hoeft niets te installeren.
+
+**1. Plaatjes verzamelen.** Elke analyse knipt planten uit als kleine plaatjes. Ze komen in de map **Documenten** → **Veldvlucht-AI** → **nog-labelen**:
+- elke gemarkeerde plant, met het nummer in de naam: `…_plek-007_…jpg` hoort bij *Plek 7* op de veldkaart;
+- per foto 5 gewone planten, zodat de AI ook gezonde planten ziet.
+
+Een plant houdt altijd dezelfde naam. Analyseer je een vlucht opnieuw, dan krijg je dus geen dubbele plaatjes.
+
+**2. In het veld kijken.** Open de veldkaart in de app en loop naar een paar paarse markeringen. Tik erop: je ziet bijvoorbeeld *Plek 7*. Kijk wat er met die plant aan de hand is, en schrijf het op.
+
+**3. Sorteren.** Open in Finder de map **Veldvlucht-AI**. Sleep elk plaatje uit **nog-labelen** naar de map van zijn soort:
+
+| Map | Wanneer |
+|---|---|
+| `gezond` | Er is niets mis met de plant. |
+| `te-droog` | De plant heeft meer water nodig: slap, geel of achtergebleven. |
+| `te-nat` | De plant heeft minder water nodig: hij staat in een plas of rot. |
+| `ziek-of-beschadigd` | Een ziekte, beestjes, vraat of een kapotte plant. |
+| `geen-plant` | Onkruid, een steen, schaduw of iets anders. |
+
+- **Twijfel je? Laat het plaatje dan in nog-labelen staan.** Een verkeerd gesorteerd plaatje leert de AI iets verkeerds.
+- Gewone planten die je niet in het veld hebt bekeken, mag je naar `gezond` slepen als ze er op het plaatje gezond uitzien.
+- Tip: zet Finder op **Symbolen** (⌘1) en maak de symbolen groter met de schuifregelaar rechtsonder.
+
+**4. Leren.** Staan er in minstens twee mappen 5 plaatjes? Beter is 30 of meer per map. Draai dan in de Terminal, in de projectmap:
+```bash
+swift run --package-path ios/VeldvluchtKern foto-analyse leer
+```
+Dit duurt een paar minuten. Daarna zie je twee percentages:
+- *Plaatjes waarvan hij leerde*: dit getal zegt weinig.
+- ***Plaatjes die hij niet had gezien*: dit getal telt.** Create ML houdt een deel van je plaatjes apart, en kijkt daarna of de AI die goed heeft. Is het minder dan 80 %? Sorteer dan meer plaatjes en draai `leer` opnieuw.
+
+De AI staat dan in **Veldvlucht-AI** → `planten-model.mlmodel`.
+
+**5. Gebruiken.** De volgende analyse (stap 4 van "De foto-analyse op je Mac") gebruikt de AI vanzelf:
+- De AI bekijkt elke plant één keer: op de foto waar de camera er recht boven hing.
+- Is hij er minstens 60 % zeker van dat een plant te droog, te nat of ziek is? Dan krijgt die plant een eigen markering, bijvoorbeeld *Plek 12: AI: te droog (82 % zeker)*.
+- Bij een markering van de vaste regels zet hij wat hij er zelf van vindt, bijvoorbeeld *AI: gezond (95 % zeker)*.
+- De AI doet er op deze Mac ongeveer 0,1 seconde over per plant. Een broccoliveld van 100 bij 60 m heeft zo'n 16.000 planten: reken op een half uur. Laat de Mac aan de lader.
+
+**Na elke vlucht** komen er nieuwe plaatjes in nog-labelen. Sorteer er weer een paar en draai `leer` opnieuw: zo wordt de AI steeds beter.
+
+**Grenzen:**
+- De AI kent alleen wat jij hem hebt laten zien. Bij een ander gewas, of foto's met heel ander licht, kan hij zich vergissen.
+- "100 % zeker" betekent niet dat hij gelijk heeft. Controleer de markeringen in het veld.
+- Foto's van internet gebruikt hij niet (zie ARCHITECTUUR.md, hoofdstuk 7).
+
+**Andere opties:**
+- `--lesmap <map>`: een andere map dan Documenten → Veldvlucht-AI;
+- `--steekproef 20`: meer gewone planten per foto uitknippen (standaard 5);
+- `--niet-knippen`: geen plaatjes uitknippen.
 
 ## Testen
 

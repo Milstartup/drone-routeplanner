@@ -3,8 +3,11 @@
 // one flight from the drone's SD card and the photo log of that flight (Vluchten → Delen),
 // finds the plants that need attention (PlantAnalysis), writes aandacht.geojson, and with
 // --upload puts them in the central system, which adds them to the field map.
+// It also cuts plants out as small pictures for the farmer to sort, and once Create ML has
+// learned from those (foto-analyse leer), it asks that model about every plant (Leren.swift).
 //
 //   swift run --package-path ios/VeldvluchtKern foto-analyse <map> [--upload]
+//   swift run --package-path ios/VeldvluchtKern foto-analyse leer
 //
 // It uses the app's core in debug builds (`swift run` builds those), through @testable.
 @testable import VeldvluchtKern
@@ -18,22 +21,59 @@ func fail(_ message: String) -> Never {
 }
 
 var arguments = Array(CommandLine.arguments.dropFirst())
-let upload = arguments.contains("--upload")
-arguments.removeAll { $0 == "--upload" }
-var maxWidth = 1200
-if let i = arguments.firstIndex(of: "--breedte"), arguments.indices.contains(i + 1), let width = Int(arguments[i + 1]) {
-    maxWidth = max(400, width)
-    arguments.removeSubrange(i...(i + 1))
+
+/// Takes a flag out of the arguments.
+func flag(_ name: String) -> Bool {
+    defer { arguments.removeAll { $0 == name } }
+    return arguments.contains(name)
 }
+
+/// Takes an option and its value out of the arguments.
+func option(_ name: String) -> String? {
+    guard let i = arguments.firstIndex(of: name), arguments.indices.contains(i + 1) else { return nil }
+    defer { arguments.removeSubrange(i...(i + 1)) }
+    return arguments[i + 1]
+}
+
+func path(_ text: String) -> URL {
+    URL(fileURLWithPath: (text as NSString).expandingTildeInPath, isDirectory: true)
+}
+
+let upload = flag("--upload")
+let cutting = !flag("--niet-knippen")
+let maxWidth = option("--breedte").flatMap(Int.init).map { max(400, $0) } ?? 1200
+let sampleCount = option("--steekproef").flatMap(Int.init).map { max(0, $0) } ?? 5
+let learningPath = option("--lesmap").map(path) ?? path("~/Documents/Veldvlucht-AI")
 guard arguments.count == 1 else {
     fail("""
-    Gebruik: swift run --package-path ios/VeldvluchtKern foto-analyse <map> [--upload] [--breedte 1200]
-      <map>      een map met de foto's van één vlucht en het fotolog (….fotolog.json) van die vlucht
-      --upload   zet de gevonden planten in het centrale systeem (inloggen met je Veldvlucht-account)
-      --breedte  hoe breed de foto's worden geanalyseerd, in pixels (standaard 1200)
+    Gebruik:
+      swift run --package-path ios/VeldvluchtKern foto-analyse <map> [--upload] [--breedte 1200] [--lesmap <map>] [--steekproef 5] [--niet-knippen]
+      swift run --package-path ios/VeldvluchtKern foto-analyse leer [--lesmap <map>]
+
+      <map>           een map met de foto's van één vlucht en het fotolog (….fotolog.json) van die vlucht
+      --upload        zet de gevonden planten in het centrale systeem (inloggen met je Veldvlucht-account)
+      --breedte       hoe breed de foto's worden geanalyseerd, in pixels (standaard 1200)
+      --lesmap        de map waarin de AI leert (standaard ~/Documents/Veldvlucht-AI)
+      --steekproef    hoeveel gewone planten per foto als plaatje worden uitgeknipt (standaard 5)
+      --niet-knippen  knip geen plaatjes uit
+      leer            laat de AI leren van de plaatjes die je in de lesmap hebt gesorteerd
     """)
 }
-let folder = URL(fileURLWithPath: (arguments[0] as NSString).expandingTildeInPath, isDirectory: true)
+let learning: LearningFolder
+do {
+    learning = try LearningFolder(url: learningPath)
+} catch {
+    fail("Kan de lesmap \(learningPath.path) niet maken: \(error.localizedDescription)")
+}
+if arguments[0] == "leer" {
+    do {
+        try learn(learning)
+        exit(0)
+    } catch {
+        fail("Leren lukte niet: \(error.localizedDescription)")
+    }
+}
+let folder = path(arguments[0])
 
 // ---- The photo log ----
 
@@ -77,10 +117,32 @@ func pixels(of url: URL) -> (rgba: [UInt8], width: Int, height: Int)? {
     return drawn ? (rgba, width, height) : nil
 }
 
+// ---- The model the farmer trained, if there is one ----
+
+var plantModel: PlantModel?
+if FileManager.default.fileExists(atPath: learning.model.path) {
+    do {
+        plantModel = try await PlantModel(url: learning.model)
+        print("De AI uit \(learning.model.path) kijkt naar elke plant.")
+    } catch {
+        print("De AI in \(learning.model.path) is niet te laden (\(error.localizedDescription)); alleen de vaste regels.")
+    }
+}
+
 var marks: [(LatLng, PlantAnalysis.Finding, String)] = []
+/// What the model said about each plant, where it stands.
+var verdicts: [(LatLng, PlantLearning.Verdict)] = []
+/// The picture of each marked plant, on disk until the markers are numbered: a big field has
+/// thousands, and most are the same plant in an overlapping photo.
+let pictureTemp = FileManager.default.temporaryDirectory.appendingPathComponent("foto-analyse-\(UUID().uuidString)", isDirectory: true)
+try? FileManager.default.createDirectory(at: pictureTemp, withIntermediateDirectories: true)
+var markPictures: [String: URL] = [:]
+func markKey(_ file: String, _ plant: PlantAnalysis.Plant) -> String { "\(file) \(plant.x) \(plant.y)" }
 var analysed = 0
 var missing: [String] = []
 var plantCount = 0
+var cut = 0
+let present = log.photos.filter { byName[$0.file.lowercased()] != nil }
 for photo in log.photos {
     guard let url = byName[photo.file.lowercased()] else {
         missing.append(photo.file)
@@ -91,24 +153,84 @@ for photo in log.photos {
         continue
     }
     let plants = PlantAnalysis.plants(rgba: image.rgba, width: image.width, height: image.height)
-    let findings = PlantAnalysis.findings(plants)
+    var findings = PlantAnalysis.findings(plants)
     analysed += 1
     plantCount += plants.count
+
+    // Pictures come from the full photo: the analysed one is too small to see a leaf.
+    let full = cutting || plantModel != nil ? fullImage(of: url) : nil
+    let typicalArea = PlantLearning.typicalArea(plants)
+    func pictureOf(_ plant: PlantAnalysis.Plant) -> CGImage? {
+        guard let full,
+              let (square, _) = PlantLearning.square(for: plant, typicalAreaPx: typicalArea,
+                                                     scale: Double(full.width) / Double(image.width),
+                                                     width: full.width, height: full.height) else { return nil }
+        return picture(of: full, square)
+    }
+
+    var byModel = 0
+    let started = Date()
+    if let plantModel {
+        // A plant partly outside the photo looks small to the model too.
+        for plant in plants where !plant.touchesEdge {
+            guard let place = PlantAnalysis.position(x: plant.x, y: plant.y, width: image.width, height: image.height, photo: photo),
+                  PlantLearning.isNearestPhoto(place, photo: photo, photos: present),
+                  let picture = pictureOf(plant), let verdict = plantModel.verdict(for: picture) else { continue }
+            verdicts.append((place, verdict))
+            if !findings.contains(where: { $0.plant == plant }), let finding = PlantLearning.finding(for: plant, verdict: verdict) {
+                findings.append(finding)
+                byModel += 1
+            }
+        }
+    }
+
     for finding in findings {
         if let place = PlantAnalysis.position(x: finding.plant.x, y: finding.plant.y, width: image.width,
                                               height: image.height, photo: photo) {
             marks.append((place, finding, photo.file))
+            if cutting, let picture = pictureOf(finding.plant), let data = jpeg(picture) {
+                let file = pictureTemp.appendingPathComponent("\(markPictures.count).jpg")
+                if (try? data.write(to: file)) != nil { markPictures[markKey(photo.file, finding.plant)] = file }
+            }
         }
     }
-    print("  \(photo.file): \(plants.count) planten, \(findings.count) opvallend.")
+    if cutting {
+        for plant in PlantLearning.sample(plants, excluding: findings.map(\.plant), count: sampleCount,
+                                          width: image.width, height: image.height) {
+            let name = PlantLearning.pictureName(flightId: log.flightId, mark: nil, photoFile: photo.file, plant: plant)
+            if let picture = pictureOf(plant), let data = jpeg(picture), (try? learning.save(data, name: name)) == true {
+                cut += 1
+            }
+        }
+    }
+    let seconds = Int(Date().timeIntervalSince(started).rounded())
+    print("  \(photo.file): \(plants.count) planten, \(findings.count) opvallend\(plantModel == nil ? "" : " (\(byModel) alleen door de AI, \(seconds) s)").")
 }
-let merged = PlantAnalysis.merge(marks)
+// Numbered, so a marker on the field map and its picture belong together: "Plek 7".
+let merged = PlantAnalysis.merge(marks).enumerated().map { index, mark -> (LatLng, PlantAnalysis.Finding, String) in
+    let (place, finding, file) = mark
+    if let picture = markPictures[markKey(file, finding.plant)], let data = try? Data(contentsOf: picture) {
+        let name = PlantLearning.pictureName(flightId: log.flightId, mark: index + 1, photoFile: file, plant: finding.plant)
+        if (try? learning.save(data, name: name)) == true { cut += 1 }
+    }
+    var numbered = finding
+    // A marker of the rules: add what the model said about that plant, perhaps in another photo.
+    if !finding.reason.hasPrefix("AI:"), let verdict = PlantLearning.verdict(near: place, in: verdicts) {
+        numbered = PlantLearning.adding(verdict, to: numbered)
+    }
+    numbered.reason = "Plek \(index + 1): \(numbered.reason)"
+    return (place, numbered, file)
+}
+try? FileManager.default.removeItem(at: pictureTemp)
 print("")
 print("\(analysed) foto's bekeken, samen \(plantCount) planten (planten in overlappende foto's tellen dubbel).")
 if !missing.isEmpty {
     print("\(missing.count) foto's uit het fotolog staan niet in de map, bijvoorbeeld \(missing.prefix(3).joined(separator: ", ")).")
 }
 print("\(merged.count) plek(ken) met aandacht nodig.")
+if cutting {
+    print("\(cut) plaatje(s) van planten in \(learning.unsorted.path). Sleep ze naar de map van hun soort; daarna: foto-analyse leer.")
+}
 
 // ---- aandacht.geojson (format veld/resultaten, only markers) ----
 

@@ -5,7 +5,8 @@ Vastgelegd op 25 oktober 2026, bijgewerkt op 27 oktober 2026. Gebouwd zijn:
 - de routeplanner;
 - de iPhone-app;
 - de software voor het sensorkastje;
-- het centrale systeem in de cloud (Supabase), met accounts, delen en een eerste foto-analyse, nog zonder getrainde AI.
+- het centrale systeem in de cloud (Supabase), met accounts, delen en een eerste foto-analyse;
+- een leer-systeem voor een eigen AI, op de Mac. Die AI is nog niet getraind: daarvoor zijn foto's van je eigen veld nodig.
  Wat nog niet met echte apparaten getest is, staat in [TESTLIJST.md](TESTLIJST.md).
 
 ## Doel
@@ -384,6 +385,11 @@ Nieuw in dit voorstel. Het centrale systeem haalt de verwachting op bij een weer
 3. **Later een getrainde AI:**
    - Leren van gelabelde foto's: eigen drone-foto's waarbij je in het veld hebt gecontroleerd wat er aan de hand was, aangevuld met openbare datasets met een licentie die dat toelaat.
    - Een bestaande beeld-AI via een API kan ook, maar die kost geld per foto. Dat past niet bij een project zonder budget.
+   - *Gebouwd op 9 november 2026, het leer-systeem:*
+     - `foto-analyse` knipt elke gemarkeerde plant en een paar gewone planten uit als plaatje van 224 × 224 pixels. De boer sorteert ze in mappen: gezond, te droog, te nat, ziek of beschadigd, geen plant.
+     - `foto-analyse leer` laat Create ML daarvan leren (overdrachtsleren op Apples *scene print*, gratis en op de Mac).
+     - Daarna vraagt de analyse de AI naar elke plant, één keer per plant.
+     - Code: `PlantLearning.swift` en `Sources/FotoAnalyse/Leren.swift`. Getest met nagemaakte foto's; uitleg in [`centraal/README.md`](../centraal/README.md).
 
 **Weer.** Omdat het geen commercieel gebruik is, mag de **gratis Open-Meteo-API** gebruikt worden (geen sleutel, wel bronvermelding). Het KNMI Data Platform kan ook.
 
@@ -406,7 +412,7 @@ Deze volgorde staat ook in [STAPPENPLAN.md](STAPPENPLAN.md).
    2. tonen op de veldkaart; *gebouwd*
    3. weer koppelen; *gebouwd (Open-Meteo)*
    4. regels voor wateradvies; *gebouwd (eenvoudige regels, versie 0)*
-   5. foto-analyse op de laptop; *niveau 1 gebouwd (zonder getrainde AI). AI voor wateradvies en markeringen: na de eerste echte vluchten*
+   5. foto-analyse op de laptop; *niveau 1 gebouwd (zonder getrainde AI); het leer-systeem voor de AI gebouwd op 9 november 2026, de AI zelf leert van foto's van je eigen veld*
    6. een server met accounts, zodat anderen kunnen meekijken; *gebouwd (Supabase)*
 6. **Betere sensoren** (capacitief of landbouwsensoren), verspreid over de zones.
 

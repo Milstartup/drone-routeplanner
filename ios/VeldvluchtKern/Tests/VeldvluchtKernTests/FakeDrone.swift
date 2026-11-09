@@ -47,7 +47,10 @@ final class FakeDrone: DroneControl {
     /// DJI's name for the flight mode; empty like before the app reported it.
     var flightModeName = ""
     /// The camera's tilt; 0 (straight ahead) like the Mavic Mini after switching on.
-    var cameraPitchDeg = 0.0
+    var cameraPitchDeg = 0.0 { didSet { cameraMovedAt = now } }
+    private var cameraMovedAt = Date.distantPast
+    /// How long the camera had not moved at each photo.
+    private(set) var shotCameraStillS: [Double] = []
     var refusesCameraDown = false
     /// The clear gimbal cover is still on: DJI accepts the turn, but the camera stays put.
     var cameraStuck = false
@@ -70,6 +73,8 @@ final class FakeDrone: DroneControl {
     var largestSpeedRise = 0.0
     /// Where the drone was each time the camera took a photo.
     private(set) var shots: [(time: Date, position: XY)] = []
+    /// The nose direction at each photo.
+    private(set) var shotHeadings: [Double] = []
 
     weak var flight: RouteFlight?
     let projection: LocalProjection
@@ -239,6 +244,8 @@ final class FakeDrone: DroneControl {
             return
         }
         shots.append((now, position))
+        shotHeadings.append(heading)
+        shotCameraStillS.append(now.timeIntervalSince(cameraMovedAt))
         if abs(cameraPitchDeg + 90) > 0.5 { tiltedShots += 1 }
         let shotNumber = shots.count
         completion(falseErrors.contains(shotNumber) ? FlightError(message: "time-out") : nil)
@@ -270,6 +277,11 @@ final class FakeDrone: DroneControl {
         guard landing, waitsForLandingConfirmation else { return completion(FlightError(message: "niet aan het landen")) }
         waitsForLandingConfirmation = false
         completion(nil)
+    }
+
+    /// A gust turns the nose.
+    func turnNose(by degrees: Double) {
+        heading = (heading + degrees + 360).truncatingRemainder(dividingBy: 360)
     }
 
     func pointCameraDown(completion: @escaping (Error?) -> Void) {

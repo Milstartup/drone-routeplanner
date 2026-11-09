@@ -187,8 +187,14 @@ final class RouteFlight: ObservableObject {
         var photoLeadM = 0.3
         var photoLateM = 3.0
         var minPhotoIntervalS = 2.0
-        /// At 30 m every 5° of tilt moves the photo about 2.6 m over the ground.
-        var maxCameraTiltDeg = 5.0
+        /// At 30 m every 3° of tilt moves the photo about 1.6 m over the ground. Real flight of
+        /// 9 November 2026: in steady flight the photos showed −89.9° to −90.0°, but the three
+        /// taken just after the camera came back within 5° were 4 to 9° off, one of them blurred.
+        /// So a photo waits until the camera has been within 3° for half a second.
+        var maxCameraTiltDeg = 3.0
+        var cameraSettleS = 0.5
+        /// A photo waits while the nose is further than this off the line.
+        var maxNoseOffsetDeg = 5.0
         /// Before take-off the gimbal gets this long to report that it looks down.
         var cameraDownWaitS = 3.0
         var telemetryTimeoutS = 1.0
@@ -269,6 +275,8 @@ final class RouteFlight: ObservableObject {
     private var lastCameraTurn: Date?
     /// Since when the app waits for the gimbal to report −90° before take-off.
     private var cameraDownSince: Date?
+    /// Since when the camera has looked straight down without a break.
+    private var cameraSteadySince: Date?
     /// Set by a tap on Landen until the drone stops waiting: one tap is enough (6 November
     /// 2026: two taps a second apart both went to the drone).
     @Published private var landingConfirmSent = false
@@ -611,6 +619,11 @@ final class RouteFlight: ObservableObject {
 
     func update(_ telemetry: DroneTelemetry) {
         if !telemetry.landingConfirmationNeeded { landingConfirmSent = false }
+        if cameraTilt(telemetry) != nil {
+            cameraSteadySince = nil
+        } else if cameraSteadySince == nil {
+            cameraSteadySince = clock()
+        }
         // So a test can be checked afterwards (C8, C9): what changed while the drone was in the
         // air. While the app steers, losing the connection is already logged by the take-over.
         if phase.isAirborne, let old = self.telemetry {
@@ -838,6 +851,12 @@ final class RouteFlight: ObservableObject {
             return
         }
 
+        // At once, not when the next photo is due: by the time the camera is back and still,
+        // that photo would be gone.
+        if phase == .flying || phase == .toStart || phase == .toResumePoint, let pitch = cameraTilt(t) {
+            turnCameraDown(from: pitch, now: now)
+        }
+
         let p = plan.projection.toXY(position)
         let dt = min(0.3, max(0, now.timeIntervalSince(lastSteerTime ?? now)))
         lastSteerTime = now
@@ -866,7 +885,7 @@ final class RouteFlight: ObservableObject {
         case .toStart:
             let target = plan.waypoints.first ?? p
             velocity = goTo(target, from: p, dt: dt)
-            heading = plan.legs.first?.bearingDeg
+            heading = plan.legs.isEmpty ? nil : noseBearing(onLeg: 0)
             if arrived(at: target, from: p, t) {
                 routeStarted = true
                 legIndex = 0
@@ -876,7 +895,7 @@ final class RouteFlight: ObservableObject {
         case .toResumePoint:
             let target = plan.point(alongM: resumeAlongM ?? 0)
             velocity = goTo(target.point, from: p, dt: dt)
-            heading = plan.legs.indices.contains(target.legIndex) ? plan.legs[target.legIndex].bearingDeg : nil
+            heading = plan.legs.indices.contains(target.legIndex) ? noseBearing(onLeg: target.legIndex) : nil
             if arrived(at: target.point, from: p, t) {
                 legIndex = target.legIndex
                 resumeAlongM = nil
@@ -901,7 +920,7 @@ final class RouteFlight: ObservableObject {
                 triggerPhotos(alongLegM: track.alongLegM, now: now, t: t)
             }
             velocity = followLeg(leg, track: track, dt: dt)
-            heading = leg.bearingDeg
+            heading = noseBearing(onLeg: legIndex)
             let speed = hypot(t.velocityEast, t.velocityNorth)
             if leg.lengthM - track.alongLegM < settings.arriveRadiusM, abs(track.crossM) < 2, speed < settings.arriveSpeedMps {
                 missRemainingPhotos(onLeg: legIndex)
@@ -999,6 +1018,21 @@ final class RouteFlight: ObservableObject {
     private func arrived(at target: XY, from p: XY, _ t: DroneTelemetry) -> Bool {
         hypot(target.x - p.x, target.y - p.y) < settings.arriveRadiusM
             && hypot(t.velocityEast, t.velocityNorth) < settings.arriveSpeedMps
+    }
+
+    /// The nose stays on the axis of the photo lanes, also on the legs between them: turning it
+    /// there and back took seconds, swung the camera, and once a photo was taken with the nose
+    /// still 30° off (9 November 2026). Without photos on a leg its direction does not matter.
+    private func noseBearing(onLeg index: Int) -> Double {
+        let legs = plan.legs
+        guard !legs[index].capture else { return legs[index].bearingDeg }
+        return (legs[index...].first(where: \.capture) ?? legs[..<index].last(where: \.capture) ?? legs[index]).bearingDeg
+    }
+
+    /// The nose lies along the line or straight against it, within a few degrees.
+    private func noseAligned(_ t: DroneTelemetry, bearing: Double) -> Bool {
+        let d = abs((t.headingDeg - bearing).truncatingRemainder(dividingBy: 180))
+        return min(d, 180 - d) <= settings.maxNoseOffsetDeg
     }
 
     /// Turns the nose along the line, or straight against it, whichever is closer: the long
@@ -1151,15 +1185,20 @@ final class RouteFlight: ObservableObject {
             // A photo at the very end of a leg: the drone stops within the arrival radius.
             let lead = photoOnLeg > leg.lengthM - settings.arriveRadiusM ? settings.arriveRadiusM + 0.2 : settings.photoLeadM
             guard alongLegM >= photoOnLeg - lead else { return }
-            // A tilted photo lies metres off and would put plants in the wrong place, so it is
-            // skipped. With the planned overlap its neighbours still cover that ground.
+            // A tilted photo lies metres off and would put plants in the wrong place, so it waits
+            // (tickSteering turns the camera back) or is skipped. With the planned overlap its
+            // neighbours still cover that ground.
             let tilt = cameraTilt(t)
-            if let pitch = tilt { turnCameraDown(from: pitch, now: now) }
-            if tilt == nil, canShoot(now) {
+            // Just back within the limit the camera still swings; a turning nose swings it too.
+            let settled = now.timeIntervalSince(cameraSteadySince ?? now) >= settings.cameraSettleS
+            let aligned = noseAligned(t, bearing: leg.bearingDeg)
+            if tilt == nil, settled, aligned, canShoot(now) {
                 shoot(photo, now: now, t: t)
                 nextPhotoIndex += 1
             } else if alongLegM > photoOnLeg + settings.photoLateM {
-                markMissed(photo.index, tilt.map { "de camera keek niet recht naar beneden (\(Int($0.rounded()))°)" } ?? "de camera was nog niet klaar")
+                let reason = tilt.map { "de camera keek niet recht naar beneden (\(Int($0.rounded()))°)" }
+                    ?? (!settled ? "de camera stond nog niet stil" : !aligned ? "de neus van de drone draaide nog" : "de camera was nog niet klaar")
+                markMissed(photo.index, reason)
             }
             return
         }

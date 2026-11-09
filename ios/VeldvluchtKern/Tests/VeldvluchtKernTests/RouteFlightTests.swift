@@ -660,6 +660,61 @@ final class RouteFlightSafetyTests: XCTestCase {
         XCTAssertTrue(drone.motorsOn)
     }
 
+    private var laneAxis: Double { plan.legs.first(where: \.capture)?.bearingDeg ?? 0 }
+
+    private func offAxis(_ heading: Double) -> Double {
+        let d = abs((heading - laneAxis).truncatingRemainder(dividingBy: 180))
+        return min(d, 180 - d)
+    }
+
+    /// 9 November 2026: between two lanes the nose turned 90° and back, which swung the camera.
+    func testKeepsTheNoseOnTheLanesAlsoBetweenThem() {
+        XCTAssertTrue(plan.legs.contains { !$0.capture }, "de voorbeeldroute heeft stukken tussen de banen")
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.phase == .flying }
+        var largest = 0.0
+        run(seconds: 2500) { [unowned self] in
+            largest = max(largest, offAxis(drone.heading))
+            return flight.phase != .flying
+        }
+        XCTAssertEqual(flight.phase, .returningHome)
+        XCTAssertLessThan(largest, 3)
+    }
+
+    /// 9 November 2026: photos taken the moment the camera came back within 5° were 4 to 9° off.
+    func testAPhotoWaitsUntilTheCameraIsStill() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in drone.shots.count >= 5 }
+        // Tilted 1.2 s before the next photo: the fake gimbal is back after 1 s, while that
+        // photo is still due.
+        let interval = drone.shots[4].time.timeIntervalSince(drone.shots[3].time)
+        run(seconds: interval - 1.2)
+        XCTAssertEqual(drone.shots.count, 5)
+        drone.cameraPitchDeg = -86
+        run(seconds: 60) { [unowned self] in drone.shots.count > 5 }
+        XCTAssertEqual(drone.cameraPitchDeg, -90, "4° scheef is niet meer goed genoeg")
+        XCTAssertGreaterThanOrEqual(drone.shotCameraStillS.last ?? 0, 0.45, "\(drone.shotCameraStillS)")
+        XCTAssertTrue(flight.log.contains { $0.text == "De camera kijkt even niet recht naar beneden (-86°). De app wacht met de foto en draait hem terug." },
+                      "\(flight.log.map(\.text))")
+        run(seconds: 2500, until: finished)
+        XCTAssertEqual(drone.tiltedShots, 0)
+        XCTAssertLessThanOrEqual(flight.missedPhotos.count, 1)
+    }
+
+    /// 9 November 2026: one photo was taken while the nose was still 30° off, rotated and tilted.
+    func testAPhotoWaitsWhileTheNoseTurns() {
+        flight.start()
+        run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 5 }
+        drone.turnNose(by: 85)
+        run(seconds: 2500, until: finished)
+        XCTAssertEqual(flight.phase, .finished)
+        XCTAssertEqual(drone.shotHeadings.filter { offAxis($0) > 5 }.count, 0, "\(drone.shotHeadings.map(offAxis))")
+        XCTAssertLessThanOrEqual(flight.missedPhotos.count, 1)
+        for index in flight.missedPhotos {
+            XCTAssertTrue(flight.log.contains { $0.text == "Foto \(index + 1) gemist: de neus van de drone draaide nog." }, "\(flight.log.map(\.text))")
+        }
+    }
+
     func testSkipsPhotosWhileTheCameraIsTiltedAndTurnsItBack() {
         flight.start()
         run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 5 }

@@ -49,6 +49,10 @@ final class FakeDrone: DroneControl {
     /// The camera's tilt; 0 (straight ahead) like the Mavic Mini after switching on.
     var cameraPitchDeg = 0.0
     var refusesCameraDown = false
+    /// The clear gimbal cover is still on: DJI accepts the turn, but the camera stays put.
+    var cameraStuck = false
+    var reportsCameraPitch = true
+    var gimbalOverloaded = false
     /// Photos taken while the camera did not look straight down.
     private(set) var tiltedShots = 0
 
@@ -104,7 +108,8 @@ final class FakeDrone: DroneControl {
             droneLanding: landing,
             landingConfirmationNeeded: landing && waitsForLandingConfirmation && altitude <= 0.3 + 1e-6,
             flightMode: flightModeName,
-            cameraPitchDeg: cameraPitchDeg
+            cameraPitchDeg: reportsCameraPitch ? cameraPitchDeg : nil,
+            gimbalOverloaded: gimbalOverloaded
         )
     }
 
@@ -271,7 +276,7 @@ final class FakeDrone: DroneControl {
         guard !refusesCameraDown else { return completion(FlightError(message: "gimbal geeft geen antwoord")) }
         // DJI accepts the command at once; the gimbal needs a moment to get there.
         completion(nil)
-        after(1) { [self] in cameraPitchDeg = -90 }
+        after(1) { [self] in if !cameraStuck { cameraPitchDeg = -90 } }
     }
 
     func cancelLanding(completion: @escaping (Error?) -> Void) {

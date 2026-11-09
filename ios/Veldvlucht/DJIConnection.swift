@@ -29,6 +29,7 @@ final class DJIConnection: NSObject, ObservableObject {
     private var sticksDeflected = false
     /// From the gimbal's own reports; nil while it has not reported.
     private var cameraPitch: Double?
+    private var gimbalOverloaded = false
 
     private var aircraft: DJIAircraft? { DJISDKManager.product() as? DJIAircraft }
 
@@ -120,7 +121,10 @@ final class DJIConnection: NSObject, ObservableObject {
         product?.camera?.delegate = self
         product?.gimbal?.delegate = self
         status.hasCamera = product?.camera != nil
-        if product?.gimbal == nil { cameraPitch = nil }
+        if product?.gimbal == nil {
+            cameraPitch = nil
+            gimbalOverloaded = false
+        }
 
         if aircraft?.flightController == nil {
             status.satelliteCount = nil
@@ -409,7 +413,7 @@ extension DJIConnection: DJIFlightControllerDelegate {
                 gpsLevel: level, homePointSet: homeSet, windWarning: wind,
                 seriousLowBattery: seriousLow, droneReturningHome: returning,
                 droneLanding: landing, landingConfirmationNeeded: confirmationNeeded,
-                flightMode: modeName, cameraPitchDeg: cameraPitch
+                flightMode: modeName, cameraPitchDeg: cameraPitch, gimbalOverloaded: gimbalOverloaded
             )
             lastTelemetry = telemetry
             onTelemetry?(telemetry)
@@ -514,7 +518,14 @@ extension DJIConnection: DJICameraDelegate {
 extension DJIConnection: DJIGimbalDelegate {
     func gimbal(_ gimbal: DJIGimbal, didUpdate state: DJIGimbalState) {
         let pitch = Double(state.attitudeInDegrees.pitch)
-        onMain { [self] in cameraPitch = pitch }
+        let overloaded = state.isMotorOverloaded
+        onMain { [self] in
+            cameraPitch = pitch
+            if overloaded != gimbalOverloaded {
+                gimbalOverloaded = overloaded
+                addLog(overloaded ? "Gimbal: motor overbelast (camera op \(Int(pitch.rounded()))°)." : "Gimbal: niet meer overbelast.")
+            }
+        }
     }
 }
 

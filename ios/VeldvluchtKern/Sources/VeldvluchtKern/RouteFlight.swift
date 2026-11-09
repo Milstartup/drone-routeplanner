@@ -67,6 +67,8 @@ struct DroneTelemetry: Equatable {
     var flightMode = ""
     /// The camera's tilt: 0 straight ahead, −90 straight down; nil when unknown.
     var cameraPitchDeg: Double? = nil
+    /// DJI: a gimbal motor is overloaded, for example with the clear gimbal cover still on.
+    var gimbalOverloaded = false
 }
 
 /// What the flight needs from the drone. DJIConnection implements it in the app.
@@ -187,6 +189,8 @@ final class RouteFlight: ObservableObject {
         var minPhotoIntervalS = 2.0
         /// At 30 m every 5° of tilt moves the photo about 2.6 m over the ground.
         var maxCameraTiltDeg = 5.0
+        /// Before take-off the gimbal gets this long to report that it looks down.
+        var cameraDownWaitS = 3.0
         var telemetryTimeoutS = 1.0
         var takeoffTimeoutS = 20.0
         /// The first real flight (6 November 2026) failed its first direction test at 1 m/s
@@ -263,6 +267,8 @@ final class RouteFlight: ObservableObject {
     private var lastLoggedFlightMode: String?
     private var turningCameraDown = false
     private var lastCameraTurn: Date?
+    /// Since when the app waits for the gimbal to report −90° before take-off.
+    private var cameraDownSince: Date?
     /// Set by a tap on Landen until the drone stops waiting: one tap is enough (6 November
     /// 2026: two taps a second apart both went to the drone).
     @Published private var landingConfirmSent = false
@@ -410,10 +416,34 @@ final class RouteFlight: ObservableObject {
                     self.addLog("\(message) Zonder dat zijn de foto's niet te gebruiken; de drone stijgt niet op.")
                     return
                 }
-                self.addLog("Camera recht naar beneden.")
-                self.takeOff()
+                self.cameraDownSince = self.clock()
+                self.checkCameraDown(self.clock())
             }
         }
+    }
+
+    /// DJI accepted the turn even when the camera could not move: on 9 November 2026 every
+    /// photo showed the horizon. So the drone only takes off once the gimbal reports −90°.
+    private func checkCameraDown(_ now: Date) {
+        guard phase == .preparing, let since = cameraDownSince, let t = telemetry else { return }
+        if !t.gimbalOverloaded, let pitch = t.cameraPitchDeg, abs(pitch + 90) <= settings.maxCameraTiltDeg {
+            cameraDownSince = nil
+            addLog("Camera recht naar beneden.")
+            takeOff()
+            return
+        }
+        guard now.timeIntervalSince(since) >= settings.cameraDownWaitS else { return }
+        cameraDownSince = nil
+        let problem: String
+        if t.gimbalOverloaded {
+            problem = "De gimbal meldt dat hij overbelast is: de camera zit vast"
+        } else if let pitch = t.cameraPitchDeg {
+            problem = "De camera draait niet naar beneden: hij staat op \(Int(pitch.rounded()))° in plaats van -90°"
+        } else {
+            problem = "De gimbal meldt niet hoe de camera staat"
+        }
+        setPhase(.failed(problem + "."))
+        addLog("\(problem). Zit het doorzichtige kapje nog om de camera? Haal het eraf en zet de drone uit en weer aan. De drone stijgt niet op.")
     }
 
     private func takeOff() {
@@ -660,6 +690,8 @@ final class RouteFlight: ObservableObject {
             releaseSticks(byStick: false)
         }
         switch phase {
+        case .preparing:
+            checkCameraDown(now)
         case .takingOff:
             tickTakeOff(now)
         case .returningHome:

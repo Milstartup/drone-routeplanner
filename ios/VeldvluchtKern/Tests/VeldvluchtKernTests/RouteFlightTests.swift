@@ -630,6 +630,36 @@ final class RouteFlightSafetyTests: XCTestCase {
                       "\(flight.log.map(\.text))")
     }
 
+    /// 9 November 2026: the clear gimbal cover was still on and every photo showed the horizon.
+    func testDoesNotTakeOffWhileTheCameraDoesNotLookDown() {
+        let cases: [(String, (FakeDrone) -> Void, String)] = [
+            ("vast", { $0.cameraStuck = true }, "De camera draait niet naar beneden: hij staat op 0° in plaats van -90°"),
+            ("onbekend", { $0.reportsCameraPitch = false }, "De gimbal meldt niet hoe de camera staat"),
+            ("overbelast", { $0.gimbalOverloaded = true }, "De gimbal meldt dat hij overbelast is: de camera zit vast"),
+        ]
+        for (name, setUp, problem) in cases {
+            make()
+            setUp(drone)
+            flight.start()
+            run(seconds: 10)
+            XCTAssertEqual(flight.phase, .failed(problem + "."), name)
+            XCTAssertFalse(drone.motorsOn, name)
+            XCTAssertTrue(drone.shots.isEmpty, name)
+            XCTAssertTrue(flight.log.contains { $0.text == "\(problem). Zit het doorzichtige kapje nog om de camera? Haal het eraf en zet de drone uit en weer aan. De drone stijgt niet op." },
+                          "\(name): \(flight.log.map(\.text))")
+            XCTAssertFalse(flight.log.contains { $0.text == "Camera recht naar beneden." }, name)
+        }
+    }
+
+    func testWaitsForTheCameraBeforeTakingOff() {
+        flight.start()
+        run(seconds: 0.5)
+        XCTAssertEqual(flight.phase, .preparing, "de gimbal staat nog op 0°")
+        XCTAssertFalse(drone.motorsOn)
+        run(seconds: 5) { [unowned self] in drone.motorsOn }
+        XCTAssertTrue(drone.motorsOn)
+    }
+
     func testSkipsPhotosWhileTheCameraIsTiltedAndTurnsItBack() {
         flight.start()
         run(seconds: 2000) { [unowned self] in flight.photoLog.photos.count >= 5 }

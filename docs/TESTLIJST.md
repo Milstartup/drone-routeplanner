@@ -1,10 +1,10 @@
 # Testlijst iPhone-app Veldvlucht
 
-Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
+Stand: 9 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
 
 ## Wat al getest is
 
-- **Op de Mac, 133 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 135 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -70,6 +70,13 @@ Stand: 6 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - **De foto's waren 16:9** (4000 × 2250) in plaats van 4:3 (4000 × 3000). Dan dekt een foto een kwart minder grond dan de planner rekent. Nu zet de app de camera vóór het opstijgen op 4:3.
   - **De camera stond in 6 van de 11 foto's 5 tot 8,5° scheef**, telkens vlak na optrekken of afremmen: de drone kantelde dan tot 20°, en de camera liep achter. In de eerste vlucht, zonder pauzes, stond hij steeds op −90°. Nu bouwt de app de snelheid rustig op (hooguit 1 m/s per seconde); afremmen blijft even snel. Eén nieuwe nep-drone-test.
   - Er zaten twee mensen op een bankje onder de route.
+- **Vierde echte vlucht (9 november 2026, 08:41 tot 08:44):** 17 foto's, DJI_0451 tot en met DJI_0467 (nog op de SD-kaart).
+  - **De foto's zijn nu 4000 × 3000 (4:3).** Dat is goed.
+  - **In alle 17 foto's kijkt de camera vooruit naar de horizon** in plaats van naar beneden. In de foto zelf staat de gimbal op 0°. Het doorzichtige kapje zat nog om de camera, dus de camera kon niet draaien. Toch nam DJI de opdracht "camera naar beneden" aan, steeg de drone op en maakte hij foto's.
+  - Nu wacht de app vóór het opstijgen tot de gimbal zelf meldt dat hij op −90° staat (hooguit 3 seconden). Lukt dat niet, of meldt de gimbal dat hij overbelast is, dan stijgt de drone niet op en zegt de app: *Zit het doorzichtige kapje nog om de camera?* Twee nieuwe nep-drone-tests.
+  - Het kapje staat nu ook in de controlelijst vóór een echte vlucht.
+  - **Nog niet nagekeken:** wat de gimbal tijdens deze vlucht aan de app meldde. Dat staat in het logboek op de iPhone.
+  - Uit de foto's: op de banen heen kantelde de drone 12 à 13°, en terug maar −2°. Er stond dus waarschijnlijk flinke wind langs de banen.
 - **Nog nooit getest:** een lange echte vlucht; een echt sensorkastje; jouw eigen indruk van alle schermen.
 
 **Let op:** met een gratis Apple ID werkt de app een week. Daarna zet je hem opnieuw op de iPhone (▶ in Xcode, of vraag het Claude).
@@ -162,6 +169,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
 
 **Voorwaarden:**
 - een open veld zonder mensen of dieren, goed weer en weinig wind;
+- het doorzichtige **kapje is van de camera af** (anders kan de camera niet naar beneden draaien);
 - je bent geregistreerd als exploitant en mag daar vliegen (geen no-fly-zone, maximaal 120 m);
 - je bent zelf de piloot en ziet de drone de hele vlucht;
 - de **propellers zitten erop en goed vast**.
@@ -183,7 +191,7 @@ De drone blijft op de grond. De camera maakt wel echte foto's: de voorbeeldroute
   2. Controleer: zijn alle geplande foto's er? Liggen ze op de goede plek? Zijn ze scherp genoeg om de planten te beoordelen? Kijkt de camera recht naar beneden (alleen grond, geen horizon)? Staat er GPS in?
 - [x] **D6** (6 november 2026: de drone ging zelf naar huis, en de app stuurde niet meer) Op veilige hoogte: wat doet één druk op de **pauzeknop** van de afstandsbediening? Volgens de handleiding remt de drone af. (Hoofdstuk 6.5 van het DJI-document.)
 - [x] **D7** (3 van 3 op 6 november 2026; de grens van 800 m is nu weg) Na 3 geslaagde echte vluchten vervalt de grens van 800 m. Ga daarna stap voor stap groter, tot een heel veld.
-- [ ] **D8** Vlieg nog eens dezelfde korte route, op een plek zonder mensen onder de route. Zet daarna de nieuwe foto's op de Mac (zoals bij D5) en laat Claude ze nakijken:
+- [ ] **D8** (9 november 2026: 4:3 klopt, maar het kapje zat nog om de camera, dus de hoek en het optrekken nog een keer) Vlieg nog eens dezelfde korte route, op een plek zonder mensen onder de route. Zet daarna de nieuwe foto's op de Mac (zoals bij D5) en laat Claude ze nakijken:
   - zijn ze nu 4000 × 3000 (4:3)?
   - staat de camera in elke foto binnen 2° van recht naar beneden? (Dat staat in de foto zelf, Claude leest het uit.)
   - de drone trekt nu rustiger op: na de bocht duurt het ongeveer 4 seconden voor hij op 4 m/s vliegt.

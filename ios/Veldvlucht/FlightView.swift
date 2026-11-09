@@ -761,6 +761,7 @@ struct StartChecklist: View {
         }
         return [
             "Propellers erop en goed vast.",
+            "Het doorzichtige kapje is van de camera af.",
             "Je staat bij het startpunt en ziet de drone de hele vlucht.",
             "Geen mensen, dieren of obstakels op de route.",
             "Wind ruim onder 8 m/s, geen regen.",

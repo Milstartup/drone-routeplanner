@@ -614,7 +614,7 @@ final class RouteFlightSafetyTests: XCTestCase {
         run(seconds: 30) { [unowned self] in drone.flying }
         XCTAssertEqual(drone.cameraPitchDeg, -90)
         let texts = flight.log.map(\.text)
-        let down = texts.firstIndex(of: "Camera recht naar beneden.")
+        let down = texts.firstIndex(of: "Camera recht naar beneden (de gimbal meldt -90°).")
         let takeOff = texts.firstIndex(of: "Opstijgen…")
         XCTAssertNotNil(down, "\(texts)")
         XCTAssertLessThan(down ?? .max, takeOff ?? .min)
@@ -647,7 +647,7 @@ final class RouteFlightSafetyTests: XCTestCase {
             XCTAssertTrue(drone.shots.isEmpty, name)
             XCTAssertTrue(flight.log.contains { $0.text == "\(problem). Zit het doorzichtige kapje nog om de camera? Haal het eraf en zet de drone uit en weer aan. De drone stijgt niet op." },
                           "\(name): \(flight.log.map(\.text))")
-            XCTAssertFalse(flight.log.contains { $0.text == "Camera recht naar beneden." }, name)
+            XCTAssertFalse(flight.log.contains { $0.text.hasPrefix("Camera recht naar beneden") }, name)
         }
     }
 

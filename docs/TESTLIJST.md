@@ -75,7 +75,9 @@ Stand: 9 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
   - **In alle 17 foto's kijkt de camera vooruit naar de horizon** in plaats van naar beneden. In de foto zelf staat de gimbal op 0°. Het doorzichtige kapje zat nog om de camera, dus de camera kon niet draaien. Toch nam DJI de opdracht "camera naar beneden" aan, steeg de drone op en maakte hij foto's.
   - Nu wacht de app vóór het opstijgen tot de gimbal zelf meldt dat hij op −90° staat (hooguit 3 seconden). Lukt dat niet, of meldt de gimbal dat hij overbelast is, dan stijgt de drone niet op en zegt de app: *Zit het doorzichtige kapje nog om de camera?* Twee nieuwe nep-drone-tests.
   - Het kapje staat nu ook in de controlelijst vóór een echte vlucht.
-  - **Nog niet nagekeken:** wat de gimbal tijdens deze vlucht aan de app meldde. Dat staat in het logboek op de iPhone.
+  - In het logboek schreef de app meteen *Camera recht naar beneden*, en daarna nooit *De camera kijkt even niet recht naar beneden*. De gimbal meldde dus niets, of ongeveer −90°. Meldde hij niets, dan houdt de nieuwe controle de drone nu op de grond. Meldde hij −90° terwijl de camera vastzat, dan helpt alleen de controlelijst. Daarom zet het logboek nu achter *Camera recht naar beneden* de hoek die de gimbal meldt.
+  - Om 8:42:15 was de verbinding met de drone ongeveer 5 seconden weg. De app stopte met sturen, zoals bedoeld. Na **Hervatten** ging de route verder vanaf foto 2, en alle 17 foto's zijn bevestigd.
+  - Het automatische landen hield twee keer op: om 8:45:09 en 8:45:34 stond de drone weer in vluchtstand *GPS*. De derde keer landde hij wel, na een tik op **Landen**. Nog uitzoeken: stopte de drone vanzelf, of werd een stick of de pauzeknop aangeraakt?
   - Uit de foto's: op de banen heen kantelde de drone 12 à 13°, en terug maar −2°. Er stond dus waarschijnlijk flinke wind langs de banen.
 - **Nog nooit getest:** een lange echte vlucht; een echt sensorkastje; jouw eigen indruk van alle schermen.
 

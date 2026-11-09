@@ -428,7 +428,7 @@ final class RouteFlight: ObservableObject {
         guard phase == .preparing, let since = cameraDownSince, let t = telemetry else { return }
         if !t.gimbalOverloaded, let pitch = t.cameraPitchDeg, abs(pitch + 90) <= settings.maxCameraTiltDeg {
             cameraDownSince = nil
-            addLog("Camera recht naar beneden.")
+            addLog("Camera recht naar beneden (de gimbal meldt \(Int(pitch.rounded()))°).")
             takeOff()
             return
         }

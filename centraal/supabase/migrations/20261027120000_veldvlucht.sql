@@ -94,6 +94,10 @@ create table if not exists public.aandacht (
   gemaakt timestamptz not null default now()
 );
 create index if not exists aandacht_veld on public.aandacht (veld, vlucht_id);
+-- 10 November 2026: what the AI says the plant is ('te-droog', 'te-nat', ...) and when the
+-- photo was taken, so the water advice can use them. Added to tables made before.
+alter table public.aandacht add column if not exists soort text;
+alter table public.aandacht add column if not exists gezien timestamptz;
 
 -- ---------------------------------------------------------------------------------------
 -- Who may see what

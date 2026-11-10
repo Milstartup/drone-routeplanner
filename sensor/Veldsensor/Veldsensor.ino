@@ -1,11 +1,11 @@
 // Veldsensor: firmware for one soil-moisture sensor box (ESP32 + the Bits & Parts LM393 sensor).
 //
-// Every MEET_INTERVAL_MINUTEN the box wakes from deep sleep, powers the sensor from a GPIO,
+// Every measuring interval (60 minutes unless set otherwise) the box wakes from deep sleep, powers the sensor from a GPIO,
 // reads its analog output and stores the value in RTC memory. Then it tries to join the
 // iPhone's Personal Hotspot and sends every unsent measurement (format "veld/sensorupload",
 // see sensor/README.md):
 // - to the central system in the cloud (HTTPS, Supabase RPC sensor_upload with the sensor's
-//   key), when CLOUD_PROJECT is set; the app need not be open;
+//   key), when it has a cloud project; the app need not be open;
 // - otherwise, or when the cloud does not answer, to the Veldvlucht app at
 //   http://<gateway>:8787/sensormetingen.
 // Measurements are only removed after an answer 200. Then WiFi off and back to sleep.
@@ -17,19 +17,26 @@
 // Pressing the BOOT button wakes the box: it measures and sends right away.
 // Unsent measurements are lost when the power goes off, on the reset button or a new upload.
 //
-// Settings live in Instellingen.h (a copy of Instellingen.voorbeeld.h, never in git).
+// Pairing (10 November 2026): after switching on, the box opens its own WiFi network
+// "Veldsensor-XXXX" for two minutes (until it has settings, for good). The Veldvlucht app,
+// or a browser at http://192.168.4.1, sends it the hotspot, the sensor's name and key and the
+// cloud; the box keeps them in flash. Instellingen.h is optional: its values are the defaults,
+// and the pins and the test mode live there. Waking from deep sleep never opens the network.
 // Serial output (115200 baud) is in Dutch for the owner.
 
-#if !__has_include("Instellingen.h")
-#error "Instellingen.h ontbreekt. Kopieer Instellingen.voorbeeld.h naar Instellingen.h (in dezelfde map) en vul je hotspot in. Zie sensor/README.md."
-#else
+#if __has_include("Instellingen.h")
 #include "Instellingen.h"
-#if !defined(HOTSPOT_NAAM) || !defined(HOTSPOT_WACHTWOORD) || !defined(SENSOR_ID) || !defined(DIEPTE_CM) \
-  || !defined(MEET_INTERVAL_MINUTEN) || !defined(TESTMODUS) || !defined(SENSOR_VOEDING_PIN) \
-  || !defined(SENSOR_PIN) || !defined(BATTERIJ_PIN) || !defined(BATTERIJ_DELER)
-#error "Instellingen.h is niet compleet. Vergelijk hem met Instellingen.voorbeeld.h."
 #endif
-// Older settings files have no cloud: then the box only sends to the app.
+// Defaults, so the box also works without Instellingen.h: then you pair it with the app.
+#ifndef HOTSPOT_NAAM
+#define HOTSPOT_NAAM ""
+#endif
+#ifndef HOTSPOT_WACHTWOORD
+#define HOTSPOT_WACHTWOORD ""
+#endif
+#ifndef SENSOR_ID
+#define SENSOR_ID ""
+#endif
 #ifndef CLOUD_PROJECT
 #define CLOUD_PROJECT ""
 #endif
@@ -39,11 +46,33 @@
 #ifndef SENSOR_SLEUTEL
 #define SENSOR_SLEUTEL ""
 #endif
+#ifndef DIEPTE_CM
+#define DIEPTE_CM 15
+#endif
+#ifndef MEET_INTERVAL_MINUTEN
+#define MEET_INTERVAL_MINUTEN 60
+#endif
+#ifndef TESTMODUS
+#define TESTMODUS false
+#endif
+#ifndef SENSOR_VOEDING_PIN
+#define SENSOR_VOEDING_PIN 25
+#endif
+#ifndef SENSOR_PIN
+#define SENSOR_PIN 34
+#endif
+#ifndef BATTERIJ_PIN
+#define BATTERIJ_PIN -1
+#endif
+#ifndef BATTERIJ_DELER
+#define BATTERIJ_DELER 2.0
 #endif
 
 #include <WiFi.h>
 #include <NetworkClientSecure.h>
 #include <HTTPClient.h>
+#include <WebServer.h>
+#include <Preferences.h>
 #include <esp_sleep.h>
 #include <time.h>
 
@@ -55,10 +84,11 @@
 
 static_assert(sizeof(HOTSPOT_NAAM) <= 33, "HOTSPOT_NAAM is te lang (hoogstens 32 tekens).");
 static_assert(sizeof(HOTSPOT_WACHTWOORD) <= 64, "HOTSPOT_WACHTWOORD is te lang (hoogstens 63 tekens).");
-static_assert(sizeof(SENSOR_ID) > 1, "SENSOR_ID mag niet leeg zijn.");
+static_assert(sizeof(SENSOR_ID) <= 41, "SENSOR_ID is te lang (hoogstens 40 tekens).");
 static_assert(DIEPTE_CM >= 0, "DIEPTE_CM kan niet negatief zijn.");
 static_assert(MEET_INTERVAL_MINUTEN >= 1, "MEET_INTERVAL_MINUTEN moet minstens 1 zijn.");
 static_assert(sizeof(CLOUD_PROJECT) <= 41, "CLOUD_PROJECT is te lang: alleen de letters voor .supabase.co.");
+static_assert(sizeof(CLOUD_SLEUTEL) <= 257 && sizeof(SENSOR_SLEUTEL) <= 65, "CLOUD_SLEUTEL of SENSOR_SLEUTEL is te lang.");
 static_assert(sizeof(CLOUD_PROJECT) == 1 || (sizeof(CLOUD_SLEUTEL) > 1 && sizeof(SENSOR_SLEUTEL) > 1),
               "Met CLOUD_PROJECT zijn ook CLOUD_SLEUTEL en SENSOR_SLEUTEL nodig (zie de app).");
 static_assert(SENSOR_PIN >= 32 && SENSOR_PIN <= 39,
@@ -76,6 +106,24 @@ constexpr uint8_t AANTAL_SAMPLES = 10;         // analogRead samples per measure
 constexpr uint32_t OPWARMTIJD_MS = 200;        // sensor settles after switching it on
 constexpr uint32_t WIFI_TIMEOUT_MS = 10000;    // give up joining the hotspot after this
 constexpr uint32_t TEST_INTERVAL_MS = 10000;   // one measurement every 10 s in TESTMODUS
+constexpr uint32_t KOPPEL_MS = 2 * 60 * 1000;  // the pairing network stays open this long after switching on
+// The pairing network's password. Everybody may know it; it only keeps passers-by from joining
+// by accident, and the box only listens for two minutes.
+constexpr const char *KOPPEL_WACHTWOORD = "veldsensor";
+
+// ---- Settings: Instellingen.h first, then what the app sent (kept in flash) ----
+
+struct Instellingen {
+  char hotspotNaam[33];
+  char hotspotWachtwoord[64];
+  char sensorId[41];
+  char sensorSleutel[65];
+  char cloudProject[41];
+  char cloudSleutel[257];  // publishable keys are short, the older "anon" keys about 200 characters
+  uint16_t diepteCm;
+  uint16_t intervalMinuten;
+};
+static Instellingen inst;
 
 // ---- Unsent measurements, kept in RTC memory (survives deep sleep, not a power loss) ----
 
@@ -120,6 +168,53 @@ static void verwijderOudste(uint16_t aantal) {
   bewaardAantal -= aantal;
 }
 
+// ---- Loading and saving the settings ----
+
+static void laadInstellingen() {
+  strlcpy(inst.hotspotNaam, HOTSPOT_NAAM, sizeof inst.hotspotNaam);
+  strlcpy(inst.hotspotWachtwoord, HOTSPOT_WACHTWOORD, sizeof inst.hotspotWachtwoord);
+  strlcpy(inst.sensorId, SENSOR_ID, sizeof inst.sensorId);
+  strlcpy(inst.sensorSleutel, SENSOR_SLEUTEL, sizeof inst.sensorSleutel);
+  strlcpy(inst.cloudProject, CLOUD_PROJECT, sizeof inst.cloudProject);
+  strlcpy(inst.cloudSleutel, CLOUD_SLEUTEL, sizeof inst.cloudSleutel);
+  inst.diepteCm = DIEPTE_CM;
+  inst.intervalMinuten = MEET_INTERVAL_MINUTEN;
+
+  Preferences flash;
+  if (!flash.begin("veldsensor", true)) return;  // never paired: no namespace yet
+  if (flash.isKey("sensor")) {
+    strlcpy(inst.hotspotNaam, flash.getString("hotspot").c_str(), sizeof inst.hotspotNaam);
+    strlcpy(inst.hotspotWachtwoord, flash.getString("wachtwoord").c_str(), sizeof inst.hotspotWachtwoord);
+    strlcpy(inst.sensorId, flash.getString("sensor").c_str(), sizeof inst.sensorId);
+    strlcpy(inst.sensorSleutel, flash.getString("sleutel").c_str(), sizeof inst.sensorSleutel);
+    strlcpy(inst.cloudProject, flash.getString("project").c_str(), sizeof inst.cloudProject);
+    strlcpy(inst.cloudSleutel, flash.getString("cloudsleutel").c_str(), sizeof inst.cloudSleutel);
+    inst.diepteCm = flash.getUShort("diepte", inst.diepteCm);
+    inst.intervalMinuten = flash.getUShort("interval", inst.intervalMinuten);
+  }
+  flash.end();
+}
+
+static bool bewaarInstellingen(const Instellingen &n) {
+  Preferences flash;
+  if (!flash.begin("veldsensor", false)) return false;
+  bool gelukt = flash.putString("hotspot", n.hotspotNaam) == strlen(n.hotspotNaam)
+             && flash.putString("wachtwoord", n.hotspotWachtwoord) == strlen(n.hotspotWachtwoord)
+             && flash.putString("sleutel", n.sensorSleutel) == strlen(n.sensorSleutel)
+             && flash.putString("project", n.cloudProject) == strlen(n.cloudProject)
+             && flash.putString("cloudsleutel", n.cloudSleutel) == strlen(n.cloudSleutel)
+             && flash.putUShort("diepte", n.diepteCm) == 2
+             && flash.putUShort("interval", n.intervalMinuten) == 2;
+  // The sensor name last: loading takes the flash settings only when it is there.
+  gelukt = gelukt && flash.putString("sensor", n.sensorId) == strlen(n.sensorId);
+  flash.end();
+  return gelukt;
+}
+
+static bool gekoppeld() {
+  return inst.hotspotNaam[0] != '\0' && inst.sensorId[0] != '\0';
+}
+
 // ---- Measuring ----
 
 // Median of the samples: one odd reading does not move it, unlike the average.
@@ -136,11 +231,8 @@ static uint16_t mediaan(uint16_t *waarden, uint8_t n) {
   return (n % 2) ? waarden[n / 2] : (uint16_t)((waarden[n / 2 - 1] + waarden[n / 2] + 1) / 2);
 }
 
-static Meting meet() {
-  Meting m{};
-  m.nr = ++volgnummer;
-  m.tijdS = nuS();
-
+// The sensor's raw value now, without keeping it.
+static uint16_t leesSensor() {
   // Power the sensor only while measuring: current through the bare metal probe makes it
   // corrode much faster.
   digitalWrite(SENSOR_VOEDING_PIN, HIGH);
@@ -151,7 +243,14 @@ static Meting meet() {
     delay(10);
   }
   digitalWrite(SENSOR_VOEDING_PIN, LOW);
-  m.ruw = mediaan(waarden, AANTAL_SAMPLES);
+  return mediaan(waarden, AANTAL_SAMPLES);
+}
+
+static Meting meet() {
+  Meting m{};
+  m.nr = ++volgnummer;
+  m.tijdS = nuS();
+  m.ruw = leesSensor();
 
 #if BATTERIJ_PIN >= 0
   uint32_t somMv = 0;
@@ -191,9 +290,9 @@ static String maakUpload(uint16_t aantal, uint32_t nu) {
   String body;
   body.reserve(144 + aantal * 68);
   body += "{\"format\":\"veld/sensorupload\",\"version\":0,\"sensorId\":";
-  voegJsonTekstToe(body, SENSOR_ID);
+  voegJsonTekstToe(body, inst.sensorId);
   body += ",\"depthCm\":";
-  body += (int)DIEPTE_CM;
+  body += (int)inst.diepteCm;
   body += ",\"boot\":";
   body += String(opstartId);
   body += ",\"measurements\":[";
@@ -216,7 +315,7 @@ static String maakUpload(uint16_t aantal, uint32_t nu) {
 
 // Sends all stored measurements to the central system in the cloud. True when it answered 200.
 static bool verstuurNaarCloud(uint16_t aantal) {
-  const String url = String("https://") + CLOUD_PROJECT + ".supabase.co/rest/v1/rpc/sensor_upload";
+  const String url = String("https://") + inst.cloudProject + ".supabase.co/rest/v1/rpc/sensor_upload";
   Serial.printf("Versturen van %u meting(en) naar de cloud ...\n", (unsigned)aantal);
 
   NetworkClientSecure verbinding;
@@ -226,16 +325,16 @@ static bool verstuurNaarCloud(uint16_t aantal) {
   http.setTimeout(15000);
   http.setReuse(false);
   if (!http.begin(verbinding, url)) {
-    Serial.println("  Ongeldig cloudadres. Klopt CLOUD_PROJECT?");
+    Serial.println("  Ongeldig cloudadres. Koppel het kastje opnieuw met de app.");
     return false;
   }
   http.addHeader("Content-Type", "application/json");
-  http.addHeader("apikey", CLOUD_SLEUTEL);
-  if (strncmp(CLOUD_SLEUTEL, "eyJ", 3) == 0) {
-    http.addHeader("Authorization", String("Bearer ") + CLOUD_SLEUTEL);  // the older "anon" keys
+  http.addHeader("apikey", inst.cloudSleutel);
+  if (strncmp(inst.cloudSleutel, "eyJ", 3) == 0) {
+    http.addHeader("Authorization", String("Bearer ") + inst.cloudSleutel);  // the older "anon" keys
   }
   String body = "{\"p_sleutel\":";
-  voegJsonTekstToe(body, SENSOR_SLEUTEL);
+  voegJsonTekstToe(body, inst.sensorSleutel);
   body += ",\"p_upload\":";
   body += maakUpload(aantal, nuS());
   body += "}";
@@ -248,7 +347,7 @@ static bool verstuurNaarCloud(uint16_t aantal) {
   } else if (code > 0) {
     Serial.printf("  De cloud antwoordde met code %d: %s\n", code, http.getString().c_str());
     if (code == 401 || code == 403) {
-      Serial.println("  Klopt SENSOR_SLEUTEL en CLOUD_SLEUTEL? Kijk in de app.");
+      Serial.println("  De sleutel klopt niet. Bewaar de sensor in de app en koppel het kastje opnieuw.");
     }
   } else {
     Serial.printf("  Cloud niet bereikbaar (%s). Heeft de hotspot internet?\n", HTTPClient::errorToString(code).c_str());
@@ -261,7 +360,7 @@ static bool verstuurNaarCloud(uint16_t aantal) {
 // does not answer) to the app. Removes them only after an answer 200.
 static void verstuur() {
   const uint16_t aantal = bewaardAantal;
-  if (CLOUD_PROJECT[0] != '\0') {
+  if (inst.cloudProject[0] != '\0') {
     if (verstuurNaarCloud(aantal)) {
       verwijderOudste(aantal);
       return;
@@ -302,14 +401,14 @@ static void verstuur() {
 
 // Joins the hotspot, sends if that worked, and switches WiFi off again.
 static void verbindEnVerstuur() {
-  if (HOTSPOT_NAAM[0] == '\0') {
-    Serial.println("Geen hotspot ingevuld in Instellingen.h: niet versturen.");
+  if (inst.hotspotNaam[0] == '\0') {
+    Serial.println("Nog geen hotspot: koppel het kastje met de app. Niet versturen.");
     return;
   }
-  Serial.printf("Verbinden met hotspot \"%s\" ... ", HOTSPOT_NAAM);
+  Serial.printf("Verbinden met hotspot \"%s\" ... ", inst.hotspotNaam);
   WiFi.persistent(false);  // don't write the hotspot to flash on every wake-up
   WiFi.mode(WIFI_STA);
-  WiFi.begin(HOTSPOT_NAAM, HOTSPOT_WACHTWOORD);
+  WiFi.begin(inst.hotspotNaam, inst.hotspotWachtwoord);
   const uint32_t start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_TIMEOUT_MS) {
     delay(100);
@@ -334,6 +433,184 @@ static void verbindEnVerstuur() {
   WiFi.mode(WIFI_OFF);
 }
 
+// ---- Pairing: the box's own network, for the app or a browser ----
+
+static WebServer server(80);
+static bool nieuwGekoppeld = false;
+
+static String netwerkNaam() {
+  const uint64_t mac = ESP.getEfuseMac();
+  char naam[20];
+  snprintf(naam, sizeof naam, "Veldsensor-%02X%02X", (unsigned)((mac >> 32) & 0xFF), (unsigned)((mac >> 40) & 0xFF));
+  return String(naam);
+}
+
+static bool alleen(const String &s, const char *toegestaan) {
+  for (size_t i = 0; i < s.length(); i++) {
+    if (!strchr(toegestaan, s[i])) return false;
+  }
+  return true;
+}
+
+// Escapes text for HTML, so a hotspot name cannot break the page.
+static String html(const char *s) {
+  String uit;
+  for (; *s; s++) {
+    switch (*s) {
+      case '&': uit += "&amp;"; break;
+      case '<': uit += "&lt;"; break;
+      case '>': uit += "&gt;"; break;
+      case '"': uit += "&quot;"; break;
+      default: uit += *s;
+    }
+  }
+  return uit;
+}
+
+static void stuurPagina() {
+  String pagina;
+  pagina.reserve(2400);
+  pagina += F("<!doctype html><html lang=nl><head><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+              "<title>Sensorkastje</title><style>body{font-family:sans-serif;margin:16px;max-width:30em}"
+              "label{display:block;margin-top:12px}input{width:100%;font-size:1.1em;padding:6px;box-sizing:border-box}"
+              "button{margin-top:16px;font-size:1.1em;padding:10px}</style></head><body>");
+  pagina += "<h1>Sensorkastje</h1><p>Nu: ruw " + String(leesSensor()) + " (hoger = droger).</p>";
+  pagina += F("<p>Makkelijker: open de Veldvlucht-app, <i>Sensoren</i>, <i>Kastje koppelen</i>.</p>"
+              "<form method=post action=/instellingen><input type=hidden name=vanuit value=pagina>");
+  pagina += "<label>Naam van je hotspot<input name=hotspot maxlength=32 value=\"" + html(inst.hotspotNaam) + "\"></label>";
+  pagina += F("<label>Wachtwoord van je hotspot (leeg = hetzelfde als eerst)<input name=wachtwoord type=password maxlength=63></label>");
+  pagina += "<label>Naam van de sensor<input name=sensor maxlength=40 value=\"" + html(inst.sensorId) + "\"></label>";
+  pagina += "<label>Sleutel van de sensor<input name=sleutel maxlength=64 value=\"" + html(inst.sensorSleutel) + "\"></label>";
+  pagina += "<label>Cloudproject (leeg = alleen naar de app)<input name=project maxlength=40 value=\"" + html(inst.cloudProject) + "\"></label>";
+  pagina += "<label>Cloudsleutel<input name=cloudsleutel maxlength=256 value=\"" + html(inst.cloudSleutel) + "\"></label>";
+  pagina += "<label>Diepte in cm<input name=diepte type=number value=" + String(inst.diepteCm) + "></label>";
+  pagina += "<label>Om de hoeveel minuten meten<input name=interval type=number value=" + String(inst.intervalMinuten) + "></label>";
+  pagina += F("<button>Bewaren</button></form></body></html>");
+  server.send(200, "text/html; charset=utf-8", pagina);
+}
+
+// The answer: JSON for the app, a page for a browser.
+static void antwoord(bool vanuitPagina, int code, bool ok, const String &tekst, uint16_t ruw) {
+  if (vanuitPagina) {
+    server.send(code, "text/html; charset=utf-8",
+                "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><body style='font-family:sans-serif'><h1>"
+                + String(ok ? "Gekoppeld" : "Niet bewaard") + "</h1><p>" + tekst + "</p>" + (ok ? "" : "<p><a href=/>Terug</a></p>"));
+    return;
+  }
+  String json = String("{\"ok\":") + (ok ? "true" : "false");
+  if (ok) {
+    json += ",\"sensorId\":";
+    voegJsonTekstToe(json, inst.sensorId);
+    json += ",\"ruw\":" + String(ruw);
+  } else {
+    json += ",\"fout\":";
+    voegJsonTekstToe(json, tekst.c_str());
+  }
+  json += "}";
+  server.send(code, "application/json", json);
+}
+
+static void ontvangInstellingen() {
+  const bool vanuitPagina = server.arg("vanuit") == "pagina";
+  Instellingen n = inst;
+  const String hotspot = server.arg("hotspot");
+  const String wachtwoord = server.arg("wachtwoord");
+  const String sensor = server.arg("sensor");
+  const String sleutel = server.arg("sleutel");
+  const String project = server.arg("project");
+  const String cloudsleutel = server.arg("cloudsleutel");
+  const long diepte = server.hasArg("diepte") ? server.arg("diepte").toInt() : n.diepteCm;
+  const long interval = server.hasArg("interval") ? server.arg("interval").toInt() : n.intervalMinuten;
+
+  const char *fout = nullptr;
+  if (hotspot.isEmpty() || hotspot.length() > 32) fout = "De naam van de hotspot moet 1 tot 32 tekens zijn.";
+  else if (!wachtwoord.isEmpty() && (wachtwoord.length() < 8 || wachtwoord.length() > 63)) fout = "Het wachtwoord van de hotspot moet 8 tot 63 tekens zijn.";
+  else if (wachtwoord.isEmpty() && hotspot != inst.hotspotNaam) fout = "Vul het wachtwoord van de hotspot in.";
+  else if (sensor.isEmpty() || sensor.length() > 40 || !alleen(sensor, "abcdefghijklmnopqrstuvwxyz0123456789-")) fout = "De naam van de sensor mag alleen kleine letters, cijfers en streepjes hebben.";
+  else if (sleutel.length() > 64 || project.length() > 40 || cloudsleutel.length() > 256) fout = "Een sleutel of het cloudproject is te lang.";
+  else if (!alleen(project, "abcdefghijklmnopqrstuvwxyz0123456789")) fout = "Het cloudproject mag alleen kleine letters en cijfers hebben.";
+  else if (!project.isEmpty() && (sleutel.isEmpty() || cloudsleutel.isEmpty())) fout = "Met een cloudproject zijn ook de sleutel van de sensor en de cloudsleutel nodig.";
+  else if (diepte < 0 || diepte > 200) fout = "De diepte moet 0 tot 200 cm zijn.";
+  else if (interval < 1 || interval > 1440) fout = "Meten kan elke 1 tot 1440 minuten.";
+  if (fout) {
+    Serial.printf("Koppelen niet gelukt: %s\n", fout);
+    antwoord(vanuitPagina, 400, false, fout, 0);
+    return;
+  }
+
+  strlcpy(n.hotspotNaam, hotspot.c_str(), sizeof n.hotspotNaam);
+  if (!wachtwoord.isEmpty()) strlcpy(n.hotspotWachtwoord, wachtwoord.c_str(), sizeof n.hotspotWachtwoord);
+  strlcpy(n.sensorId, sensor.c_str(), sizeof n.sensorId);
+  strlcpy(n.sensorSleutel, sleutel.c_str(), sizeof n.sensorSleutel);
+  strlcpy(n.cloudProject, project.c_str(), sizeof n.cloudProject);
+  strlcpy(n.cloudSleutel, cloudsleutel.c_str(), sizeof n.cloudSleutel);
+  n.diepteCm = (uint16_t)diepte;
+  n.intervalMinuten = (uint16_t)interval;
+  if (!bewaarInstellingen(n)) {
+    antwoord(vanuitPagina, 500, false, "Bewaren in het geheugen van het kastje lukte niet. Probeer het opnieuw.", 0);
+    return;
+  }
+  if (strcmp(n.sensorId, inst.sensorId) != 0) {
+    // Another sensor: measurements of the old one must not be sent under the new name.
+    bewaardBegin = 0;
+    bewaardAantal = 0;
+  }
+  inst = n;
+  nieuwGekoppeld = true;
+  const uint16_t ruw = leesSensor();
+  Serial.printf("Gekoppeld als sensor %s, hotspot \"%s\"%s. Nu: ruw %u.\n", inst.sensorId, inst.hotspotNaam,
+                inst.cloudProject[0] ? ", met de cloud" : ", alleen naar de app", (unsigned)ruw);
+  antwoord(vanuitPagina, 200, true,
+           "Het kastje is nu sensor " + html(inst.sensorId) + " en meet ruw " + String(ruw) + ". Zet je hotspot aan; het kastje stuurt zo zijn eerste meting.",
+           ruw);
+}
+
+// The box's own network: two minutes after switching on, or until it has settings.
+static void koppelModus() {
+  const bool totGekoppeld = !gekoppeld();
+  const String naam = netwerkNaam();
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(naam.c_str(), KOPPEL_WACHTWOORD);
+  server.on("/", HTTP_GET, stuurPagina);
+  server.on("/instellingen", HTTP_POST, ontvangInstellingen);
+  server.on("/meting", HTTP_GET, [] {
+    String json = "{\"sensorId\":";
+    voegJsonTekstToe(json, inst.sensorId);
+    json += ",\"ruw\":" + String(leesSensor()) + "}";
+    server.send(200, "application/json", json);
+  });
+  server.onNotFound([] {
+    server.sendHeader("Location", "http://192.168.4.1/");
+    server.send(302, "text/plain", "");
+  });
+  server.begin();
+  Serial.printf("Koppelen: verbind je iPhone met wifi \"%s\" (wachtwoord %s) en kies in de app Kastje koppelen.\n",
+                naam.c_str(), KOPPEL_WACHTWOORD);
+  Serial.println(totGekoppeld ? "Het kastje heeft nog geen instellingen: het netwerk blijft aan tot het gekoppeld is."
+                              : "Het netwerk blijft 2 minuten aan; daarna gaat het kastje meten.");
+
+  const uint32_t start = millis();
+  uint32_t herinnering = start;
+  while (!nieuwGekoppeld && (totGekoppeld || millis() - start < KOPPEL_MS)) {
+    server.handleClient();
+    if (millis() - herinnering > 30000) {
+      herinnering = millis();
+      Serial.printf("Wacht op koppelen via wifi \"%s\" ...\n", naam.c_str());
+    }
+    delay(2);
+  }
+  // Let the answer reach the iPhone before the network goes away.
+  const uint32_t klaar = millis();
+  while (nieuwGekoppeld && millis() - klaar < 1500) {
+    server.handleClient();
+    delay(2);
+  }
+  server.stop();
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_OFF);
+  Serial.println(nieuwGekoppeld ? "Koppelnetwerk uit." : "Niet gekoppeld; de oude instellingen blijven. Koppelnetwerk uit.");
+}
+
 // ---- One cycle: measure, keep, try to send ----
 
 static void meetEnVerstuur() {
@@ -351,8 +628,8 @@ static void meetEnVerstuur() {
 }
 
 static void slaap() {
-  // Subtract the time awake, so measurements stay about MEET_INTERVAL_MINUTEN apart.
-  const uint64_t intervalUs = (uint64_t)MEET_INTERVAL_MINUTEN * 60ULL * 1000000ULL;
+  // Subtract the time awake, so measurements stay about one interval apart.
+  const uint64_t intervalUs = (uint64_t)inst.intervalMinuten * 60ULL * 1000000ULL;
   const uint64_t wakkerUs = (uint64_t)millis() * 1000ULL;
   const uint64_t slaapUs = intervalUs > wakkerUs + 1000000ULL ? intervalUs - wakkerUs : 1000000ULL;
   Serial.printf("Wifi uit. Slapen tot de volgende meting, over %lu s. Druk op BOOT om meteen te meten en te versturen.\n",
@@ -378,8 +655,10 @@ void setup() {
     volgnummer = 0;
   }
 
+  laadInstellingen();
+
   Serial.println();
-  Serial.printf("=== Sensorkastje %s ===\n", SENSOR_ID);
+  Serial.printf("=== Sensorkastje %s ===\n", gekoppeld() ? inst.sensorId : "(nog niet gekoppeld)");
   const esp_sleep_wakeup_cause_t oorzaak = esp_sleep_get_wakeup_cause();
   if (oorzaak == ESP_SLEEP_WAKEUP_TIMER) {
     Serial.println("Wakker na het slapen.");
@@ -387,6 +666,9 @@ void setup() {
     Serial.println("BOOT-knop ingedrukt: nu meten en versturen.");
   } else {
     Serial.println("Opgestart (stroom aan, resetknop of nieuwe upload).");
+  }
+  if (oorzaak != ESP_SLEEP_WAKEUP_TIMER && oorzaak != ESP_SLEEP_WAKEUP_EXT0) {
+    koppelModus();
   }
 
   if (TESTMODUS) {

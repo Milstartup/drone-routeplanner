@@ -1,10 +1,10 @@
 # Testlijst iPhone-app Veldvlucht
 
-Stand: 9 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
+Stand: 10 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan op **Kopieer logboek**, plak het in een bericht aan Claude en zet erbij wat je zag. Een schermafbeelding helpt (zijknop + volume omhoog).
 
 ## Wat al getest is
 
-- **Op de Mac, 149 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
+- **Op de Mac, 158 automatische tests** (`swift test` in `ios/VeldvluchtKern`):
   - routebestand lezen en controleren;
   - de dataformaten en de voorbeeldbestanden;
   - de stuurlus met een **nep-drone**: de hele voorbeeldroute (alle 180 foto's binnen 2 m van hun plek), verwisselde assen, zijwind, pauze en hervatten, overnemen met de sticks, verbindingsverlies, lege accu, harde wind, de eigen terugkeer van de drone, verder vanaf een foto van een eerdere vlucht, en de strengere controles voor een echte vlucht.
@@ -91,6 +91,10 @@ Stand: 9 november 2026. Vink af wat gelukt is (`[x]`). Lukt iets niet, druk dan 
     - de neus blijft ook in de bocht tussen twee banen in de richting van de banen;
     - de app draait de camera meteen terug zodra hij scheef staat, niet pas als er een foto nodig is.
   - Uit de foto's: op de ene baan hing de drone 2 à 3° voorover, op de andere 10 à 12° achterover. Er stond dus weer wind langs de banen.
+- **Koppelen en advies met alle informatie (10 november 2026), alleen op de Mac:**
+  - **Het sensorkastje koppelen met de app:** het kastje maakt bij het aanzetten 2 minuten lang een eigen wifi-netwerk, en de app stuurt het alle instellingen. Je hoeft niets meer in te vullen in de Arduino IDE. Het programma compileert; het bericht van de app is getest (4 tests). **Nog niet getest met een echt bordje.**
+  - **Het wateradvies gebruikt nu ook de foto's:** noemt de AI in een strook minstens 3 planten te droog of te nat, dan telt dat mee. Het advies zegt erbij of de foto's en de sensor het eens zijn. Precies dezelfde regels in de app en in de cloud (4 tests in elk).
+  - Elke markering van de foto-analyse krijgt mee wat de AI zag en wanneer de foto is gemaakt. Daarvoor moet je `bash centraal/installeer.sh` nog een keer draaien (F13).
 - **Het leer-systeem voor de AI (9 november 2026), alleen met nagemaakte foto's:** een nagemaakt broccoliveld met gezonde, te droge en zieke planten en onkruid.
   - De analyse knipte 880 plaatjes uit. Een script sorteerde ze zoals jij dat zou doen. Create ML leerde ervan in 4 minuten.
   - Daarna keek de AI naar een ander nagemaakt veld met overlappende foto's: hij vond 117 van de 118 te droge en 114 van de 115 zieke planten. Eén van de 859 gezonde planten noemde hij ten onrechte ziek. Elke plant kreeg hoogstens één markering.
@@ -236,7 +240,7 @@ Wat al getest is: de berekening van de route (gelijk aan de planner), het weer, 
   - het weer van vandaag en de komende dagen, met het beste vliegmoment.
 - [ ] **E7** Zet in hetzelfde menu **Melding bij goed vliegweer** aan en sta meldingen toe. Komt er een melding, een uur voor het volgende goede moment?
 - [ ] **E8** **Sensoren plaatsen en ijken…**: kies 1 sensor en sleep hem naar de plek waar hij komt. Bewaar. Noteer de naam (bijvoorbeeld `mijn-veld-s1`): ____________________
-- [ ] **E9** Bouw het kastje op tafel volgens [sensor/README.md](../sensor/README.md), met die naam. Zet de hotspot aan (met *Maximaliseer compatibiliteit*) en houd Veldvlucht open. Je hoort dit te zien:
+- [ ] **E9** Bouw het kastje op tafel volgens [sensor/README.md](../sensor/README.md) en zet het programma erop. Koppel het met **Kastje koppelen** bij de sensor (sensor/README.md, "Koppelen met de app"). Komt *Gekoppeld: het kastje is nu sensor …*? Zet daarna de hotspot aan (met *Maximaliseer compatibiliteit*) en houd Veldvlucht open. Je hoort dit te zien:
   - vraagt de iPhone iets over het **lokale netwerk**, kies dan *Sta toe*;
   - in het sensorscherm *Sensor s1 (…): … meting(en) ontvangen*;
   - op de veldkaart een turquoise druppel met de ruwe waarde.
@@ -289,6 +293,7 @@ Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het i
      ```
   3. Je hoort per foto het aantal planten te zien. In de simulator fotografeert de drone geen veld, dus daar zijn het er 0 of een paar.
   4. Bij een echte vlucht boven een veld: probeer ook `--upload`. Synchroniseer de app: staan er paarse markeringen? Kloppen ze met wat je in het veld ziet?
+- [ ] **F13** **Na de update van 10 november 2026:** draai in de projectmap nog een keer `bash centraal/installeer.sh`. Je hoort weer *Klaar* te zien. Je velden en metingen blijven staan.
 
 ## G. De AI laten leren (nieuw, 9 november 2026)
 
@@ -298,6 +303,7 @@ Pas na een echte vlucht boven een veld met planten. Hoe het werkt, staat in [cen
 - [ ] **G2** Loop in het veld naar 5 à 10 markeringen (tik erop voor het nummer, *Plek 7*). Sleep de plaatjes daarna naar de map van hun soort. Sleep ook 10 gewone planten naar `gezond`.
 - [ ] **G3** Draai `foto-analyse leer`. Welk percentage zie je bij *Plaatjes die hij niet had gezien*? ____ %
 - [ ] **G4** Analyseer dezelfde vlucht opnieuw, met `--upload`. Staan er markeringen met *AI:* op de veldkaart? Kloppen ze met wat je in het veld ziet?
+- [ ] **G5** Noemt de AI in een strook 3 of meer planten *te droog* of *te nat*? Tik op die strook op de veldkaart: staat er *Foto's van …: … planten lijken te droog (AI)* in de uitleg? Klopt het advies met wat je in het veld ziet?
 
 ## Wat je naar Claude stuurt
 

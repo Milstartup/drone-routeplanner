@@ -378,7 +378,7 @@ Het rekenwerk (routebestand, controles, dataformaten) staat apart in `Veldvlucht
    swift test
    ```
 
-Onderaan moet staan: *Executed 149 tests, with 0 failures*.
+Onderaan moet staan: *Executed 158 tests, with 0 failures*.
 
 - De tests lezen ook alle voorbeeldbestanden uit `docs/voorbeelden`, dus een fout in zo'n bestand valt meteen op.
 - **De stuurlus wordt getest met een nep-drone** (`FakeDrone.swift`): een eenvoudig model dat reageert op stuurcommando's, met een vertraging, en eventueel met wind. Daarmee vliegt de test de hele voorbeeldroute en controleert hij:
@@ -390,7 +390,8 @@ Onderaan moet staan: *Executed 149 tests, with 0 failures*.
   - verder vanaf een foto van een eerdere vlucht, en de strengere controles van een echte vlucht;
   - de zes fouten uit de onafhankelijke review van 26 oktober 2026, elk met een eigen test (zie [TESTLIJST.md](../docs/TESTLIJST.md)).
 - **Veld tekenen** (`FieldPlannerTests`): voor drie velden die de routeplanner zelf maakte, geeft de app precies hetzelfde routebestand. Ook: rechthoeken, een U-vorm, te kleine velden en een veldgrens die zichzelf kruist.
-- **Weer, sensoren en advies** (`CentralTests`): een echt antwoord van Open-Meteo met de vliegmomenten, uploads van een kastje (ook dubbel verstuurd), en alle regels van het wateradvies.
+- **Weer, sensoren en advies** (`CentralTests`): een echt antwoord van Open-Meteo met de vliegmomenten, uploads van een kastje (ook dubbel verstuurd), en alle regels van het wateradvies, ook met de foto's van de AI.
+- **Koppelen** (`SensorPairingTests`): dezelfde controles als het kastje, en het bericht dat de app naar het kastje stuurt.
 - **De cloud** (`CloudTests`): inloggen, een verlopen login vernieuwen, velden bewaren met de sleutels van de kastjes, metingen lezen, en wat er gebeurt zonder internet. Tegen een nep-server.
 - **De foto-analyse** (`PlantAnalysisTests`): een nagemaakte foto met een gelige en een kleine plant, een plant die half buiten de foto valt, en de plek op de grond bij elke vliegrichting.
 - **Het leer-systeem voor de AI** (`PlantLearningTests`): het vierkant rond een plant, welke gewone planten worden uitgeknipt, de namen van de plaatjes, genoeg plaatjes om te leren, één foto per plant, en wanneer de AI een markering geeft.
@@ -472,7 +473,7 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `RouteView.swift` | Tabblad *Route*: je velden, een bestand kiezen, en per route de kaart, de controle en de knop naar de vlucht. |
 | `FieldEditor.swift` | **Veld tekenen**: hoeken aantikken en verslepen, startpunt, instellingen. Ook de kaart waarop je sensoren versleept. |
 | `FieldStore.swift` | Bewaart de getekende velden, één bestand per veld in *Velden*. |
-| `SensorEditor.swift` | Sensoren plaatsen, hun naam voor het kastje, en ijken. |
+| `SensorEditor.swift` | Sensoren plaatsen, het kastje koppelen (**Kastje koppelen**), en ijken. |
 | `SensorReceiver.swift` | **De ontvanger:** neemt via de hotspot de metingen van de sensorkastjes aan (poort 8787) en zet ze bij het juiste veld. |
 | `WeatherService.swift` | Haalt het weer op bij Open-Meteo en plant de melding voor goed vliegweer. |
 | `CloudStore.swift` | **De koppeling met de cloud:** je login (in de sleutelhanger), synchroniseren, sleutels van de kastjes, delen. |
@@ -485,7 +486,7 @@ Dit is al gedaan op deze Mac. Je hebt het alleen nodig als `ios/Pods` of `ios/ve
 | `VeldvluchtKern/…/FieldPlanner.swift` | **Vliegbanen en foto's voor een veld**, dezelfde berekening als de planner (`src/core`). |
 | `VeldvluchtKern/…/FieldRecord.swift` | Een getekend veld, zijn sensoren, de stroken voor het advies en het beeld van de camera op de grond. |
 | `VeldvluchtKern/…/OpenMeteo.swift` | Het weer van Open-Meteo in het formaat `veld/weer`, met de vliegmomenten. |
-| `VeldvluchtKern/…/SensorUpload.swift` | Wat een kastje stuurt (`veld/sensorupload`) omzetten naar metingen, zonder dubbele. |
+| `VeldvluchtKern/…/SensorUpload.swift` | Wat een kastje stuurt (`veld/sensorupload`) omzetten naar metingen, zonder dubbele. En het koppelen: de instellingen die de app naar het kastje stuurt (`SensorPairing`). |
 | `VeldvluchtKern/…/WaterAdvisor.swift` | Wateradvies per strook met eenvoudige regels (dezelfde als in de cloud: `centraal/supabase/functions/_shared/rekenkern.ts`). |
 | `VeldvluchtKern/…/Cloud.swift` | Praat met Supabase: inloggen, velden, metingen, weer, advies, vluchten, delen. |
 | `VeldvluchtKern/…/PlantAnalysis.swift` | **De foto-analyse:** planten vinden, afwijkende markeren, hun plek op de grond uitrekenen. |

@@ -49,7 +49,10 @@ function fakeServer(options: { weatherAgeMinutes?: number } = {}) {
     }
     if (path.startsWith('aandacht?')) {
       return json([
-        { lat: 52.50001, lng: 5.5401, reden: 'Geler dan de buren', foto: 'DJI_0042.JPG', zekerheid: 0.6, vlucht_id: 'nieuw' },
+        {
+          lat: 52.50001, lng: 5.5401, reden: 'Geler dan de buren', foto: 'DJI_0042.JPG', zekerheid: 0.6, vlucht_id: 'nieuw',
+          soort: 'te-droog', gezien: '2026-10-26T09:30:00+01:00', gemaakt: '2026-10-26T11:00:00+01:00',
+        },
         { lat: 52.50002, lng: 5.5402, reden: 'Oud', foto: null, zekerheid: null, vlucht_id: 'oud' },
       ]);
     }
@@ -77,8 +80,9 @@ describe('the hourly work of the central system', () => {
     // Today (26 October) and tomorrow: 1.1 + 2.0 mm rain in the answer of Open-Meteo.
     expect(features[2].properties.advice).toBe('water');
     expect(features[2].properties.reason).toContain('3,1 mm regen');
-    // Only the markers of the most recent flight.
+    // Only the markers of the most recent flight, with what the AI said and when.
     expect(features[4].properties.reason).toBe('Geler dan de buren');
+    expect(features[4].properties).toMatchObject({ plantKind: 'te-droog', seenAt: '2026-10-26T08:30:00.000Z' });
   });
 
   it('keeps a forecast that is less than an hour old', async () => {

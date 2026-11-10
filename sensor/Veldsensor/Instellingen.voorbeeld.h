@@ -1,7 +1,9 @@
-// Voorbeeld voor Instellingen.h. Kopieer dit bestand naar Instellingen.h
-// (in dezelfde map) en vul daar je eigen waarden in. Instellingen.h staat in
-// .gitignore en komt dus nooit in git. Zet in DIT voorbeeldbestand nooit je
-// echte wachtwoord.
+// Voorbeeld voor Instellingen.h. Niet meer nodig als je het kastje koppelt met
+// de app (sensor/README.md, "Koppelen met de app"); alleen voor de testmodus of
+// andere pinnen. Kopieer dit bestand dan naar Instellingen.h (in dezelfde map)
+// en vul daar je eigen waarden in. Instellingen.h staat in .gitignore en komt
+// dus nooit in git. Zet in DIT voorbeeldbestand nooit je echte wachtwoord.
+// Wat de app bij het koppelen stuurt, gaat voor wat hier staat.
 
 #pragma once
 

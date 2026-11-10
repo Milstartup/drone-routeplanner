@@ -110,6 +110,22 @@ final class CloudTests: XCTestCase {
         XCTAssertEqual((sent["sensors"] as? [[String: Any]])?.first?["id"] as? String, "broccoli-west-s1")
     }
 
+    func testSavesMarkersWithWhatTheAISaw() async throws {
+        answers = [("rest/v1/aandacht", 204, ""), ("rest/v1/aandacht", 201, "")]
+        let seen = Date(timeIntervalSince1970: 1_794_000_000)
+        try await api(session: loggedIn).saveAttention(field: "veld-1", flightId: "vlucht 1", marks: [
+            .init(position: LatLng(lat: 52.5, lng: 5.54), reason: "Plek 1: AI: te droog (82 % zeker).", photo: "DJI_0001.JPG",
+                  confidence: 0.82, kind: "te-droog", seenAt: seen),
+            .init(position: LatLng(lat: 52.5, lng: 5.54), reason: "Plek 2: Plant kleiner.", photo: nil, confidence: 0.4),
+        ])
+        XCTAssertEqual(requests.map(\.httpMethod), ["DELETE", "POST"])
+        let rows = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(requests[1].httpBody)) as? [[String: Any]])
+        XCTAssertEqual(rows[0]["soort"] as? String, "te-droog")
+        XCTAssertEqual(rows[0]["gezien"] as? String, ISO8601DateFormatter().string(from: seen))
+        XCTAssertTrue(rows[1]["soort"] is NSNull)
+        XCTAssertTrue(rows[1]["gezien"] is NSNull)
+    }
+
     func testReadsFieldsAndMeasurementsAsTheDatabaseGivesThem() async throws {
         let date = Date(timeIntervalSince1970: 1_793_000_000)
         let field = FieldRecord(id: "broccoli-west", name: "Broccoli west", boundary: [], home: nil, settings: .planner,

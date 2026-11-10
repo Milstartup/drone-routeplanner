@@ -132,6 +132,9 @@ if FileManager.default.fileExists(atPath: learning.model.path) {
 var marks: [(LatLng, PlantAnalysis.Finding, String)] = []
 /// What the model said about each plant, where it stands.
 var verdicts: [(LatLng, PlantLearning.Verdict)] = []
+/// What the model said about the plants it marked itself, by markKey.
+var markVerdicts: [String: PlantLearning.Verdict] = [:]
+let photoTimes = Dictionary(log.photos.map { ($0.file, $0.time) }, uniquingKeysWith: { first, _ in first })
 /// The picture of each marked plant, on disk until the markers are numbered: a big field has
 /// thousands, and most are the same plant in an overlapping photo.
 let pictureTemp = FileManager.default.temporaryDirectory.appendingPathComponent("foto-analyse-\(UUID().uuidString)", isDirectory: true)
@@ -179,6 +182,7 @@ for photo in log.photos {
             verdicts.append((place, verdict))
             if !findings.contains(where: { $0.plant == plant }), let finding = PlantLearning.finding(for: plant, verdict: verdict) {
                 findings.append(finding)
+                markVerdicts[markKey(photo.file, plant)] = verdict
                 byModel += 1
             }
         }
@@ -206,7 +210,9 @@ for photo in log.photos {
     let seconds = Int(Date().timeIntervalSince(started).rounded())
     print("  \(photo.file): \(plants.count) planten, \(findings.count) opvallend\(plantModel == nil ? "" : " (\(byModel) alleen door de AI, \(seconds) s)").")
 }
-// Numbered, so a marker on the field map and its picture belong together: "Plek 7".
+// Numbered, so a marker on the field map and its picture belong together: "Plek 7". The AI's
+// kind goes with it, so the water advice can count plants that look too dry or too wet.
+var markKinds: [String?] = []
 let merged = PlantAnalysis.merge(marks).enumerated().map { index, mark -> (LatLng, PlantAnalysis.Finding, String) in
     let (place, finding, file) = mark
     if let picture = markPictures[markKey(file, finding.plant)], let data = try? Data(contentsOf: picture) {
@@ -214,10 +220,13 @@ let merged = PlantAnalysis.merge(marks).enumerated().map { index, mark -> (LatLn
         if (try? learning.save(data, name: name)) == true { cut += 1 }
     }
     var numbered = finding
+    var kind = markVerdicts[markKey(file, finding.plant)]?.kind
     // A marker of the rules: add what the model said about that plant, perhaps in another photo.
     if !finding.reason.hasPrefix("AI:"), let verdict = PlantLearning.verdict(near: place, in: verdicts) {
         numbered = PlantLearning.adding(verdict, to: numbered)
+        kind = verdict.kind
     }
+    markKinds.append(kind?.rawValue)
     numbered.reason = "Plek \(index + 1): \(numbered.reason)"
     return (place, numbered, file)
 }
@@ -239,11 +248,13 @@ let geojson: [String: Any] = [
     "type": "FeatureCollection",
     "properties": ["format": FieldResults.format, "version": FieldResults.version, "fieldId": log.fieldId,
                    "createdAt": formatter.string(from: Date())],
-    "features": merged.map { place, finding, file -> [String: Any] in
-        ["type": "Feature",
-         "geometry": ["type": "Point", "coordinates": [place.lng, place.lat]],
-         "properties": ["kind": "aandacht", "reason": finding.reason, "photoFile": file, "flightId": log.flightId,
-                        "confidence": (finding.confidence * 100).rounded() / 100]]
+    "features": merged.enumerated().map { index, mark -> [String: Any] in
+        let (place, finding, file) = mark
+        var properties: [String: Any] = ["kind": "aandacht", "reason": finding.reason, "photoFile": file, "flightId": log.flightId,
+                                         "confidence": (finding.confidence * 100).rounded() / 100]
+        if let kind = markKinds[index] { properties["plantKind"] = kind }
+        if let seen = photoTimes[file] { properties["seenAt"] = formatter.string(from: seen) }
+        return ["type": "Feature", "geometry": ["type": "Point", "coordinates": [place.lng, place.lat]], "properties": properties]
     },
 ]
 let output = folder.appendingPathComponent("aandacht.geojson")
@@ -295,8 +306,11 @@ do {
     guard let field = try await api.fields().first(where: { $0.veldId == log.fieldId && $0.eigenaar == session.userId }) else {
         fail("Het veld \(log.fieldId) staat niet in jouw account. Open de app, log in en synchroniseer eerst.")
     }
-    let rows = merged.map { place, finding, file in
-        CloudAPI.AttentionMark(position: place, reason: finding.reason, photo: file, confidence: (finding.confidence * 100).rounded() / 100)
+    let rows = merged.enumerated().map { index, mark in
+        let (place, finding, file) = mark
+        return CloudAPI.AttentionMark(position: place, reason: finding.reason, photo: file,
+                                      confidence: (finding.confidence * 100).rounded() / 100,
+                                      kind: markKinds[index], seenAt: photoTimes[file])
     }
     try await api.saveAttention(field: field.id, flightId: log.flightId, marks: rows)
     try? await api.recalculate(field: field.id)

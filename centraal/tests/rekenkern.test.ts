@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  type Attention,
   type FieldRecord,
   type LatLng,
   type Measurement,
@@ -67,9 +68,13 @@ function weather(rainToday: number, rainTomorrow: number, evaporation = 1): Weat
 
 type Zone = { properties: { name: string; advice?: string; amountMm?: number; confidence?: number; reason: string } };
 
-function advice(raw: number, w: Weather | null, time = '2026-10-26T10:00:00+01:00', calibrated = true): Zone[] {
-  const measurements: Measurement[] = [{ sensorId: 'proefveld-s1', time: date(time), raw }];
-  const r = results(field(calibrated), measurements, w, [], date('2026-10-26T12:00:00+01:00'));
+function advice(
+  raw: number, w: Weather | null, time = '2026-10-26T10:00:00+01:00', calibrated = true, attention: Attention[] = [], withSensor = true,
+): Zone[] {
+  const f = field(calibrated);
+  if (!withSensor) f.sensors = [];
+  const measurements: Measurement[] = withSensor ? [{ sensorId: 'proefveld-s1', time: date(time), raw }] : [];
+  const r = results(f, measurements, w, attention, date('2026-10-26T12:00:00+01:00'));
   const features = r.features as { properties: { kind: string; name?: string } }[];
   expect(features[0].properties).toEqual({ kind: 'veldgrens', name: 'Proefveld' });
   return features.filter((f) => f.properties.kind === 'waterzone') as unknown as Zone[];
@@ -128,6 +133,57 @@ describe('water advice per strip', () => {
     expect(zone.advice).toBe('water');
     expect(zone.confidence).toBeCloseTo(0.6, 9);
     expect(zone.reason).toContain('Geen weersverwachting');
+  });
+
+  // The same cases as CentralTests.swift, "Photos in the advice".
+  const marks = (kind: string, count: number, seen = '2026-10-25T14:00:00+01:00'): Attention[] =>
+    Array.from({ length: count }, (_, i) => {
+      const p = at(10 + i * 5, 35);
+      return { ...p, reason: `Plek ${i + 1}: AI`, photoFile: 'DJI_0001.JPG', flightId: 'v1', confidence: 0.8, kind, seenAt: date(seen) };
+    });
+
+  it('photos that agree make the advice surer', () => {
+    const zone = advice(760, weather(0.5, 0.5), undefined, true, marks('te-droog', 3))[1].properties;
+    expect(zone.advice).toBe('water');
+    expect(zone.confidence).toBeCloseTo(0.8, 9);
+    expect(zone.reason).toBe(
+      'Sensor s1 19 % vocht, gemeten 2 uur geleden. Verwacht vandaag en morgen 1 mm regen en 2 mm verdamping. ' +
+        'Regel: droger dan 35 % en weinig regen op komst → nu water geven. ' +
+        "Foto's van 22 uur geleden: 3 planten lijken te droog (AI). Dat past bij de sensor.",
+    );
+  });
+
+  it('photos that disagree send you to the field', () => {
+    const dry = advice(500, weather(0, 0), undefined, true, marks('te-droog', 4))[1].properties;
+    expect(dry.advice).toBe('binnenkort');
+    expect(dry.confidence).toBeCloseTo(0.6, 9);
+    expect(dry.reason.endsWith('4 planten lijken te droog (AI). De sensor meet genoeg: kijk in het veld of de sensor goed in de grond zit → binnenkort.')).toBe(true);
+    const wet = advice(760, weather(0.5, 0.5), undefined, true, marks('te-nat', 3))[1].properties;
+    expect(wet.advice).toBe('binnenkort');
+    expect(wet.reason.endsWith('3 planten lijken te nat (AI). De sensor meet droog: kijk eerst in het veld → binnenkort.')).toBe(true);
+  });
+
+  it('photos alone give a careful advice', () => {
+    const zones = advice(0, null, undefined, true, marks('te-droog', 3), false);
+    expect(zones[1].properties.advice).toBe('binnenkort');
+    expect(zones[1].properties.confidence).toBeCloseTo(0.3, 9);
+    expect(zones[1].properties.reason).toBe(
+      'Geen sensor in of naast deze strook. Plaats er een bij Sensoren. ' +
+        "Foto's van 22 uur geleden: 3 planten lijken te droog (AI). Zonder meting → binnenkort water geven. Een sensor maakt het advies zekerder.",
+    );
+    expect(zones[0].properties.advice).toBeUndefined();
+    expect(advice(0, null, undefined, true, marks('te-nat', 3), false)[1].properties.advice).toBe('genoeg');
+  });
+
+  it('few, old or other markers do not count', () => {
+    const base = advice(760, weather(0.5, 0.5))[1].properties;
+    expect(advice(760, weather(0.5, 0.5), undefined, true, marks('te-droog', 2))[1].properties).toEqual(base);
+    expect(advice(760, weather(0.5, 0.5), undefined, true, marks('te-droog', 5, '2026-10-18T10:00:00+02:00'))[1].properties).toEqual(base);
+    expect(advice(760, weather(0.5, 0.5), undefined, true, marks('ziek-of-beschadigd', 5))[1].properties).toEqual(base);
+    const mixed = advice(760, weather(0.5, 0.5), undefined, true, [...marks('te-droog', 3), ...marks('te-nat', 3)])[1].properties;
+    expect(mixed.advice).toBe('water');
+    expect(mixed.confidence).toBe(base.confidence);
+    expect(mixed.reason.endsWith('3 planten lijken te droog en 3 planten lijken te nat (AI).')).toBe(true);
   });
 
   it('adds the plants that need attention', () => {

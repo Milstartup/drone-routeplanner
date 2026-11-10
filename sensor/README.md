@@ -4,6 +4,7 @@ Het programma voor één sensorkastje uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR
 
 **Zo werkt het:**
 
+0. **Koppelen, één keer:** zet je het kastje aan, dan maakt het 2 minuten lang een eigen wifi-netwerk. Daarmee stuurt de Veldvlucht-app het je hotspot, de naam en sleutel van de sensor en de cloud. Zie "Koppelen met de app".
 1. Het kastje slaapt en wordt **elk uur** wakker.
 2. Het zet de sensor **heel even aan** (0,2 seconde), meet 10 keer en neemt de middelste waarde. Daarna zet het de sensor weer uit.
 3. Het **bewaart** de meting in zijn geheugen.
@@ -28,7 +29,7 @@ Het programma voor één sensorkastje uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR
 |---|---|---|
 | `Veldsensor/Veldsensor.ino` | **Het programma voor het kastje.** Dit open je in de Arduino IDE. | Ja |
 | `Veldsensor/Instellingen.voorbeeld.h` | Voorbeeld van je instellingen, zonder wachtwoord. | Ja |
-| `Veldsensor/Instellingen.h` | **Je hotspot en wachtwoord.** Maak je zelf (zie hieronder). Alleen op deze Mac. | **Nee** (`.gitignore`) |
+| `Veldsensor/Instellingen.h` | **Niet meer nodig** als je koppelt met de app. Alleen voor de testmodus of andere pinnen, of als je toch alles zelf invult. Alleen op deze Mac. | **Nee** (`.gitignore`) |
 | `nep-sensorkastje.py` | Doet alsof het een kastje is. Om de app te testen zonder ESP32. | Ja |
 
 ## Wat er al gedaan is (26 oktober 2026)
@@ -43,7 +44,13 @@ Het programma voor één sensorkastje uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR
   - een volgnummer per meting, zodat dubbel verstuurde metingen maar één keer tellen;
   - de knop **BOOT** om meteen te meten en te versturen;
   - **rechtstreeks naar de cloud** (https, met de sleutel van de sensor). Met de cloud ingesteld is het programma 1.110.576 bytes (84%); zonder cloud laat de compiler dat deel weg.
-- **Nog niet getest:** op een echt ESP32-bordje en met de sensor.
+- **Erbij gekomen op 10 november 2026: koppelen met de app.**
+  - Het kastje maakt bij het aanzetten 2 minuten lang een eigen wifi-netwerk, *Veldsensor-* met vier tekens. Heeft het nog geen instellingen, dan blijft dat netwerk aan.
+  - De app (of een browser op `http://192.168.4.1`) stuurt de instellingen; het kastje controleert ze en bewaart ze in zijn geheugen, ook als de stroom eraf gaat.
+  - `Instellingen.h` is niet meer nodig. Wat erin staat, telt nog wel, tot het kastje gekoppeld is.
+  - Het programma compileert zonder fouten of waarschuwingen: 1.148.344 bytes (87% van de ruimte), met en zonder `Instellingen.h`.
+  - Het bericht dat de app stuurt is getest op de Mac (`SensorPairingTests`).
+- **Nog niet getest:** op een echt ESP32-bordje en met de sensor. Ook het koppelen niet.
 
 **Hulpmiddelen voor de controle**, alleen in de map `.tools/` (niet in git). Er is niets in je thuismap gezet en er was geen beheerderswachtwoord nodig.
 
@@ -100,7 +107,26 @@ Later, voor het veld: een powerbank en een waterdicht doosje.
    - Dit is een grote download (ongeveer 2 GB, uitgepakt rond de 6 GB). Het duurt een tijdje.
 8. Kies **Tools → Board → esp32 → ESP32 Dev Module**.
 
-## Eenmalig: je instellingen invullen
+## Koppelen met de app (de makkelijkste manier)
+
+Je hoeft niets in te vullen in de Arduino IDE. Zet het programma op het bordje (zie "Het programma op het bordje zetten") en koppel het daarna zo:
+
+1. **In de app:** *Veldkaart* → tik op de regel onder de naam van je veld → **Sensoren plaatsen en ijken…**. Plaats de sensor en druk op **Bewaren**. Ben je ingelogd, dan krijgt de sensor zijn sleutel voor de cloud.
+2. Open **Sensoren plaatsen en ijken…** opnieuw en druk bij je sensor op **Kastje koppelen**.
+3. **Zet het kastje aan**, of druk op de knop **EN** van het bordje. Het maakt nu 2 minuten lang een wifi-netwerk: **Veldsensor-** met vier tekens, bijvoorbeeld *Veldsensor-3FA2*.
+4. Ga op je iPhone naar **Instellingen → Wifi** en kies dat netwerk. Het wachtwoord is `veldsensor`. Zegt de iPhone *Geen internetverbinding*, dan is dat goed.
+5. Ga terug naar Veldvlucht. Vul de **naam van je hotspot** in (de naam van je iPhone) en het **wachtwoord** uit *Instellingen → Persoonlijke hotspot*.
+6. Druk op **Koppelen**. Vraagt de iPhone of Veldvlucht apparaten op je lokale netwerk mag zoeken? Kies **Sta toe**, en druk nog een keer op Koppelen.
+7. Je ziet *Gekoppeld: het kastje is nu sensor … en meet ruw …*. Ga op je iPhone terug naar je gewone wifi en zet je **Persoonlijke hotspot** aan. Het kastje stuurt zo zijn eerste meting.
+
+- Te laat, en is het netwerk weg? Druk op **EN** en begin bij stap 4.
+- Je hotspot-wachtwoord bewaart de app **niet**; alleen het kastje kent het.
+- Geen iPhone bij de hand? Ga op een telefoon of laptop naar het netwerk van het kastje en open `http://192.168.4.1` in de browser. Daar staat een formulier met dezelfde vakjes.
+- Koppel je het kastje als een **andere sensor**, dan gooit het de metingen weg die het nog niet had verstuurd: die horen bij de oude sensor.
+
+## Of: je instellingen zelf invullen in Instellingen.h
+
+Niet nodig als je koppelt met de app. Wel nodig voor de **testmodus** (zie "Testen op tafel") of als je andere pinnen gebruikt. Wat je hier invult, gebruikt het kastje tot het gekoppeld is.
 
 Je wachtwoord hoef je **aan niemand te geven, ook niet aan Claude**. Je zet het zelf in een bestand dat niet in git komt.
 
@@ -131,8 +157,6 @@ Je wachtwoord hoef je **aan niemand te geven, ook niet aan Claude**. Je zet het 
    ```
    In de lijst mag `sensor/Veldsensor/Instellingen.h` **niet** voorkomen.
 
-Vergeet je stap 2, dan stopt het compileren met de melding *"Instellingen.h ontbreekt"*.
-
 **Tip:** staat er in de naam van je iPhone een apostrof (zoals in *Milan’s iPhone*)? Die is lastig goed over te typen. Geef je iPhone dan een simpele naam, zoals *iPhone van Milan*.
 
 ## Het programma op het bordje zetten
@@ -149,6 +173,17 @@ Vergeet je stap 2, dan stopt het compileren met de melding *"Instellingen.h ontb
 1. Kies **Tools → Serial Monitor**.
 2. Zet rechtsboven in het venster de snelheid op **115200 baud**.
 3. Druk op de knop **EN** (of **RST**) op het bordje. Het programma begint opnieuw.
+
+Na het aanzetten zie je eerst het koppelen:
+
+```
+=== Sensorkastje mijn-veld-s1 ===
+Opgestart (stroom aan, resetknop of nieuwe upload).
+Koppelen: verbind je iPhone met wifi "Veldsensor-3FA2" (wachtwoord veldsensor) en kies in de app Kastje koppelen.
+Het netwerk blijft 2 minuten aan; daarna gaat het kastje meten.
+Gekoppeld als sensor mijn-veld-s1, hotspot "iPhone van Milan", met de cloud. Nu: ruw 2875.
+Koppelnetwerk uit.
+```
 
 Zo ziet een meting eruit als alles goed gaat:
 
@@ -170,12 +205,12 @@ Wifi uit. Slapen tot de volgende meting, over 3586 s.
 
 **Voorbereiding:**
 
-1. Zet in `Instellingen.h` **TESTMODUS** op `true`. Dan meet het kastje elke 10 seconden, zonder te slapen.
+1. Maak `Instellingen.h` (zie "Of: je instellingen zelf invullen", stap 1 tot 3) en zet daarin alleen **TESTMODUS** op `true`. Dan meet het kastje elke 10 seconden, zonder te slapen.
 2. Zet het programma opnieuw op het bordje (Upload).
 3. Op de iPhone: **Instellingen → Persoonlijke hotspot**:
    - zet **Sta anderen toe verbinding te maken** aan;
    - zet **Maximaliseer compatibiliteit** aan. **Belangrijk:** een iPhone 12 of nieuwer (jouw iPhone 13 ook) gebruikt anders 5 GHz. De ESP32 kan alleen 2,4 GHz, en vindt de hotspot dan niet.
-4. **Plaats de sensor in de app** bij *Sensoren*, met precies dezelfde naam als `SENSOR_ID`. Anders bewaart de app de metingen niet.
+4. **Koppel het kastje** met de app (zie "Koppelen met de app"). Dan heeft het precies de naam die de app verwacht.
 5. **Open de Veldvlucht-app en laat hem open op het scherm.** De app kan alleen metingen ontvangen als hij open is. Staat hij op de achtergrond of is de iPhone op slot, dan bewaart het kastje de metingen en probeert het later opnieuw.
 
 **De test:**
@@ -183,7 +218,7 @@ Wifi uit. Slapen tot de volgende meting, over 3586 s.
 1. Open de Serial Monitor (115200 baud).
 2. Elke 10 seconden hoort er te staan: *Gemeten: ruw …*
 3. Daarna: *verbonden na … s* en **Gelukt. De app zegt: {"ontvangen":…}**
-4. Kijk in de app of de metingen van je `SENSOR_ID` binnenkomen.
+4. Kijk in de app (*Sensoren plaatsen en ijken…*) of de metingen van je sensor binnenkomen.
 5. Probeer droog en nat:
    - houd de meetvork in de lucht: de waarde komt dicht bij 4095;
    - zet de meetvork in een glas water: de waarde wordt veel lager.
@@ -193,11 +228,12 @@ Wifi uit. Slapen tot de volgende meting, over 3586 s.
 
 | Wat je ziet | Wat je doet |
 |---|---|
-| *Instellingen.h ontbreekt* | Doe de stappen van "Je instellingen invullen". |
+| *Nog geen hotspot: koppel het kastje* | Koppel het met de app (zie "Koppelen met de app"). |
+| *Het kastje antwoordt niet* in de app | Staat je iPhone op de wifi *Veldsensor-…*? Druk op **EN**, kies het netwerk opnieuw en probeer het binnen 2 minuten. |
 | *Hotspot niet gevonden* | Staat **Maximaliseer compatibiliteit** aan? Klopt de naam precies? Open op de iPhone het scherm **Persoonlijke hotspot** en laat dat open tot het kastje verbonden is. Ga daarna terug naar Veldvlucht. |
-| *Klopt het wachtwoord?* | Controleer het wachtwoord in `Instellingen.h` en zet het programma opnieuw op het bordje. |
+| *Klopt het wachtwoord?* | Koppel het kastje opnieuw met het goede wachtwoord van je hotspot. |
 | *App niet bereikbaar* | Is de Veldvlucht-app open, op het scherm? Is de iPhone niet op slot? |
-| *De app antwoordde met code 404* en *Onbekende sensor* | Plaats de sensor in de app bij *Sensoren*, met precies dezelfde naam als `SENSOR_ID`. |
+| *De app antwoordde met code 404* en *Onbekende sensor* | Druk in de app bij *Sensoren* op **Bewaren**, en koppel het kastje opnieuw. |
 | Ruw is altijd 0 | Zitten VCC aan GPIO 25 en AO aan GPIO 34? |
 | Ruw is altijd rond 4095, ook in water | Zitten de draadjes van de meetvork goed vast aan het printje? |
 | Geen poort in *Tools → Port* | Een andere USB-kabel proberen: veel kabels laden alleen op. |

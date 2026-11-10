@@ -6,7 +6,7 @@ Het centrale systeem uit [ARCHITECTUUR.md](../docs/ARCHITECTUUR.md), hoofdstuk 4
 
 - **Bewaren:** je velden, de sensoren met hun sleutels, alle sensormetingen, het weer, het advies en de fotologs van je vluchten.
 - **Sensormetingen ontvangen:** een sensorkastje stuurt via de hotspot van je iPhone rechtstreeks naar de cloud, met de geheime sleutel van zijn sensor. De app hoeft dan niet open te zijn.
-- **Weer en advies, elk uur:** om 7 over elk uur haalt de cloud het weer op bij Open-Meteo en rekent het wateradvies per strook uit. Na nieuwe metingen of een veranderd veld gebeurt dat meteen. Het zijn dezelfde regels als in de app (`ios/VeldvluchtKern/…/WaterAdvisor.swift`); de tests controleren dat ze hetzelfde uitkomen.
+- **Weer en advies, elk uur:** om 7 over elk uur haalt de cloud het weer op bij Open-Meteo en rekent het wateradvies per strook uit, met de sensoren, het weer en wat de AI op de foto's zag (planten die te droog of te nat lijken). Na nieuwe metingen of een veranderd veld gebeurt dat meteen. Het zijn dezelfde regels als in de app (`ios/VeldvluchtKern/…/WaterAdvisor.swift`); de tests controleren dat ze hetzelfde uitkomen.
 - **Delen:** de eigenaar van een veld kan anderen met een Veldvlucht-account laten meekijken. Zij zien het veld, de sensoren, het weer en het advies, maar kunnen niets veranderen.
 - **Foto-analyse:** die draait op je Mac, want de foto's zijn te groot voor de gratis cloud (zie "De foto-analyse op je Mac"). De gevonden planten komen in de cloud en zo op de veldkaart.
 
@@ -187,6 +187,14 @@ Gratis plan van Supabase (stand oktober 2026, controleer op <https://supabase.co
 - 500 MB database en 1 GB bestanden. Een sensor die elk uur meet, gebruikt een paar MB per jaar. De foto's zelf gaan niet naar de cloud.
 - **Een project zonder activiteit wordt na 7 dagen gepauzeerd.** Zolang een kastje metingen stuurt of je de app gebruikt, is er activiteit. Is het toch gepauzeerd, zet het dan in het dashboard weer aan (*Restore project*). Er gaat niets verloren.
 - Open-Meteo is gratis voor niet-commercieel gebruik, met bronvermelding.
+
+## Na een update van Veldvlucht
+
+Komt er iets nieuws in de cloud (zoals op 10 november 2026: de AI-soort bij de markeringen, en het advies met de foto's), draai dan in de projectmap nog een keer:
+```bash
+bash centraal/installeer.sh
+```
+Dat is veilig: je velden, metingen en accounts blijven staan. Het script zet alleen wat nieuw is erbij en vervangt het rekenprogramma. Doe je het niet, dan lukt `foto-analyse … --upload` niet meer.
 
 ## Opnieuw installeren of op een andere Mac
 

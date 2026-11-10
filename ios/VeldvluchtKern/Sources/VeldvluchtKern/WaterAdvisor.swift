@@ -1,5 +1,6 @@
 // The central system, version 0 (docs/ARCHITECTUUR.md, chapter 4): water advice per strip of
-// the field, with simple rules you can check, from the soil sensors and the weather. No AI.
+// the field, with simple rules you can check, from the soil sensors, the weather and what the
+// AI of the photo analysis saw: plants that look too dry or too wet.
 // For now it runs inside the app, as a part of its own: the field map only shows what this
 // returns, in the format veld/resultaten. Every advice says what it is based on.
 import Foundation
@@ -18,10 +19,15 @@ enum WaterAdvisor {
     static let rainWaitMm = 10.0
     /// In between, and this much more rain than evaporation in two days: enough.
     static let netRainEnoughMm = 5.0
+    /// Photos older than this say nothing about the water now.
+    static let photoMaxAgeS = 7 * 24 * 3600.0
+    /// This many plants the AI found too dry (or too wet) in one strip count for the advice.
+    static let photoMinPlants = 3
 
-    /// Strips with advice, plus the field boundary, for the field map.
+    /// Strips with advice, plus the field boundary, for the field map. `attention` are the
+    /// markers of the photo analysis; the caller adds them to the map itself.
     static func results(field: FieldRecord, measurements: [SensorMeasurement], weather: WeatherForecast?,
-                        now: Date) -> FieldResults {
+                        attention: [FieldResults.Feature] = [], now: Date) -> FieldResults {
         let strips = FieldStrips.strips(boundary: field.boundary, angleDeg: field.lineAngleDeg, widthM: field.stripWidthM)
         let latest = Dictionary(grouping: measurements, by: \.sensorId).compactMapValues { $0.max { $0.time < $1.time } }
         let water = expectedWater(weather, now: now)
@@ -33,7 +39,9 @@ enum WaterAdvisor {
                                                  properties: .init(kind: .veldgrens, name: field.name)))
         }
         for (index, strip) in strips.enumerated() {
-            let advice = adviseStrip(strip, field: field, latest: latest, water: water, projection: projection, now: now)
+            let photos = photoEvidence(strip, attention: attention, projection: projection, now: now)
+            let advice = combine(adviseStrip(strip, field: field, latest: latest, water: water, projection: projection, now: now),
+                                 photos: photos, now: now)
             features.append(FieldResults.Feature(
                 type: "Feature",
                 geometry: .polygon([closed(strip)]),
@@ -149,6 +157,83 @@ enum WaterAdvisor {
         if water == nil { confidence -= 0.1 }
         return Advice(advice: advice, amountMm: amount > 0 ? (amount * 2).rounded() / 2 : 0, reason: reason,
                       confidence: min(0.8, max(0.2, confidence)))
+    }
+
+    /// What the AI saw on the photos of the last week in one strip.
+    struct PhotoEvidence: Equatable {
+        var dry = 0
+        var wet = 0
+        var newest: Date?
+
+        var looksDry: Bool { dry >= photoMinPlants && wet < photoMinPlants }
+        var looksWet: Bool { wet >= photoMinPlants && dry < photoMinPlants }
+
+        func text(now: Date) -> String? {
+            guard let newest else { return nil }
+            let parts = [dry >= photoMinPlants ? "\(dry) planten lijken te droog" : nil,
+                         wet >= photoMinPlants ? "\(wet) planten lijken te nat" : nil].compactMap { $0 }
+            guard !parts.isEmpty else { return nil }
+            return "Foto's van \(FieldSummary.ageText(of: newest, now: now)): \(parts.joined(separator: " en ")) (AI)."
+        }
+    }
+
+    static func photoEvidence(_ strip: [LatLng], attention: [FieldResults.Feature], projection: LocalProjection,
+                              now: Date) -> PhotoEvidence {
+        let polygon = strip.map(projection.toXY)
+        var evidence = PhotoEvidence()
+        for mark in attention {
+            guard case let .point(place) = mark.geometry, let seen = mark.properties.seenAt,
+                  seen <= now, now.timeIntervalSince(seen) <= photoMaxAgeS,
+                  Geo.pointInPolygon(projection.toXY(place), polygon) else { continue }
+            switch mark.properties.plantKind {
+            case "te-droog": evidence.dry += 1
+            case "te-nat": evidence.wet += 1
+            default: continue
+            }
+            evidence.newest = max(evidence.newest ?? seen, seen)
+        }
+        return evidence
+    }
+
+    /// The sensor's advice, checked against the photos. Agreeing photos make it surer; photos
+    /// that disagree send the farmer to look first. Without a usable sensor the photos alone
+    /// give a careful advice.
+    static func combine(_ sensor: Advice, photos: PhotoEvidence, now: Date) -> Advice {
+        guard let text = photos.text(now: now) else { return sensor }
+        var result = sensor
+        result.reason += " " + text
+        guard let advice = sensor.advice else {
+            if photos.looksDry {
+                return Advice(advice: .binnenkort, amountMm: 0,
+                              reason: result.reason + " Zonder meting → binnenkort water geven. Een sensor maakt het advies zekerder.",
+                              confidence: 0.3)
+            }
+            if photos.looksWet {
+                return Advice(advice: .genoeg, amountMm: 0, reason: result.reason + " Zonder meting → geen water geven.", confidence: 0.3)
+            }
+            return result
+        }
+        var confidence = sensor.confidence ?? 0.5
+        switch advice {
+        case .genoeg where photos.looksDry:
+            result.advice = .binnenkort
+            result.reason += " De sensor meet genoeg: kijk in het veld of de sensor goed in de grond zit → binnenkort."
+            confidence -= 0.1
+        case .water where photos.looksWet:
+            result.advice = .binnenkort
+            result.reason += " De sensor meet droog: kijk eerst in het veld → binnenkort."
+            confidence -= 0.1
+        case .binnenkort where photos.looksWet:
+            result.reason += " Dat past niet bij de sensor: kijk eerst in het veld."
+            confidence -= 0.1
+        case .water where photos.looksDry, .binnenkort where photos.looksDry, .genoeg where photos.looksWet:
+            result.reason += " Dat past bij de sensor."
+            confidence += 0.1
+        default:
+            break
+        }
+        result.confidence = min(0.8, max(0.2, confidence))
+        return result
     }
 
     private static func rounded1(_ value: Double) -> Double { (value * 10).rounded() / 10 }

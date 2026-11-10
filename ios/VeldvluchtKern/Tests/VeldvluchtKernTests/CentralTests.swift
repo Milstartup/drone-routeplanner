@@ -149,11 +149,14 @@ final class CentralTests: XCTestCase {
     }
 
     private func advice(raw: Double, at time: String = "2026-10-26T10:00:00+01:00", weather: WeatherForecast?,
-                        calibrated: Bool = true) -> [FieldResults.Feature] {
+                        calibrated: Bool = true, attention: [FieldResults.Feature] = [],
+                        withSensor: Bool = true) -> [FieldResults.Feature] {
         var field = field()
         if calibrated { field.sensors[0].calibration = .init(dryRaw: 860, wetRaw: 340) }
-        let results = WaterAdvisor.results(field: field, measurements: [measurement(raw: raw, at: time, field: field)],
-                                           weather: weather, now: date("2026-10-26T12:00:00+01:00"))
+        if !withSensor { field.sensors = [] }
+        let measurements = withSensor ? [measurement(raw: raw, at: time, field: field)] : []
+        let results = WaterAdvisor.results(field: field, measurements: measurements, weather: weather,
+                                           attention: attention, now: date("2026-10-26T12:00:00+01:00"))
         XCTAssertEqual(results.boundary?.properties.name, "Proefveld")
         return results.waterZones
     }
@@ -220,6 +223,61 @@ final class CentralTests: XCTestCase {
         let results = WaterAdvisor.results(field: field, measurements: [], weather: nil, now: Date())
         XCTAssertTrue(results.waterZones.allSatisfy { $0.properties.advice == nil })
         XCTAssertTrue(results.waterZones[0].properties.reason!.contains("Geen sensor"))
+    }
+
+    // MARK: Photos in the advice (the same cases as centraal/tests/rekenkern.test.ts)
+
+    /// `count` markers of the AI in the middle strip (y 24...48 of the 100 × 60 m field).
+    private func marks(_ kind: String, _ count: Int, seen: String = "2026-10-25T14:00:00+01:00") -> [FieldResults.Feature] {
+        let projection = LocalProjection(origin: LatLng(lat: 52.5, lng: 5.54))
+        return (0..<count).map { i in
+            FieldResults.Feature(type: "Feature", geometry: .point(projection.toLatLng(XY(x: 10 + Double(i) * 5, y: 35))),
+                                 properties: .init(kind: .aandacht, reason: "Plek \(i + 1): AI", confidence: 0.8,
+                                                   photoFile: "DJI_0001.JPG", flightId: "v1", plantKind: kind, seenAt: date(seen)))
+        }
+    }
+
+    func testPhotosThatAgreeMakeTheAdviceSurer() {
+        let zone = advice(raw: 760, weather: weather(rainToday: 0.5, rainTomorrow: 0.5), attention: marks("te-droog", 3))[1].properties
+        XCTAssertEqual(zone.advice, .water)
+        XCTAssertEqual(zone.confidence ?? 0, 0.8, accuracy: 1e-9)
+        XCTAssertEqual(zone.reason, "Sensor s1 19 % vocht, gemeten 2 uur geleden. Verwacht vandaag en morgen 1 mm regen en 2 mm verdamping. "
+                       + "Regel: droger dan 35 % en weinig regen op komst → nu water geven. "
+                       + "Foto's van 22 uur geleden: 3 planten lijken te droog (AI). Dat past bij de sensor.")
+    }
+
+    func testPhotosThatDisagreeSendYouToTheField() {
+        let dry = advice(raw: 500, weather: weather(rainToday: 0, rainTomorrow: 0), attention: marks("te-droog", 4))[1].properties
+        XCTAssertEqual(dry.advice, .binnenkort, "de sensor zegt genoeg, de planten lijken te droog")
+        XCTAssertEqual(dry.confidence ?? 0, 0.6, accuracy: 1e-9)
+        XCTAssertTrue(dry.reason!.hasSuffix("4 planten lijken te droog (AI). De sensor meet genoeg: kijk in het veld of de sensor goed in de grond zit → binnenkort."), dry.reason!)
+        let wet = advice(raw: 760, weather: weather(rainToday: 0.5, rainTomorrow: 0.5), attention: marks("te-nat", 3))[1].properties
+        XCTAssertEqual(wet.advice, .binnenkort)
+        XCTAssertTrue(wet.reason!.hasSuffix("3 planten lijken te nat (AI). De sensor meet droog: kijk eerst in het veld → binnenkort."), wet.reason!)
+    }
+
+    func testPhotosAloneGiveACarefulAdvice() {
+        let zones = advice(raw: 0, weather: nil, attention: marks("te-droog", 3), withSensor: false)
+        XCTAssertEqual(zones[1].properties.advice, .binnenkort)
+        XCTAssertEqual(zones[1].properties.confidence ?? 0, 0.3, accuracy: 1e-9)
+        XCTAssertEqual(zones[1].properties.reason, "Geen sensor in of naast deze strook. Plaats er een bij Sensoren. "
+                       + "Foto's van 22 uur geleden: 3 planten lijken te droog (AI). Zonder meting → binnenkort water geven. Een sensor maakt het advies zekerder.")
+        XCTAssertNil(zones[0].properties.advice, "geen foto's in deze strook")
+        let wet = advice(raw: 0, weather: nil, attention: marks("te-nat", 3), withSensor: false)[1].properties
+        XCTAssertEqual(wet.advice, .genoeg)
+    }
+
+    func testFewOldOrOtherMarkersDoNotCount() {
+        let base = advice(raw: 760, weather: weather(rainToday: 0.5, rainTomorrow: 0.5))[1].properties
+        XCTAssertEqual(advice(raw: 760, weather: weather(rainToday: 0.5, rainTomorrow: 0.5), attention: marks("te-droog", 2))[1].properties, base)
+        XCTAssertEqual(advice(raw: 760, weather: weather(rainToday: 0.5, rainTomorrow: 0.5),
+                              attention: marks("te-droog", 5, seen: "2026-10-18T10:00:00+02:00"))[1].properties, base, "ouder dan een week")
+        XCTAssertEqual(advice(raw: 760, weather: weather(rainToday: 0.5, rainTomorrow: 0.5), attention: marks("ziek-of-beschadigd", 5))[1].properties, base)
+        let mixed = advice(raw: 760, weather: weather(rainToday: 0.5, rainTomorrow: 0.5),
+                           attention: marks("te-droog", 3) + marks("te-nat", 3))[1].properties
+        XCTAssertEqual(mixed.advice, .water)
+        XCTAssertEqual(mixed.confidence, base.confidence)
+        XCTAssertTrue(mixed.reason!.hasSuffix("3 planten lijken te droog en 3 planten lijken te nat (AI)."), mixed.reason!)
     }
 
     func testTheResultsAreAValidFile() throws {

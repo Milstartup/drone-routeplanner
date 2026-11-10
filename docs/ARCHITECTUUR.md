@@ -151,11 +151,16 @@ Een app of server mag de weersverwachting uit de Google-zoekresultaten niet zoma
      - anders → **genoeg**.
    - **50 % of natter:** **genoeg**.
    - De hoeveelheid is ruwweg 0,4 mm per procent tot 55 %.
+   - **De foto's tellen mee** (10 november 2026). Noemt de AI van de foto-analyse in een strook minstens 3 planten *te droog* of *te nat*, op foto's van de laatste 7 dagen:
+     - zegt de sensor hetzelfde → het advies blijft, 10 % zekerder;
+     - zegt de sensor *genoeg* terwijl de planten te droog lijken, of *nu water geven* terwijl ze te nat lijken → **binnenkort**, met *kijk in het veld*, 10 % minder zeker;
+     - geen bruikbare sensor → alleen de foto's: te droog → **binnenkort**, te nat → **genoeg**, met 30 % zekerheid.
+     - Zieke planten, onkruid en markeringen zonder AI tellen niet mee voor water.
    - De zekerheid is laag (20 tot 80 %): dit zijn eerste regels, die nog met het veld vergeleken moeten worden.
    - Dezelfde regels staan in de app (`WaterAdvisor`). De tests controleren dat de cloud en de app hetzelfde advies geven, met dezelfde uitleg.
-5. **Foto-analyse op de Mac** (`foto-analyse`, niveau 1 van hoofdstuk 7): planten zoeken, de afwijkende markeren, hun plek op de grond uitrekenen. De plekken gaan naar de tabel `aandacht` en staan dan op de veldkaart.
+5. **Foto-analyse op de Mac** (`foto-analyse`, niveau 1 van hoofdstuk 7): planten zoeken, de afwijkende markeren, hun plek op de grond uitrekenen. De plekken gaan naar de tabel `aandacht` en staan dan op de veldkaart. Sinds 10 november 2026 met wat de AI zag (`soort`) en wanneer de foto is gemaakt (`gezien`), voor het wateradvies.
 6. **Accounts en delen:** inloggen met e-mail en wachtwoord. De eigenaar nodigt anderen uit om mee te kijken.
-7. **Nog niet:** een getrainde AI, en terugkijken naar eerdere dagen in de app. De ruwe metingen worden wel allemaal bewaard.
+7. **Nog niet:** terugkijken naar eerdere dagen in de app. De ruwe metingen worden wel allemaal bewaard. De AI voor de planten leert op de Mac van jouw eigen foto's (hoofdstuk 7, niveau 3).
 
 **Uitgangspunten:**
 

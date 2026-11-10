@@ -123,7 +123,8 @@ enum SampleData {
             results = cloud
             source = .cloud
         } else {
-            results = WaterAdvisor.results(field: record, measurements: measurements, weather: weather, now: now)
+            results = WaterAdvisor.results(field: record, measurements: measurements, weather: weather,
+                                           attention: cloud?.attention ?? [], now: now)
             // Newer measurements than the cloud's: the app works it out, with the cloud's markers.
             results.features += cloud?.attention ?? []
             source = .app

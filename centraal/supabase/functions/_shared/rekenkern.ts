@@ -74,6 +74,10 @@ export interface Attention {
   photoFile?: string | null;
   flightId: string;
   confidence?: number | null;
+  /** What the AI says the plant is: 'te-droog', 'te-nat', 'ziek-of-beschadigd', 'gezond', 'geen-plant'. */
+  kind?: string | null;
+  /** When the photo was taken. */
+  seenAt?: Date | null;
 }
 
 const EARTH_RADIUS_M = 6371008.8;
@@ -400,6 +404,89 @@ interface StripAdvice {
   confidence?: number;
 }
 
+// ---- Photos in the advice (WaterAdvisor.swift, combine) ----
+
+/** Photos older than this say nothing about the water now. */
+const PHOTO_MAX_AGE_S = 7 * 24 * 3600;
+/** This many plants the AI found too dry (or too wet) in one strip count for the advice. */
+const PHOTO_MIN_PLANTS = 3;
+
+interface PhotoEvidence {
+  dry: number;
+  wet: number;
+  newest: Date | null;
+}
+
+function photoEvidence(polygon: XY[], attention: Attention[], proj: ReturnType<typeof projection>, now: Date): PhotoEvidence {
+  const evidence: PhotoEvidence = { dry: 0, wet: 0, newest: null };
+  for (const mark of attention) {
+    const seen = mark.seenAt;
+    if (!seen || seen > now || (now.getTime() - seen.getTime()) / 1000 > PHOTO_MAX_AGE_S) continue;
+    if (!pointInPolygon(proj.toXY({ lat: mark.lat, lng: mark.lng }), polygon)) continue;
+    if (mark.kind === 'te-droog') evidence.dry += 1;
+    else if (mark.kind === 'te-nat') evidence.wet += 1;
+    else continue;
+    if (!evidence.newest || seen > evidence.newest) evidence.newest = seen;
+  }
+  return evidence;
+}
+
+const looksDry = (e: PhotoEvidence) => e.dry >= PHOTO_MIN_PLANTS && e.wet < PHOTO_MIN_PLANTS;
+const looksWet = (e: PhotoEvidence) => e.wet >= PHOTO_MIN_PLANTS && e.dry < PHOTO_MIN_PLANTS;
+
+function photoText(e: PhotoEvidence, now: Date): string | null {
+  if (!e.newest) return null;
+  const parts = [
+    e.dry >= PHOTO_MIN_PLANTS ? `${e.dry} planten lijken te droog` : null,
+    e.wet >= PHOTO_MIN_PLANTS ? `${e.wet} planten lijken te nat` : null,
+  ].filter((p): p is string => p !== null);
+  if (parts.length === 0) return null;
+  return `Foto's van ${ageText(e.newest, now)}: ${parts.join(' en ')} (AI).`;
+}
+
+/**
+ * The sensor's advice, checked against the photos. Agreeing photos make it surer; photos that
+ * disagree send the farmer to look first. Without a usable sensor the photos alone give a
+ * careful advice.
+ */
+function combine(sensor: StripAdvice, photos: PhotoEvidence, now: Date): StripAdvice {
+  const text = photoText(photos, now);
+  if (!text) return sensor;
+  const result: StripAdvice = { ...sensor, reason: `${sensor.reason} ${text}` };
+  if (!sensor.advice) {
+    if (looksDry(photos)) {
+      return {
+        advice: 'binnenkort',
+        amountMm: 0,
+        reason: `${result.reason} Zonder meting → binnenkort water geven. Een sensor maakt het advies zekerder.`,
+        confidence: 0.3,
+      };
+    }
+    if (looksWet(photos)) {
+      return { advice: 'genoeg', amountMm: 0, reason: `${result.reason} Zonder meting → geen water geven.`, confidence: 0.3 };
+    }
+    return result;
+  }
+  let confidence = sensor.confidence ?? 0.5;
+  if (sensor.advice === 'genoeg' && looksDry(photos)) {
+    result.advice = 'binnenkort';
+    result.reason += ' De sensor meet genoeg: kijk in het veld of de sensor goed in de grond zit → binnenkort.';
+    confidence -= 0.1;
+  } else if (sensor.advice === 'water' && looksWet(photos)) {
+    result.advice = 'binnenkort';
+    result.reason += ' De sensor meet droog: kijk eerst in het veld → binnenkort.';
+    confidence -= 0.1;
+  } else if (sensor.advice === 'binnenkort' && looksWet(photos)) {
+    result.reason += ' Dat past niet bij de sensor: kijk eerst in het veld.';
+    confidence -= 0.1;
+  } else if ((sensor.advice !== 'genoeg' && looksDry(photos)) || (sensor.advice === 'genoeg' && looksWet(photos))) {
+    result.reason += ' Dat past bij de sensor.';
+    confidence += 0.1;
+  }
+  result.confidence = Math.min(0.8, Math.max(0.2, Math.round(confidence * 1e9) / 1e9));
+  return result;
+}
+
 function shortName(sensorId: string, fieldId: string): string {
   return sensorId.startsWith(`${fieldId}-`) ? sensorId.slice(fieldId.length + 1) : sensorId;
 }
@@ -520,7 +607,8 @@ export function results(field: FieldRecord, measurements: Measurement[], weather
     });
   }
   strips(field.boundary, lineAngle(field), field.stripWidthM ?? DEFAULT_STRIP_WIDTH_M).forEach((strip, index) => {
-    const a = adviseStrip(strip, field, latest, water, proj, now);
+    const photos = photoEvidence(strip.map(proj.toXY), attention, proj, now);
+    const a = combine(adviseStrip(strip, field, latest, water, proj, now), photos, now);
     features.push({
       type: 'Feature',
       geometry: { type: 'Polygon', coordinates: [ring(strip)] },
@@ -537,6 +625,8 @@ export function results(field: FieldRecord, measurements: Measurement[], weather
         photoFile: mark.photoFile ?? undefined,
         flightId: mark.flightId,
         confidence: mark.confidence ?? undefined,
+        plantKind: mark.kind ?? undefined,
+        seenAt: mark.seenAt?.toISOString(),
       },
     });
   }

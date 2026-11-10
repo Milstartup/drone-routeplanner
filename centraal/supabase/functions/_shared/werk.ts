@@ -69,12 +69,18 @@ async function calculate(env: Env, row: FieldRow, now: Date): Promise<void> {
 
   // The markers of the most recent flight that was analysed.
   const marks = (await rest(
-    `aandacht?veld=eq.${row.id}&select=lat,lng,reden,foto,zekerheid,vlucht_id&order=gemaakt.desc&limit=1000`,
-  )) as { lat: number; lng: number; reden: string; foto: string | null; zekerheid: number | null; vlucht_id: string }[];
+    `aandacht?veld=eq.${row.id}&select=lat,lng,reden,foto,zekerheid,vlucht_id,soort,gezien,gemaakt&order=gemaakt.desc&limit=1000`,
+  )) as {
+    lat: number; lng: number; reden: string; foto: string | null; zekerheid: number | null; vlucht_id: string;
+    soort: string | null; gezien: string | null; gemaakt: string;
+  }[];
   const latestFlight = marks[0]?.vlucht_id;
   const attention: Attention[] = marks
     .filter((m) => m.vlucht_id === latestFlight)
-    .map((m) => ({ lat: m.lat, lng: m.lng, reason: m.reden, photoFile: m.foto, flightId: m.vlucht_id, confidence: m.zekerheid }));
+    .map((m) => ({
+      lat: m.lat, lng: m.lng, reason: m.reden, photoFile: m.foto, flightId: m.vlucht_id, confidence: m.zekerheid,
+      kind: m.soort, seenAt: m.gezien || m.gemaakt ? new Date(m.gezien ?? m.gemaakt) : null,
+    }));
 
   await upsert('resultaten', { veld: row.id, resultaten: results(field, measurements, weather, attention, now), berekend: now.toISOString() });
 }

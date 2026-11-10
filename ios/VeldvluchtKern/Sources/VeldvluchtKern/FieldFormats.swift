@@ -203,6 +203,11 @@ struct FieldResults: Codable, Equatable {
         var confidence: Double?
         var photoFile: String?
         var flightId: String?
+        /// A marker: what the AI of the photo analysis says the plant is ("te-droog", "te-nat",
+        /// "ziek-of-beschadigd", "gezond", "geen-plant"); missing when only the rules marked it.
+        var plantKind: String?
+        /// A marker: when the photo was taken.
+        var seenAt: Date?
     }
 
     struct Feature: Codable, Equatable {

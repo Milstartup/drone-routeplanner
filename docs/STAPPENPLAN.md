@@ -9,9 +9,9 @@ Stand op 27 oktober 2026:
   - **Route:** **een veld tekenen in de app** (hoeken aantikken, de app maakt de vliegbanen), of een routebestand van de planner inlezen; daarna vliegen (stap 3 t/m 5);
   - **Veldkaart:** je eigen veld met sensoren, weer en wateradvies, of de voorbeeldgegevens (stap 7 t/m 9);
   - **Vluchten:** fotologs en logboeken (stap 6).
-- **Het sensorkastje** (stap 8): de software staat in [`sensor/`](../sensor/README.md). Het stuurt rechtstreeks naar de cloud, of anders naar de app.
+- **Het sensorkastje** (stap 8): de software staat in [`sensor/`](../sensor/README.md). Het stuurt rechtstreeks naar de cloud, of anders naar de app. Sinds 10 november 2026 koppel je het met de app: geen instellingen meer invullen in de Arduino IDE.
 - **Het centrale systeem** (stap 9) in de cloud, in [`centraal/`](../centraal/README.md):
-  - ontvangen en opslaan, weer en wateradvies elk uur;
+  - ontvangen en opslaan, weer en wateradvies elk uur, met de sensoren, het weer en wat de AI op de foto's zag;
   - accounts, en anderen laten meekijken;
   - een eerste foto-analyse op de Mac, zonder getrainde AI.
 
@@ -221,7 +221,7 @@ Vlieg hierbij nog niet.
   - de neus langs de vliegbanen.
 - **Foto's:** een losse foto bij elke geplande positie, met minstens 2 s ertussen. Een foto telt pas als de camera het bestand meldt. Het fotolog (`veld/fotolog`) staat per vlucht in de Bestanden-app.
 - **Alleen in de simulator:** zonder actieve simulator start de route niet.
-- **Getest met een nep-drone** (nu 149 tests in `ios/VeldvluchtKern`, na een onafhankelijke review met zes herstelde fouten):
+- **Getest met een nep-drone** (nu 158 tests in `ios/VeldvluchtKern`, na een onafhankelijke review met zes herstelde fouten):
   - de hele voorbeeldroute, met alle 180 foto's binnen 2 m van hun plek;
   - verwisselde assen en zijwind;
   - pauze en hervatten, overnemen en verbindingsverlies.
@@ -316,7 +316,7 @@ Dit kan al **voordat** het centrale systeem of de AI bestaat, en naast de stappe
 - Het kastje meet elk uur, zet de sensor alleen aan tijdens het meten, en bewaart de metingen.
 - Het stuurt ze via de **hotspot van de iPhone** naar de app (het formaat `veld/sensorupload` uit [ARCHITECTUUR.md](ARCHITECTUUR.md)).
 - *27 oktober 2026:* het stuurt ze eerst **rechtstreeks naar de cloud**, met een geheime sleutel per sensor. Lukt dat niet, dan naar de app.
-- In de app plaats je de sensoren op je veld en ijk je ze met droge en natte grond.
+- In de app plaats je de sensoren op je veld, **koppel je het kastje** (10 november 2026: het kastje maakt een eigen wifi-netwerk en de app stuurt het alle instellingen) en ijk je ze met droge en natte grond.
 - Getest: het ontvangen in de app, met nep-metingen vanaf de Mac (`sensor/nep-sensorkastje.py`).
 
 1. Op tafel:

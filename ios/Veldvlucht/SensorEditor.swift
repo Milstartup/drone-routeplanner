@@ -1,5 +1,6 @@
 // Placing the soil sensors in a field drawn in the app, giving each its name for the sensor
-// box, and calibrating it: the raw value in dry and in saturated soil of the field.
+// box, pairing the box (it gets its settings over its own WiFi network), and calibrating it:
+// the raw value in dry and in saturated soil of the field.
 import SwiftUI
 import UIKit
 
@@ -26,6 +27,8 @@ struct SensorEditorView: View {
     @State private var saving = false
     /// The key of each sensor box, from the central system.
     @State private var keys: [String: String] = [:]
+    /// The sensor whose box is being paired.
+    @State private var pairing: Draft?
 
     init(field: FieldRecord, fields: FieldStore, receiver: SensorReceiver, cloud: CloudStore) {
         original = field
@@ -96,6 +99,12 @@ struct SensorEditorView: View {
                 keys = cloud.link(original.id).keys
             }
             .onChange(of: receiver.uploads) { _, _ in readLatest() }
+            .sheet(item: $pairing) { draft in
+                // The cloud only with the sensor's key: that comes after Bewaren, when logged in.
+                let key = keys[draft.id]
+                PairBoxView(sensorId: draft.id, depthCm: Int(draft.depthCm.rounded()), sensorKey: key,
+                            cloud: cloud.isLoggedIn && key != nil ? cloud.config : nil)
+            }
             .alert("Niet bewaard", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
                 Button("OK") { saveError = nil }
             } message: {
@@ -183,7 +192,7 @@ struct SensorEditorView: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("1. Zet op de iPhone **Persoonlijke hotspot** aan, met **Maximaliseer compatibiliteit**.")
-                Text("2. Zet in het kastje de naam en het wachtwoord van de hotspot, en de naam van de sensor hieronder.")
+                Text("2. Koppel het kastje met **Kastje koppelen** bij de sensor hieronder.")
                 Text("3. Houd Veldvlucht open. Het kastje stuurt zijn metingen zodra het de hotspot ziet.")
             }
             .font(.footnote)
@@ -241,6 +250,12 @@ struct SensorEditorView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+            Button {
+                pairing = d
+            } label: {
+                Label("Kastje koppelen", systemImage: "wifi")
+            }
+            .buttonStyle(ActionButtonStyle(color: .teal, prominent: false))
             Stepper(value: draft.depthCm, in: 5...60, step: 5) {
                 Row(label: "Diepte", value: "\(RouteCheck.number(d.depthCm)) cm")
             }
@@ -284,5 +299,116 @@ struct SensorEditorView: View {
         }
         if let volt = m.batteryVolt { text += " · accu \(dutchNumber(volt, digits: 2)) V" }
         return text + "."
+    }
+}
+
+/// Gives a sensor box its settings: the iPhone joins the box's own WiFi network, and the app
+/// sends the hotspot, the sensor's name and key and the cloud (SensorPairing).
+private struct PairBoxView: View {
+    let sensorId: String
+    let depthCm: Int
+    let sensorKey: String?
+    let cloud: CloudConfig?
+    @Environment(\.dismiss) private var dismiss
+    /// Not secret: the name of the iPhone. The password is never kept.
+    @AppStorage("koppelen.hotspotNaam") private var hotspotName = ""
+    @State private var password = ""
+    @State private var sending = false
+    @State private var outcome: SensorPairing.Outcome?
+    @State private var failure: String?
+
+    private var settings: SensorPairing.Settings {
+        SensorPairing.Settings(hotspotName: hotspotName.trimmingCharacters(in: .whitespaces), hotspotPassword: password,
+                               sensorId: sensorId, sensorKey: cloud == nil ? nil : sensorKey,
+                               cloudProject: cloud?.projectRef, cloudKey: cloud?.key, depthCm: depthCm)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: Design.spacing) {
+                    Card {
+                        Text("Zo koppel je het kastje").font(.headline)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("1. Zet het kastje aan, of druk op de knop **EN** op het bordje. Het maakt 2 minuten lang een eigen wifi-netwerk: **\(SensorPairing.networkPrefix)…**")
+                            Text("2. Ga op je iPhone naar **Instellingen → Wifi** en kies dat netwerk. Het wachtwoord is **\(SensorPairing.networkPassword)**. Kom daarna terug naar Veldvlucht.")
+                            Text("3. Vul hieronder je hotspot in en druk op **Koppelen**.")
+                        }
+                        .font(.footnote)
+                    }
+                    Card {
+                        Text("Je hotspot").font(.headline)
+                        TextField("Naam van je hotspot", text: $hotspotName)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+                        Text("Precies de naam van je iPhone: Instellingen → Algemeen → Info → Naam.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        SecureField("Wachtwoord van je hotspot", text: $password)
+                            .textFieldStyle(.roundedBorder)
+                        Text("Staat bij Instellingen → Persoonlijke hotspot. De app bewaart het niet; alleen het kastje.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Card {
+                        Rows(rows: [("Sensor", sensorId), ("Diepte", "\(depthCm) cm"),
+                                    ("Naar de cloud", cloud == nil ? "nee, alleen naar de app" : "ja")])
+                        if cloud == nil {
+                            Text("Voor de cloud: log in (Route → Account) en druk op Bewaren bij Sensoren. Koppel het kastje daarna opnieuw.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
+                    if !hotspotName.isEmpty || !password.isEmpty {
+                        ForEach(SensorPairing.problems(settings), id: \.self) { Notice(text: $0) }
+                    }
+                    Button(action: send) {
+                        if sending {
+                            ProgressView()
+                        } else {
+                            Label("Koppelen", systemImage: "link")
+                        }
+                    }
+                    .buttonStyle(ActionButtonStyle(color: .teal))
+                    .disabled(sending || !SensorPairing.problems(settings).isEmpty)
+                    if let failure {
+                        Notice(text: failure)
+                    }
+                    switch outcome {
+                    case let .paired(id, raw):
+                        Notice(text: "Gekoppeld: het kastje is nu sensor \(id) en meet ruw \(raw). Ga op je iPhone terug naar je gewone wifi en zet je Persoonlijke hotspot aan. Het kastje stuurt zo zijn eerste meting.",
+                               symbol: "checkmark.circle.fill", color: .green)
+                    case let .refused(reason):
+                        Notice(text: "Het kastje bewaarde het niet: \(reason)")
+                    case nil:
+                        EmptyView()
+                    }
+                }
+                .padding()
+            }
+            .screenBackground()
+            .navigationTitle("Kastje koppelen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Klaar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func send() {
+        let request = SensorPairing.request(settings)
+        sending = true
+        outcome = nil
+        failure = nil
+        Task {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                outcome = SensorPairing.outcome(data: data, status: (response as? HTTPURLResponse)?.statusCode ?? 0)
+                if case .paired = outcome { password = "" }
+            } catch {
+                failure = SensorPairing.noAnswer
+            }
+            sending = false
+        }
     }
 }

@@ -306,6 +306,10 @@ final class CloudAPI {
         var reason: String
         var photo: String?
         var confidence: Double
+        /// What the AI says the plant is ("te-droog", "te-nat", ...): the water advice uses it.
+        var kind: String? = nil
+        /// When the photo was taken.
+        var seenAt: Date? = nil
     }
 
     /// Replaces the markers of one flight with these.
@@ -315,7 +319,8 @@ final class CloudAPI {
         guard !marks.isEmpty else { return }
         let rows: [[String: Any]] = marks.map {
             ["veld": cloudId, "vlucht_id": flightId, "lat": $0.position.lat, "lng": $0.position.lng,
-             "reden": $0.reason, "foto": $0.photo ?? NSNull(), "zekerheid": $0.confidence]
+             "reden": $0.reason, "foto": $0.photo ?? NSNull(), "zekerheid": $0.confidence,
+             "soort": $0.kind ?? NSNull(), "gezien": $0.seenAt.map { ISO8601DateFormatter().string(from: $0) } ?? NSNull()]
         }
         _ = try await authorized("rest/v1/aandacht", method: "POST", body: Self.json(rows), headers: ["Prefer": "return=minimal"])
     }

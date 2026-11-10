@@ -293,7 +293,7 @@ Wat al getest is: alles op de Mac, zonder echt project (zie boven). Hoe je het i
      ```
   3. Je hoort per foto het aantal planten te zien. In de simulator fotografeert de drone geen veld, dus daar zijn het er 0 of een paar.
   4. Bij een echte vlucht boven een veld: probeer ook `--upload`. Synchroniseer de app: staan er paarse markeringen? Kloppen ze met wat je in het veld ziet?
-- [ ] **F13** **Na de update van 10 november 2026:** draai in de projectmap nog een keer `bash centraal/installeer.sh`. Je hoort weer *Klaar* te zien. Je velden en metingen blijven staan.
+- [x] **F13** (10 november 2026: gelukt; de rekenkern rekende 5 velden zonder problemen, en de nieuwe vakjes `soort` en `gezien` staan in de database) **Na de update van 10 november 2026:** draai in de projectmap nog een keer `bash centraal/installeer.sh`. Je hoort weer *Klaar* te zien. Je velden en metingen blijven staan.
 
 ## G. De AI laten leren (nieuw, 9 november 2026)
 

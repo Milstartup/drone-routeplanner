@@ -194,7 +194,7 @@ Komt er iets nieuws in de cloud (zoals op 10 november 2026: de AI-soort bij de m
 ```bash
 bash centraal/installeer.sh
 ```
-Dat is veilig: je velden, metingen en accounts blijven staan. Het script zet alleen wat nieuw is erbij en vervangt het rekenprogramma. Doe je het niet, dan lukt `foto-analyse … --upload` niet meer.
+Dat is veilig: je velden, metingen en accounts blijven staan. Het script zet alleen wat nieuw is erbij en vervangt het rekenprogramma. Het script neemt zelf het project dat in `ios/Config/Lokaal.xcconfig` staat, ook als het niet *veldvlucht* heet. Doe je het niet, dan lukt `foto-analyse … --upload` niet meer.
 
 ## Opnieuw installeren of op een andere Mac
 

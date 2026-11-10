@@ -28,16 +28,19 @@ echo "Ingelogd."
 
 stap "2. Je project zoeken"
 PROJECTEN=$("$SUPABASE" projects list -o json 2>/dev/null)
-REF=$(printf '%s' "$PROJECTEN" | python3 -c '
-import json, sys
+# The project the app already uses (written by an earlier run) comes first, whatever its name.
+BEKEND=$(sed -n 's/^SUPABASE_PROJECT *= *\([a-z0-9]*\).*/\1/p' "$LOKAAL" | head -n 1)
+REF=$(printf '%s' "$PROJECTEN" | BEKEND="$BEKEND" python3 -c '
+import json, os, sys
 try:
     projects = json.load(sys.stdin)
 except ValueError:
     sys.exit(0)
 if isinstance(projects, dict):
     projects = projects.get("projects", [])
+known = [p for p in projects if os.environ.get("BEKEND") and (p.get("id") or p.get("ref")) == os.environ["BEKEND"]]
 named = [p for p in projects if str(p.get("name", "")).lower() == "veldvlucht"]
-pick = named or (projects if len(projects) == 1 else [])
+pick = known or named or (projects if len(projects) == 1 else [])
 if pick:
     print(pick[0].get("id") or pick[0].get("ref") or "")
 ')
